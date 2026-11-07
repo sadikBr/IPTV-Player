@@ -36,7 +36,7 @@ guide (EPG).
 
 | Area | Choice | Why |
 |---|---|---|
-| Framework | **Qt 6.8 LTS** | One codebase for desktop + mobile, long-term support |
+| Framework | **Qt 6.10** | One codebase for desktop + mobile. (Free Qt 6.8 LTS patches ended at 6.8.3, and that version no longer links on current macOS) |
 | UI | **Qt Quick / QML** (Qt Quick Controls 2, Material style) | Touch-friendly, GPU-accelerated, adapts to phones and desktops. Qt Widgets does not work well on mobile. |
 | Core logic | **C++17/20** | Networking, parsing, database, models exposed to QML |
 | Video playback | **Qt Multimedia** (FFmpeg backend) behind a `PlayerBackend` interface | Ships with Qt and works on every target platform. Optional **libmpv** backend on desktop later for wider codec/stream support. |
@@ -182,7 +182,7 @@ history(item_kind, item_id, position_ms, duration_ms, watched_at)
 Each phase ends with something that runs and can be tested on a real device.
 
 ### Phase 0 — Project setup (≈ 2–3 days)
-- [x] CMake + Qt 6.8 skeleton, `Main.qml` with a window
+- [x] CMake + Qt 6 skeleton, `Main.qml` with a window
 - [ ] Builds and runs on Linux/Windows/macOS **and** an Android device (CI builds; needs a check on your devices)
 - [x] GitHub Actions: desktop builds + Android APK artifact
 - [x] clang-format, `.gitignore`, README with build instructions

@@ -71,19 +71,34 @@ Keep `release.keystore` safe and out of the repository.
 
 ## Building from source
 
-Requirements: **Qt 6.8 LTS** (Qt Quick, Quick Controls 2, Multimedia, SVG), CMake ≥ 3.21,
+Requirements: **Qt 6.8 or newer** (CI uses 6.10) with Qt Quick, Quick Controls 2, Multimedia and SVG; CMake ≥ 3.21,
 Ninja and a C++17 compiler. Qt 6.4+ also builds, but older Qt Multimedia versions are much
 less reliable for streaming.
 
+### Arch Linux
+
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64
+sudo pacman -S --needed base-devel cmake ninja \
+  qt6-base qt6-declarative qt6-multimedia qt6-multimedia-ffmpeg qt6-svg qt6-wayland
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/bin/IPTVPlayer
+```
+
+`qt6-multimedia-ffmpeg` is required: it is the video engine. For hardware decoding,
+install `intel-media-driver` (Intel) or `libva-mesa-driver` (AMD).
+
+### Other systems (Qt from the online installer)
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/path/to/Qt/6.10.1/gcc_64
 cmake --build build
 ./build/bin/IPTVPlayer
 ctest --test-dir build --output-on-failure   # off-screen UI smoke test
 ```
 
 Or open `CMakeLists.txt` in Qt Creator and press Run. For Android, pick an Android kit in
-Qt Creator (it needs JDK 17, the Android SDK and NDK r26b).
+Qt Creator (it needs JDK 17, the Android SDK and NDK r27c).
 
 ## Project layout
 

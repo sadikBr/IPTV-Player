@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  QT_VERSION: '6.8.3'
+  QT_VERSION: '6.10.*'   # latest 6.10 patch release
   QT_MODULES: 'qtmultimedia'
 
 jobs:
@@ -136,7 +136,7 @@ jobs:
     name: Android
     runs-on: ubuntu-24.04
     env:
-      NDK_VERSION: '26.1.10909125'
+      NDK_VERSION: '27.2.12479018'   # r27c, required by Qt 6.10
     steps:
       - uses: actions/checkout@v5
 
@@ -217,7 +217,8 @@ jobs:
 
       - name: Configure
         run: |
-          QT_BASE="$RUNNER_TEMP/Qt/$QT_VERSION"
+          QT_BASE=$(ls -d "$RUNNER_TEMP"/Qt/6.* | sort -V | tail -n 1)
+          echo "Using Qt from $QT_BASE"
           "$QT_BASE/android_arm64_v8a/bin/qt-cmake" -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DQT_HOST_PATH="$QT_BASE/gcc_64" \

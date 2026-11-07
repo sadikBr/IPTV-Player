@@ -80,10 +80,13 @@ set_target_properties(iptvplayer PROPERTIES
     QT_ANDROID_PACKAGE_NAME io.github.sadikbr.iptvplayer
     QT_ANDROID_APP_NAME "IPTV Player")
 
-include(GNUInstallDirs)
-install(TARGETS iptvplayer
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+# Android is packaged by the "apk" target instead.
+if(NOT ANDROID)
+    include(GNUInstallDirs)
+    install(TARGETS iptvplayer
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 # Smoke test: start the app off-screen, load all QML and fail on any QML warning.
 if(NOT ANDROID AND NOT IOS)
