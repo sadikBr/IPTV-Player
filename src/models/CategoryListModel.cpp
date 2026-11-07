@@ -1,6 +1,7 @@
 #include "CategoryListModel.h"
 
 #include "Database.h"
+#include "SourceStore.h"
 
 #include <QSqlQuery>
 
@@ -71,6 +72,18 @@ int CategoryListModel::indexOf(int categoryId) const
     return -1;
 }
 
+void CategoryListModel::hideCategory(int categoryId)
+{
+    QSqlQuery q(Database::connection());
+    q.prepare(QStringLiteral("SELECT ext_id FROM categories WHERE id = ?"));
+    q.addBindValue(categoryId);
+    if (!q.exec() || !q.next())
+        return;
+    SourceStore(Database::connection())
+            .setCategoriesHidden(m_sourceId, kindFromString(m_kind), { q.value(0).toString() }, true);
+    emit DataNotifier::instance()->contentChanged(m_sourceId);
+}
+
 QString CategoryListModel::nameOf(int categoryId) const
 {
     const int i = indexOf(categoryId);
@@ -85,7 +98,8 @@ void CategoryListModel::reload()
         QSqlQuery q(db);
 
         int total = 0;
-        q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels WHERE source_id = ? AND kind = ?"));
+        q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels c WHERE c.source_id = ? AND c.kind = ? AND ")
+                  + SourceStore::notInHiddenCategory());
         q.addBindValue(m_sourceId);
         q.addBindValue(m_kind);
         if (q.exec() && q.next())
@@ -111,14 +125,29 @@ void CategoryListModel::reload()
         q.prepare(QStringLiteral(
                 "SELECT cat.id, cat.name, COUNT(c.id) FROM categories cat "
                 "JOIN channels c ON c.category_id = cat.id "
-                "WHERE cat.source_id = ? AND cat.kind = ? "
-                "GROUP BY cat.id ORDER BY cat.position"));
+                "WHERE cat.source_id = ? AND cat.kind = ? AND ")
+                  + SourceStore::categoryNotHidden() + QStringLiteral(
+                " GROUP BY cat.id ORDER BY cat.position"));
         q.addBindValue(m_sourceId);
         q.addBindValue(m_kind);
         if (q.exec()) {
             while (q.next())
                 rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toInt() });
         }
+    }
+
+    int hiddenCount = 0;
+    if (m_sourceId > 0) {
+        QSqlQuery q(Database::connection());
+        q.prepare(QStringLiteral("SELECT COUNT(*) FROM hidden_categories WHERE source_id = ? AND kind = ?"));
+        q.addBindValue(m_sourceId);
+        q.addBindValue(m_kind);
+        if (q.exec() && q.next())
+            hiddenCount = q.value(0).toInt();
+    }
+    if (hiddenCount != m_hiddenCount) {
+        m_hiddenCount = hiddenCount;
+        emit hiddenCountChanged();
     }
 
     const bool countChange = rows.size() != m_rows.size();

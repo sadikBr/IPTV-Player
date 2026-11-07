@@ -161,6 +161,13 @@ ApplicationWindow {
             current.episodeRequested(current.resumeEpisode.extId, false)
     }
     function smokeBack() { goBack() }
+    function smokeHideGroup(group) {
+        if (stack.currentItem && stack.currentItem.hideGroup)
+            stack.currentItem.hideGroup(group)
+    }
+    function smokeManageCategories(kind) {
+        AppState.manageCategoriesRequested(AppState.sourceId, kind)
+    }
 
     // --- Wiring ---
 
@@ -169,6 +176,9 @@ ApplicationWindow {
         function onSectionRequested(name) { window.goSection(name) }
         function onAddProviderRequested() { window.addProvider() }
         function onPlayStreamRequested(url, title) { window.openStream(url, title) }
+        function onManageCategoriesRequested(sourceId, kind) {
+            stack.push(manageCategoriesComponent, { "sourceId": sourceId, "kind": kind })
+        }
         function onSourceIdChanged() {
             // Switching provider: show the same section for the new one.
             if (stack.depth > 0 && AppState.section !== "home" && AppState.section !== "settings")
@@ -329,6 +339,13 @@ ApplicationWindow {
             onBackRequested: stack.pop()
             onEpisodeRequested: (episodeExtId, fromStart) =>
                 window.playEpisode(seriesPage.sourceId, seriesPage.extId, episodeExtId, fromStart)
+        }
+    }
+
+    Component {
+        id: manageCategoriesComponent
+        ManageCategoriesPage {
+            onBackRequested: stack.pop()
         }
     }
 

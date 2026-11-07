@@ -503,6 +503,11 @@ Page {
                     }
                 }
                 IconButton {
+                    iconName: "filter"
+                    tip: qsTr("Choose categories")
+                    onClicked: AppState.manageCategoriesRequested(row.sourceId, "live")
+                }
+                IconButton {
                     iconName: "clock"
                     tip: qsTr("TV guide time shift")
                     onClicked: {

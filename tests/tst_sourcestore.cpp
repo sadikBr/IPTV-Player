@@ -218,6 +218,28 @@ private slots:
         QCOMPARE(store.recentProgress(10).size(), 1);
     }
 
+    void hiddenCategories()
+    {
+        SourceStore store(Database::connection());
+        const int id = store.sources().constFirst().id;
+        QVERIFY(store.replaceContent(id, sampleContent(10))); // categories "1" and "2", 5 channels each
+        const auto visible = [id]() {
+            QSqlQuery q(Database::connection());
+            q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels c WHERE c.source_id = ? AND ")
+                      + SourceStore::notInHiddenCategory());
+            q.addBindValue(id);
+            return q.exec() && q.next() ? q.value(0).toInt() : -1;
+        };
+        QCOMPARE(visible(), 10);
+        QVERIFY(store.setCategoriesHidden(id, ContentKind::Live, { QStringLiteral("2") }, true));
+        QCOMPARE(visible(), 5);
+        // Survives a re-sync (stored by provider id)
+        QVERIFY(store.replaceContent(id, sampleContent(10)));
+        QCOMPARE(visible(), 5);
+        QVERIFY(store.setCategoriesHidden(id, ContentKind::Live, { QStringLiteral("2") }, false));
+        QCOMPARE(visible(), 10);
+    }
+
     void removeSourceCascades()
     {
         SourceStore store(Database::connection());
@@ -227,6 +249,29 @@ private slots:
         QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM channels")), 0);
         QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM categories")), 0);
         QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM favorites")), 0);
+    }
+
+    void categoryGroup_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<QString>("group");
+        QTest::newRow("bracket") << "[EN] KIDS" << "EN";
+        QTest::newRow("bracket lower") << "[fr] Séries VF" << "FR";
+        QTest::newRow("bracket arabic") << "[AR] رمضان 2025" << "AR";
+        QTest::newRow("bracket spaces") << " [ CA ] QUEBECOISE" << "CA";
+        QTest::newRow("pipe") << "UK | General" << "UK";
+        QTest::newRow("colon") << "FR: Sport" << "FR";
+        QTest::newRow("dash") << "DE - Filme" << "DE";
+        QTest::newRow("parens") << "(4K) Movies" << "4K";
+        QTest::newRow("none") << "Sports" << "";
+        QTest::newRow("word with dash") << "Movies 24/7" << "";
+    }
+
+    void categoryGroup()
+    {
+        QFETCH(QString, name);
+        QFETCH(QString, group);
+        QCOMPARE(SourceStore::categoryGroup(name), group);
     }
 
     void searchKey()

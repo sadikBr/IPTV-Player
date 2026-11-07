@@ -37,6 +37,12 @@ Page {
         }
     }
 
+    function hideCategory(categoryId) {
+        if (categoryId === selectedCategory)
+            selectCategory(CategoryListModel.AllCategories)
+        categories.hideCategory(categoryId)
+    }
+
     function selectCategory(categoryId) {
         selectedCategory = categoryId
         searchField.text = ""
@@ -128,6 +134,11 @@ Page {
             onClicked: page.guideRequested()
         }
         IconButton {
+            iconName: "filter"
+            tip: qsTr("Choose categories")
+            onClicked: AppState.manageCategoriesRequested(page.sourceId, "live")
+        }
+        IconButton {
             iconName: "retry"
             tip: qsTr("Update channel list and TV guide")
             enabled: !SourceManager.busy
@@ -184,6 +195,8 @@ Page {
             model: categories
             selectedCategory: page.selectedCategory
             onCategorySelected: (id) => page.selectCategory(id)
+            onHideRequested: (id) => page.hideCategory(id)
+            onManageRequested: AppState.manageCategoriesRequested(page.sourceId, "live")
         }
 
         RowLayout {
@@ -197,8 +210,11 @@ Page {
                 Layout.fillHeight: true
                 Layout.leftMargin: AppTheme.pageMargin - 10
                 model: categories
+                hiddenCount: categories.hiddenCount
                 selectedCategory: page.selectedCategory
                 onCategorySelected: (id) => page.selectCategory(id)
+                onHideRequested: (id) => page.hideCategory(id)
+                onManageRequested: AppState.manageCategoriesRequested(page.sourceId, "live")
             }
 
             Item {

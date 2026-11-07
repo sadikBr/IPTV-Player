@@ -90,7 +90,16 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 2000, QStringLiteral("home-dashboard"), [=] {
                           invoke("smokeOpenSection", QStringLiteral("settings"));
                       } });
-        steps.append({ 1000, QStringLiteral("settings"), {} });
+        steps.append({ 1000, QStringLiteral("settings"), [=] {
+                          invoke("smokeManageCategories", QStringLiteral("live"));
+                      } });
+        steps.append({ 1200, QStringLiteral("categories"), [=] {
+                          invoke("smokeHideGroup", QStringLiteral("AR"));
+                      } });
+        steps.append({ 600, QStringLiteral("categories-hidden"), [=] {
+                          invoke("smokeOpenSection", QStringLiteral("live"));
+                      } });
+        steps.append({ 1200, QStringLiteral("channels-filtered"), {} });
     } else {
         steps.append({ 2000, QStringLiteral("player"), {} });
     }

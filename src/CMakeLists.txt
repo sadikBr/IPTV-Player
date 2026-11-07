@@ -42,6 +42,8 @@ qt_add_executable(iptvplayer
     models/EpisodeListModel.cpp
     models/ContinueWatchingModel.h
     models/ContinueWatchingModel.cpp
+    models/CategoryManagerModel.h
+    models/CategoryManagerModel.cpp
     player/PlayerBackend.h
     player/QtMultimediaBackend.h
     player/QtMultimediaBackend.cpp
@@ -57,11 +59,13 @@ set(QML_SOURCES
     qml/AppButton.qml
     qml/AppScrollBar.qml
     qml/AppState.qml
+    qml/AppSwitch.qml
     qml/AppTextField.qml
     qml/AppTheme.qml
     qml/Avatar.qml
     qml/BottomNav.qml
     qml/CategoryChips.qml
+    qml/CategoryMenu.qml
     qml/CategoryPanel.qml
     qml/ChannelCard.qml
     qml/ChannelDelegate.qml
@@ -74,6 +78,7 @@ set(QML_SOURCES
     qml/HomePage.qml
     qml/IconButton.qml
     qml/LivePage.qml
+    qml/ManageCategoriesPage.qml
     qml/MetaPill.qml
     qml/MovieDetailsPage.qml
     qml/NavRail.qml
@@ -99,7 +104,9 @@ set(QML_RESOURCES
     qml/icons/clock.svg
     qml/icons/close.svg
     qml/icons/delete.svg
+    qml/icons/eye-off.svg
     qml/icons/film.svg
+    qml/icons/filter.svg
     qml/icons/folder.svg
     qml/icons/fullscreen-exit.svg
     qml/icons/fullscreen.svg

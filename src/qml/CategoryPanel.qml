@@ -8,7 +8,10 @@ ListView {
     id: root
 
     property int selectedCategory: CategoryListModel.AllCategories
+    property int hiddenCount: 0
     signal categorySelected(int categoryId)
+    signal hideRequested(int categoryId)
+    signal manageRequested()
 
     clip: true
     spacing: 2
@@ -32,6 +35,12 @@ ListView {
         rightPadding: 12
         hoverEnabled: true
         onClicked: root.categorySelected(categoryId)
+        onPressAndHold: categoryMenu.openFor(categoryId, name)
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: categoryMenu.openFor(item.categoryId, item.name)
+        }
 
         background: Rectangle {
             radius: AppTheme.radiusSmall
@@ -65,5 +74,27 @@ ListView {
             height: 1
             color: AppTheme.stroke
         }
+    }
+
+    footer: AbstractButton {
+        width: root.width
+        height: 44
+        hoverEnabled: true
+        onClicked: root.manageRequested()
+        contentItem: Label {
+            leftPadding: 14
+            verticalAlignment: Text.AlignVCenter
+            text: root.hiddenCount > 0 ? qsTr("%1 hidden · Choose categories").arg(root.hiddenCount)
+                                       : qsTr("Choose categories…")
+            color: parent.hovered ? AppTheme.textPrimary : AppTheme.textTertiary
+            font.pixelSize: AppTheme.fontSmall
+        }
+        background: Item {}
+    }
+
+    CategoryMenu {
+        id: categoryMenu
+        onHideRequested: (id) => root.hideRequested(id)
+        onManageRequested: root.manageRequested()
     }
 }

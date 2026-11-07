@@ -4,6 +4,7 @@
 #include "XtreamApi.h"
 
 #include <QHash>
+#include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QVariant>
@@ -309,6 +310,59 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
         return false;
     }
     return true;
+}
+
+bool SourceStore::setCategoriesHidden(int sourceId, ContentKind kind, const QStringList &extIds,
+                                      bool hidden)
+{
+    if (!m_db.transaction()) {
+        m_lastError = m_db.lastError().text();
+        return false;
+    }
+    QSqlQuery q(m_db);
+    q.prepare(hidden ? QStringLiteral("INSERT OR IGNORE INTO hidden_categories (source_id, kind, ext_id) "
+                                      "VALUES (?, ?, ?)")
+                     : QStringLiteral("DELETE FROM hidden_categories WHERE source_id = ? AND kind = ? "
+                                      "AND ext_id = ?"));
+    for (const QString &extId : extIds) {
+        q.addBindValue(sourceId);
+        q.addBindValue(kindToString(kind));
+        q.addBindValue(text(extId));
+        if (!q.exec()) {
+            m_lastError = q.lastError().text();
+            m_db.rollback();
+            return false;
+        }
+    }
+    if (!m_db.commit()) {
+        m_lastError = m_db.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+    return true;
+}
+
+QString SourceStore::categoryGroup(const QString &name)
+{
+    static const QRegularExpression bracket(QStringLiteral(R"re(^\s*[\[(]\s*([^\])]{1,12}?)\s*[\])])re"));
+    static const QRegularExpression prefix(QStringLiteral(R"re(^\s*([A-Za-z]{2,4})\s*[|:\x{2013}\x{2014}-]\s*\S)re"));
+    auto m = bracket.match(name);
+    if (!m.hasMatch())
+        m = prefix.match(name);
+    return m.hasMatch() ? m.captured(1).trimmed().toUpper() : QString();
+}
+
+QString SourceStore::notInHiddenCategory(const QString &alias)
+{
+    return QStringLiteral("NOT EXISTS (SELECT 1 FROM categories hc JOIN hidden_categories hh "
+                          "ON hh.source_id = hc.source_id AND hh.kind = hc.kind AND hh.ext_id = hc.ext_id "
+                          "WHERE hc.id = %1.category_id)").arg(alias);
+}
+
+QString SourceStore::categoryNotHidden(const QString &alias)
+{
+    return QStringLiteral("NOT EXISTS (SELECT 1 FROM hidden_categories hh WHERE hh.source_id = %1.source_id "
+                          "AND hh.kind = %1.kind AND hh.ext_id = %1.ext_id)").arg(alias);
 }
 
 bool SourceStore::setFavorite(int sourceId, ContentKind kind, const QString &extId, bool favorite)

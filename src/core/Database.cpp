@@ -172,6 +172,15 @@ const QList<QStringList> &migrations()
         {
             QStringLiteral("ALTER TABLE sources ADD COLUMN epg_shift_minutes INTEGER NOT NULL DEFAULT 0"),
         },
+        // Version 5: categories the user doesn't want to see (by provider id, so
+        // the choice survives list updates)
+        {
+            QStringLiteral(R"(CREATE TABLE hidden_categories (
+                source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                kind TEXT NOT NULL,
+                ext_id TEXT NOT NULL,
+                PRIMARY KEY (source_id, kind, ext_id)))"),
+        },
     };
     return list;
 }

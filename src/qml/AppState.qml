@@ -19,6 +19,7 @@ QtObject {
     signal sectionRequested(string section)
     signal addProviderRequested()
     signal playStreamRequested(url url, string title)
+    signal manageCategoriesRequested(int sourceId, string kind)
 
     function refreshSource() {
         sourceInfo = sourceId > 0 ? SourceManager.source(sourceId) : ({})

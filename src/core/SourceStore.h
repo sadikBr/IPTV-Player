@@ -6,6 +6,7 @@
 #include <QList>
 #include <QSqlDatabase>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 #include <optional>
 
@@ -91,6 +92,17 @@ public:
     // Unfinished movies and episodes, most recent first (all sources).
     QList<WatchProgress> recentProgress(int limit) const;
     bool removeProgress(int sourceId, ContentKind kind, const QString &extId);
+
+    // Hidden categories: left out of category lists, "All" and search.
+    bool setCategoriesHidden(int sourceId, ContentKind kind, const QStringList &extIds, bool hidden);
+    // Language / region group from a category name: "[EN] KIDS" -> "EN",
+    // "UK | News" -> "UK", "FR: Sport" -> "FR". Empty when there is none.
+    static QString categoryGroup(const QString &name);
+
+    // SQL condition: true when channel row `alias` is not in a hidden category.
+    static QString notInHiddenCategory(const QString &alias = QStringLiteral("c"));
+    // SQL condition: true when category row `alias` is not hidden.
+    static QString categoryNotHidden(const QString &alias = QStringLiteral("cat"));
 
     bool setFavorite(int sourceId, ContentKind kind, const QString &extId, bool favorite);
     bool isFavorite(int sourceId, ContentKind kind, const QString &extId) const;

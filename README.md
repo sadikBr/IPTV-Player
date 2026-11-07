@@ -27,8 +27,13 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   with wrong time zones
 - **Movies and series:** poster grids with ratings, details pages, seasons and episodes,
   resume where you stopped, next episode after a 10 s countdown, favorites
-- **Settings:** manage providers (use, update, guide time shift, remove), User-Agent,
-  play a single stream URL
+- **Choose categories:** hide what you don't watch, per provider. Whole languages or regions
+  at once (detected from prefixes like `[EN]`, `[FR]`, `[AR]`, `UK |`), or category by
+  category with search. Hidden categories disappear from lists, search and Home; favorites
+  stay. Open it from the filter button on Live TV / Movies / Series, from Settings, or
+  right-click / long-press a category
+- **Settings:** manage providers (use, update, choose categories, guide time shift, remove),
+  User-Agent, play a single stream URL
 - Player: seek bar, audio and subtitle tracks, previous/next channel or episode, channel
   list, channel number entry, stream info, full screen
 - Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)

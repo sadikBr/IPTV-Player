@@ -14,6 +14,8 @@ class CategoryListModel : public QAbstractListModel
     // "live" (default), "movie" or "series"
     Q_PROPERTY(QString kind READ kind WRITE setKind NOTIFY kindChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // Number of categories of this kind the user has hidden
+    Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY hiddenCountChanged)
 
 public:
     enum Special { AllCategories = -1, FavoritesCategory = -2 };
@@ -34,6 +36,8 @@ public:
 
     Q_INVOKABLE int indexOf(int categoryId) const;
     Q_INVOKABLE QString nameOf(int categoryId) const;
+    Q_INVOKABLE void hideCategory(int categoryId);
+    int hiddenCount() const { return m_hiddenCount; }
 
 public slots:
     void reload();
@@ -42,6 +46,7 @@ signals:
     void sourceIdChanged();
     void kindChanged();
     void countChanged();
+    void hiddenCountChanged();
 
 private:
     struct Row
@@ -53,5 +58,6 @@ private:
 
     int m_sourceId = -1;
     QString m_kind = QStringLiteral("live");
+    int m_hiddenCount = 0;
     QList<Row> m_rows;
 };

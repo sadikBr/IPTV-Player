@@ -269,6 +269,9 @@ void ChannelListModel::reload()
         const QString search = SourceStore::searchKey(m_searchText.trimmed());
         if (!search.isEmpty()) {
             sql += QStringLiteral(" AND c.search_name LIKE :search ESCAPE '\\'");
+            sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
+        } else if (m_categoryId == CategoryListModel::AllCategories) {
+            sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
         } else if (m_categoryId == CategoryListModel::FavoritesCategory) {
             sql += QStringLiteral(" AND f.ext_id IS NOT NULL");
         } else if (m_categoryId > 0) {

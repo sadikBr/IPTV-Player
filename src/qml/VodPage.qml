@@ -20,6 +20,12 @@ Page {
 
     signal itemActivated(string extId)
 
+    function hideCategory(categoryId) {
+        if (categoryId === selectedCategory)
+            selectCategory(CategoryListModel.AllCategories)
+        categories.hideCategory(categoryId)
+    }
+
     function selectCategory(categoryId) {
         selectedCategory = categoryId
         searchField.text = ""
@@ -85,6 +91,11 @@ Page {
             }
         }
         IconButton {
+            iconName: "filter"
+            tip: qsTr("Choose categories")
+            onClicked: AppState.manageCategoriesRequested(page.sourceId, page.kind)
+        }
+        IconButton {
             iconName: "retry"
             tip: qsTr("Update lists")
             enabled: !SourceManager.busy
@@ -124,6 +135,8 @@ Page {
             model: categories
             selectedCategory: page.selectedCategory
             onCategorySelected: (id) => page.selectCategory(id)
+            onHideRequested: (id) => page.hideCategory(id)
+            onManageRequested: AppState.manageCategoriesRequested(page.sourceId, page.kind)
         }
 
         RowLayout {
@@ -137,8 +150,11 @@ Page {
                 Layout.fillHeight: true
                 Layout.leftMargin: AppTheme.pageMargin - 10
                 model: categories
+                hiddenCount: categories.hiddenCount
                 selectedCategory: page.selectedCategory
                 onCategorySelected: (id) => page.selectCategory(id)
+                onHideRequested: (id) => page.hideCategory(id)
+                onManageRequested: AppState.manageCategoriesRequested(page.sourceId, page.kind)
             }
 
             Item {

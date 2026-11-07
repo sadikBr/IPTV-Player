@@ -79,7 +79,12 @@ QtObject {
 
     // Initials for avatars: "My Provider" -> "MP"
     function initials(name) {
-        const words = (name || "?").trim().split(/\s+/)
+        // Skip prefixes like "[EN]" or "UK |" and anything that isn't a letter or digit.
+        const clean = (name || "").replace(/^\s*[\[(][^\])]*[\])]\s*/, "")
+                                  .replace(/^\s*[A-Za-z]{2,4}\s*[|:]\s*/, "")
+        const words = clean.split(/[\s|:\-_.,\/]+/).filter(w => w.length > 0)
+        if (words.length === 0)
+            return "?"
         return (words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : "")).toUpperCase()
     }
 

@@ -8,6 +8,8 @@ ListView {
 
     property int selectedCategory: CategoryListModel.AllCategories
     signal categorySelected(int categoryId)
+    signal hideRequested(int categoryId)
+    signal manageRequested()
 
     implicitHeight: 34
     orientation: ListView.Horizontal
@@ -24,5 +26,12 @@ ListView {
         text: name
         selected: categoryId === root.selectedCategory
         onClicked: root.categorySelected(categoryId)
+        onPressAndHold: categoryMenu.openFor(categoryId, name)
+    }
+
+    CategoryMenu {
+        id: categoryMenu
+        onHideRequested: (id) => root.hideRequested(id)
+        onManageRequested: root.manageRequested()
     }
 }
