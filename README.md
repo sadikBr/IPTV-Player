@@ -143,11 +143,14 @@ cmake --build build
 ./build/bin/IPTVPlayer
 ```
 
-To add it to your app launcher (with its icon):
+To add it to your app launcher (with its icon), run once:
 
 ```bash
-cmake --install build --prefix ~/.local
+tools/install-desktop-entry.sh             # --remove takes it out again
 ```
+
+The entry points at `build/bin/IPTVPlayer`, so after pulling and rebuilding the launcher
+starts the new version.
 
 If the build stops with `qmlcachegen` crashing (a bug in some Qt versions), configure
 with `-DIPTV_QML_AOT=OFF`; QML is then compiled when the app starts instead.
@@ -192,5 +195,6 @@ assets/                    app icon (all sizes), Linux .desktop file, Windows re
 android/                   Android manifest, launcher icons, launch screen
 installer/windows/         Windows installer (Inno Setup)
 tools/make_icons.py        draws the icon and writes every size (needs Pillow)
+tools/install-desktop-entry.sh  adds the app to the Linux app launcher
 .github/workflows/build.yml  CI for Linux (+ AppImage), Windows (+ installer), Android
 ```
