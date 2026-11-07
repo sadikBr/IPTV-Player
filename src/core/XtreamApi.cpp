@@ -179,6 +179,28 @@ QUrl XtreamApi::liveStreamUrl(const XtreamCredentials &creds, const QString &str
                 QUrl::StrictMode);
 }
 
+QString XtreamApi::imageUrl(const QString &value, bool backdrop)
+{
+    const QString v = value.trimmed();
+    if (v.isEmpty())
+        return {};
+    if (v.startsWith(QLatin1String("http://"), Qt::CaseInsensitive)
+        || v.startsWith(QLatin1String("https://"), Qt::CaseInsensitive))
+        return v;
+    if (v.startsWith(QLatin1String("//")))
+        return QStringLiteral("https:") + v;
+    // A bare image file name: TMDB's image server.
+    static const QRegularExpression tmdb(QStringLiteral("^/?[A-Za-z0-9_-]+\\.(jpg|jpeg|png|webp)$"),
+                                         QRegularExpression::CaseInsensitiveOption);
+    if (tmdb.match(v).hasMatch()) {
+        const QString file = v.startsWith(QLatin1Char('/')) ? v : QLatin1Char('/') + v;
+        return QStringLiteral("https://image.tmdb.org/t/p/") + (backdrop ? QStringLiteral("w1280")
+                                                                         : QStringLiteral("w500"))
+                + file;
+    }
+    return {};
+}
+
 QUrl XtreamApi::movieUrl(const XtreamCredentials &creds, const QString &streamId,
                          const QString &extension)
 {
@@ -291,7 +313,7 @@ bool XtreamApi::parseLiveStreams(const QByteArray &json, QList<ChannelData> *out
         c.name = str(o.value(QStringLiteral("name")));
         if (c.name.isEmpty())
             c.name = tr("Channel %1").arg(c.extId);
-        c.logo = str(o.value(QStringLiteral("stream_icon")));
+        c.logo = imageUrl(str(o.value(QStringLiteral("stream_icon"))));
         c.epgId = str(o.value(QStringLiteral("epg_channel_id")));
         c.number = toInt(o.value(QStringLiteral("num")));
         if (c.number <= 0)
@@ -366,7 +388,7 @@ bool XtreamApi::parseMovies(const QByteArray &json, QList<ChannelData> *out, QSt
         c.name = str(o.value(QStringLiteral("name")));
         if (c.name.isEmpty())
             c.name = tr("Movie %1").arg(c.extId);
-        c.logo = str(o.value(QStringLiteral("stream_icon")));
+        c.logo = imageUrl(str(o.value(QStringLiteral("stream_icon"))));
         c.extension = str(o.value(QStringLiteral("container_extension")));
         c.rating = ratingText(o.value(QStringLiteral("rating")));
         c.year = str(o.value(QStringLiteral("year")));
@@ -406,7 +428,7 @@ bool XtreamApi::parseSeries(const QByteArray &json, QList<ChannelData> *out, QSt
         c.name = str(o.value(QStringLiteral("name")));
         if (c.name.isEmpty())
             c.name = tr("Series %1").arg(c.extId);
-        c.logo = str(o.value(QStringLiteral("cover")));
+        c.logo = imageUrl(str(o.value(QStringLiteral("cover"))));
         c.rating = ratingText(o.value(QStringLiteral("rating")));
         QString date = str(o.value(QStringLiteral("releaseDate")));
         if (date.isEmpty())
@@ -449,7 +471,8 @@ VodDetails detailsFrom(const QJsonObject &info)
         d.poster = str(info.value(QStringLiteral("cover")));
     if (d.poster.isEmpty())
         d.poster = str(info.value(QStringLiteral("cover_big")));
-    d.backdrop = firstImage(info.value(QStringLiteral("backdrop_path")));
+    d.poster = XtreamApi::imageUrl(d.poster);
+    d.backdrop = XtreamApi::imageUrl(firstImage(info.value(QStringLiteral("backdrop_path"))), true);
     d.durationSecs = parseDuration(info);
     return d;
 }
@@ -507,7 +530,7 @@ bool XtreamApi::parseSeriesInfo(const QByteArray &json, const QString &seriesId,
             e.extension = str(o.value(QStringLiteral("container_extension")));
             const QJsonObject info = o.value(QStringLiteral("info")).toObject();
             e.plot = str(info.value(QStringLiteral("plot")));
-            e.image = str(info.value(QStringLiteral("movie_image")));
+            e.image = imageUrl(str(info.value(QStringLiteral("movie_image"))), true);
             e.durationSecs = parseDuration(info);
             result.append(std::move(e));
         }

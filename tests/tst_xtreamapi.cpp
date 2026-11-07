@@ -192,6 +192,20 @@ private slots:
         QCOMPARE(series.at(1).year, QStringLiteral("2015")); // release_date
     }
 
+    void imageUrl()
+    {
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral("http://img.example.com/a.jpg")),
+                 QStringLiteral("http://img.example.com/a.jpg"));
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral("8rft8A9nH43IReybFtYt21ezfMK.jpg"), true),
+                 QStringLiteral("https://image.tmdb.org/t/p/w1280/8rft8A9nH43IReybFtYt21ezfMK.jpg"));
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral("/pnZ9NMxRqbcJ2dPNROIoregruv5.jpg")),
+                 QStringLiteral("https://image.tmdb.org/t/p/w500/pnZ9NMxRqbcJ2dPNROIoregruv5.jpg"));
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral("//cdn.example.com/x.png")),
+                 QStringLiteral("https://cdn.example.com/x.png"));
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral("not an image")), QString());
+        QCOMPARE(XtreamApi::imageUrl(QString()), QString());
+    }
+
     void parseMovieInfo()
     {
         VodDetails d;

@@ -3,6 +3,7 @@
 #include "CategoryListModel.h"
 #include "Database.h"
 #include "EpgStore.h"
+#include "XtreamApi.h"
 
 #include <QDateTime>
 
@@ -152,7 +153,7 @@ QVariant ChannelListModel::data(const QModelIndex &index, int role) const
     case Qt::DisplayRole:
         return row.name;
     case LogoRole:
-        return row.logo;
+        return XtreamApi::imageUrl(row.logo);
     case NumberRole:
         return row.number;
     case FavoriteRole:

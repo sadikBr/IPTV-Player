@@ -1,6 +1,7 @@
 #include "ContinueWatchingModel.h"
 
 #include "Database.h"
+#include "XtreamApi.h"
 
 using namespace iptv;
 
@@ -38,7 +39,7 @@ QVariant ContinueWatchingModel::data(const QModelIndex &index, int role) const
                 ? tr("S%1 · E%2").arg(p.season).arg(p.episode)
                 : QString();
     case ImageRole:
-        return p.image;
+        return XtreamApi::imageUrl(p.image);
     case WatchedRole:
         return double(p.positionMs) / double(qMax<qint64>(1, p.durationMs));
     case RemainingRole:

@@ -51,6 +51,10 @@ public:
     static QUrl episodeUrl(const XtreamCredentials &creds, const QString &episodeId,
                            const QString &extension);
 
+    // Image fields sometimes hold only a TMDB file name ("abc.jpg" or "/abc.jpg").
+    // Returns a full URL for those, the input for full URLs, and "" otherwise.
+    static QString imageUrl(const QString &value, bool backdrop = false);
+
     static bool parseAccount(const QByteArray &json, XtreamAccount *out, QString *error);
     static bool parseCategories(const QByteArray &json, ContentKind kind,
                                 QList<CategoryData> *out, QString *error);

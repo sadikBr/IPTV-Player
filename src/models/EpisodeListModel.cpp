@@ -1,6 +1,7 @@
 #include "EpisodeListModel.h"
 
 #include "Database.h"
+#include "XtreamApi.h"
 
 using namespace iptv;
 
@@ -72,7 +73,7 @@ QVariant EpisodeListModel::data(const QModelIndex &index, int role) const
     case PlotRole:
         return e.plot;
     case ImageRole:
-        return e.image;
+        return XtreamApi::imageUrl(e.image, true);
     case DurationRole:
         return e.durationSecs;
     case WatchedRole:
@@ -99,7 +100,8 @@ QVariantMap EpisodeListModel::get(int row) const
     return {
         { QStringLiteral("extId"), e.extId },     { QStringLiteral("title"), e.title },
         { QStringLiteral("season"), e.season },   { QStringLiteral("episode"), e.episode },
-        { QStringLiteral("plot"), e.plot },       { QStringLiteral("image"), e.image },
+        { QStringLiteral("plot"), e.plot },
+        { QStringLiteral("image"), XtreamApi::imageUrl(e.image, true) },
         { QStringLiteral("durationSecs"), e.durationSecs },
         { QStringLiteral("watched"), m_rows.at(row).watched },
     };

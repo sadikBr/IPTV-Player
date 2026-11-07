@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 import QtMultimedia
@@ -80,6 +81,7 @@ Page {
         index = ((index % count) + count) % count
         const channel = channelModel.get(index)
         channelIndex = index
+        resetRetries()
         streamTitle = channel.number + "  " + channel.name
         currentFavorite = channel.favorite
         currentEpgKey = channel.epgKey
@@ -290,48 +292,135 @@ Page {
         }
     }
 
-    // Error state
-    Pane {
+    // --- Errors: friendly message, automatic retries for live channels ---
+
+    readonly property bool liveContext: !isVod
+    readonly property var retryDelays: [5, 10, 20]
+    property int retryAttempt: 0
+    property int retryCountdown: 0
+
+    function resetRetries() {
+        retryAttempt = 0
+        retryCountdown = 0
+    }
+
+    Connections {
+        target: player
+        function onFailedChanged() {
+            if (player.failed && page.liveContext && page.retryAttempt < page.retryDelays.length)
+                page.retryCountdown = page.retryDelays[page.retryAttempt]
+        }
+        function onPlayingChanged() {
+            if (player.playing)
+                page.resetRetries()
+        }
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: player.failed && page.retryCountdown > 0
+        onTriggered: {
+            if (--page.retryCountdown <= 0) {
+                page.retryAttempt++
+                player.retry()
+            }
+        }
+    }
+
+    Rectangle {
         anchors.centerIn: parent
-        width: Math.min(page.width - 2 * AppTheme.margin, 460)
+        width: Math.min(page.width - 2 * AppTheme.margin, 480)
+        height: errorColumn.implicitHeight + 48
         visible: player.failed
-        padding: AppTheme.margin
-        background: Rectangle { color: AppTheme.surface; radius: AppTheme.radius }
+        radius: AppTheme.radiusLarge
+        color: "#F2141418"
+        border.color: AppTheme.stroke
 
         ColumnLayout {
+            id: errorColumn
             anchors.left: parent.left
             anchors.right: parent.right
-            spacing: AppTheme.spacing
+            anchors.top: parent.top
+            anchors.margins: 24
+            spacing: 12
 
-            Label {
-                text: qsTr("Can't play this stream")
-                font.pixelSize: 18
-                font.bold: true
-                color: AppTheme.textPrimary
+            RowLayout {
+                spacing: 14
+                Rectangle {
+                    Layout.preferredWidth: 44
+                    Layout.preferredHeight: 44
+                    radius: 22
+                    color: "#26FF3B4E"
+                    IconImage {
+                        anchors.centerIn: parent
+                        source: page.liveContext ? "icons/live.svg" : "icons/film.svg"
+                        sourceSize: Qt.size(22, 22)
+                        color: AppTheme.live
+                    }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    text: page.liveContext ? qsTr("Channel unavailable") : qsTr("Can't play this video")
+                    wrapMode: Text.Wrap
+                    font.pixelSize: AppTheme.fontH2
+                    font.weight: Font.Bold
+                    color: AppTheme.textPrimary
+                }
             }
             Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 color: AppTheme.textSecondary
-                text: player.errorString
+                lineHeight: 1.25
+                text: page.liveContext
+                      ? qsTr("This channel isn't sending a picture right now. It may be off air at "
+                             + "the moment, or your provider has a problem with it.")
+                      : qsTr("Your provider couldn't deliver this file. Try again in a moment.")
             }
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
+            Label {
+                Layout.fillWidth: true
+                visible: page.liveContext
+                color: page.retryCountdown > 0 ? AppTheme.textPrimary : AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontSmall
+                text: page.retryCountdown > 0
+                      ? qsTr("Trying again in %1 s… (attempt %2 of %3)")
+                            .arg(page.retryCountdown).arg(page.retryAttempt + 1).arg(page.retryDelays.length)
+                      : page.retryAttempt >= page.retryDelays.length
+                        ? qsTr("Tried %1 times without success.").arg(page.retryDelays.length) : ""
+            }
+            Label {
+                Layout.fillWidth: true
+                visible: player.errorString.length > 0
+                wrapMode: Text.Wrap
+                color: AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontCaption
+                text: qsTr("Details: %1").arg(player.errorString)
+            }
+            Flow {
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                spacing: 10
+                layoutDirection: Qt.RightToLeft
                 AppButton {
-                    text: qsTr("Back")
-                    variant: "ghost"
-                    onClicked: page.closeRequested()
+                    text: qsTr("Try again")
+                    iconName: "retry"
+                    onClicked: {
+                        page.resetRetries()
+                        player.retry()
+                    }
                 }
                 AppButton {
                     text: qsTr("Next channel")
+                    iconName: "next"
                     visible: page.hasChannels
                     variant: "secondary"
                     onClicked: page.playChannel(page.channelIndex + 1)
                 }
                 AppButton {
-                    text: qsTr("Retry")
-                    iconName: "retry"
-                    onClicked: player.retry()
+                    text: qsTr("Back")
+                    variant: "ghost"
+                    onClicked: page.closeRequested()
                 }
             }
         }

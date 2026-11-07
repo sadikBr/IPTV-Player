@@ -44,11 +44,15 @@ QVariantMap VodManager::describe(int sourceId, int kindValue, const QString &ext
     if (year.isEmpty() && details.releaseDate.size() >= 4)
         year = details.releaseDate.left(4);
 
+    // Older cached details may hold bare TMDB file names.
+    const QString poster = XtreamApi::imageUrl(pick(item->logo, details.poster));
+    const QString backdrop = XtreamApi::imageUrl(details.backdrop, true);
+
     return {
         { QStringLiteral("extId"), item->extId },
         { QStringLiteral("name"), item->name },
-        { QStringLiteral("poster"), pick(item->logo, details.poster) },
-        { QStringLiteral("backdrop"), details.backdrop },
+        { QStringLiteral("poster"), poster },
+        { QStringLiteral("backdrop"), backdrop },
         { QStringLiteral("year"), year },
         { QStringLiteral("rating"), pick(details.rating, item->rating) },
         { QStringLiteral("genre"), pick(details.genre, item->genre) },
