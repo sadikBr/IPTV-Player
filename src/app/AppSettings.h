@@ -21,6 +21,12 @@ class AppSettings : public QObject
     Q_PROPERTY(QString defaultUserAgent READ defaultUserAgent CONSTANT)
     // Live TV layout: "grid" or "list"
     Q_PROPERTY(QString liveViewMode READ liveViewMode WRITE setLiveViewMode NOTIFY liveViewModeChanged)
+    // Playback (Settings → Playback)
+    Q_PROPERTY(bool autoReconnect READ autoReconnect WRITE setAutoReconnect NOTIFY playbackChanged)
+    Q_PROPERTY(bool lowLatency READ lowLatency WRITE setLowLatency NOTIFY playbackChanged)
+    Q_PROPERTY(bool lowLatencySupported READ lowLatencySupported CONSTANT)
+    // Takes effect after a restart.
+    Q_PROPERTY(bool hardwareDecoding READ hardwareDecoding WRITE setHardwareDecoding NOTIFY playbackChanged)
     Q_PROPERTY(int lastSourceId READ lastSourceId WRITE setLastSourceId NOTIFY lastSourceIdChanged)
     Q_PROPERTY(int lastChannelSourceId READ lastChannelSourceId NOTIFY lastChannelChanged)
     Q_PROPERTY(QString lastChannelExtId READ lastChannelExtId NOTIFY lastChannelChanged)
@@ -46,6 +52,16 @@ public:
     QString liveViewMode() const;
     void setLiveViewMode(const QString &mode);
 
+    bool autoReconnect() const;
+    void setAutoReconnect(bool on);
+    bool lowLatency() const;
+    void setLowLatency(bool on);
+    bool lowLatencySupported() const;
+    bool hardwareDecoding() const;
+    void setHardwareDecoding(bool on);
+    // Called once at start-up, before any video plays.
+    static void applyHardwareDecodingSetting();
+
     QString userAgent() const;
     QString defaultUserAgent() const;
     void setUserAgent(const QString &userAgent);
@@ -65,6 +81,7 @@ signals:
     void volumeChanged();
     void userAgentChanged();
     void liveViewModeChanged();
+    void playbackChanged();
     void lastSourceIdChanged();
     void lastChannelChanged();
 

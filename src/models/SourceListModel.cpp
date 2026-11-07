@@ -48,6 +48,8 @@ QVariant SourceListModel::data(const QModelIndex &index, int role) const
         return s.epgCount;
     case EpgShiftRole:
         return s.epgShiftMinutes;
+    case OutputFormatRole:
+        return s.outputFormat;
     case MovieCountRole:
         return s.movieCount;
     case SeriesCountRole:
@@ -75,6 +77,7 @@ QHash<int, QByteArray> SourceListModel::roleNames() const
         { EpgShiftRole, "epgShiftMinutes" },
         { MovieCountRole, "movieCount" },
         { SeriesCountRole, "seriesCount" },
+        { OutputFormatRole, "outputFormat" },
     };
 }
 

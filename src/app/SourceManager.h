@@ -52,6 +52,8 @@ public:
     Q_INVOKABLE void removeSource(int sourceId);
     // Corrects TV guide times of a provider by this many minutes.
     Q_INVOKABLE void setEpgShift(int sourceId, int minutes);
+    // Live stream format for an Xtream provider: "ts" or "m3u8" (HLS).
+    Q_INVOKABLE void setOutputFormat(int sourceId, const QString &format);
     Q_INVOKABLE void cancel();
 
     Q_INVOKABLE QVariantMap source(int sourceId) const;

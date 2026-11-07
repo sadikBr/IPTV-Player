@@ -63,6 +63,7 @@ set(QML_SOURCES
     qml/Main.qml
     qml/AddSourcePage.qml
     qml/AppButton.qml
+    qml/AppDialog.qml
     qml/AppScrollBar.qml
     qml/AppState.qml
     qml/AppSwitch.qml

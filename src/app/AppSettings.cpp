@@ -132,6 +132,61 @@ void AppSettings::setUserAgent(const QString &userAgent)
     emit userAgentChanged();
 }
 
+bool AppSettings::autoReconnect() const
+{
+    return m_settings.value(QStringLiteral("playback/autoReconnect"), true).toBool();
+}
+
+void AppSettings::setAutoReconnect(bool on)
+{
+    if (on == autoReconnect())
+        return;
+    m_settings.setValue(QStringLiteral("playback/autoReconnect"), on);
+    emit playbackChanged();
+}
+
+bool AppSettings::lowLatency() const
+{
+    return m_settings.value(QStringLiteral("playback/lowLatency"), false).toBool();
+}
+
+void AppSettings::setLowLatency(bool on)
+{
+    if (on == lowLatency())
+        return;
+    m_settings.setValue(QStringLiteral("playback/lowLatency"), on);
+    emit playbackChanged();
+}
+
+bool AppSettings::lowLatencySupported() const
+{
+    // Qt Multimedia's playback options exist from Qt 6.10.
+    return QT_VERSION >= QT_VERSION_CHECK(6, 10, 0);
+}
+
+bool AppSettings::hardwareDecoding() const
+{
+    return m_settings.value(QStringLiteral("playback/hardwareDecoding"), true).toBool();
+}
+
+void AppSettings::setHardwareDecoding(bool on)
+{
+    if (on == hardwareDecoding())
+        return;
+    m_settings.setValue(QStringLiteral("playback/hardwareDecoding"), on);
+    emit playbackChanged();
+}
+
+void AppSettings::applyHardwareDecodingSetting()
+{
+    // Qt's FFmpeg engine reads this once; an empty list means software
+    // decoding. A value the user set themselves is left alone.
+    if (qEnvironmentVariableIsSet("QT_FFMPEG_DECODING_HW_DEVICE_TYPES"))
+        return;
+    if (!QSettings().value(QStringLiteral("playback/hardwareDecoding"), true).toBool())
+        qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "");
+}
+
 QString AppSettings::liveViewMode() const
 {
     return m_settings.value(QStringLiteral("browse/liveViewMode"), QStringLiteral("grid")).toString();

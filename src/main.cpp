@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QQuickItem>
+#include "app/AppSettings.h"
 #include "app/SpatialNavigation.h"
 #include <QImage>
 #include <QQmlApplicationEngine>
@@ -213,6 +214,8 @@ int main(int argc, char *argv[])
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, dataDir);
     }
+    AppSettings::applyHardwareDecodingSetting();
+
     QString dbError;
     if (!iptv::Database::initialize(QDir(dataDir).filePath(QStringLiteral("iptv.sqlite")),
                                     &dbError)) {

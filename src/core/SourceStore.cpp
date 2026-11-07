@@ -154,6 +154,19 @@ bool SourceStore::setEpgShift(int id, int minutes)
     return true;
 }
 
+bool SourceStore::setOutputFormat(int id, const QString &format)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("UPDATE sources SET output_format = ? WHERE id = ?"));
+    q.addBindValue(format == QLatin1String("m3u8") ? QStringLiteral("m3u8") : QStringLiteral("ts"));
+    q.addBindValue(id);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
 bool SourceStore::removeSource(int id)
 {
     QSqlQuery q(m_db);

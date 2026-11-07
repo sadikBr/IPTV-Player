@@ -160,6 +160,8 @@ Page {
     PlayerController {
         id: player
         vod: page.isVod
+        autoReconnect: AppSettings.autoReconnect
+        lowLatency: AppSettings.lowLatency
         onVolumeChanged: AppSettings.volume = volume
         onEnded: {
             page.markFinished()

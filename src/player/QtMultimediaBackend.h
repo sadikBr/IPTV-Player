@@ -18,6 +18,8 @@ public:
 
     void setVideoOutput(QObject *output) override;
     void setSource(const QUrl &url) override;
+    bool supportsLowLatency() const override;
+    void setLowLatency(bool on) override;
     void play() override;
     void pause() override;
     void stop() override;
@@ -47,5 +49,6 @@ private:
     QAudioOutput *m_audio = nullptr;
     State m_state = State::Stopped;
     bool m_hasError = false;
+    bool m_lowLatency = false;
     QString m_streamInfo;
 };

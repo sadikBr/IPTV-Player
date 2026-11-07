@@ -365,15 +365,13 @@ Page {
     }
 
     // Program details
-    Dialog {
+    AppDialog {
         id: details
         property var program: null
         property int channelIndex: -1
         property string channelName
 
-        anchors.centerIn: parent
         width: Math.min(page.width - 32, 480)
-        modal: true
         title: program ? program.title : ""
         standardButtons: Dialog.Close
 

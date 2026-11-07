@@ -32,8 +32,10 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   category with search. Hidden categories disappear from lists, search and Home; favorites
   stay. Open it from the filter button on Live TV / Movies / Series, from Settings, or
   right-click / long-press a category
-- **Settings:** manage providers (use, update, choose categories, guide time shift, remove),
-  User-Agent, play a single stream URL
+- **Settings:** manage providers (use, update, choose categories, remove; the gear button
+  sets the live stream format, MPEG-TS or HLS, and the guide time shift), playback
+  (automatic reconnect, start channels faster, hardware decoding), User-Agent, updates,
+  play a single stream URL
 - **Automatic reconnect:** when a stream that was playing drops, freezes or stays stuck
   buffering, the player reconnects by itself (up to 5 tries). Live channels pick up at
   "now", movies and episodes where they were
@@ -52,8 +54,12 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 - **"The server closed the connection" / "Connection reset by peer":** many providers only
   answer clients that look like a known player. The app identifies itself as VLC
   (`VLC/3.0.20 LibVLC/3.0.20`). To use a different one, go to **Settings → Network**.
-- **Guide times are off by a fixed amount:** Settings → Providers → clock button, and
+- **Guide times are off by a fixed amount:** Settings → Providers → gear button, and
   shift that provider's guide by the difference.
+- **Channels don't start or keep stopping:** Settings → Providers → gear button, switch
+  the live stream format (MPEG-TS ↔ HLS).
+- **Green or garbled picture:** Settings → Playback → turn off Hardware decoding and
+  restart the app.
 - **"Network unreachable":** the network or DNS hands out an address that can't be
   reached (for example a `64:ff9b::` IPv6 address on a network without IPv6). Check the
   connection, VPN and DNS settings.

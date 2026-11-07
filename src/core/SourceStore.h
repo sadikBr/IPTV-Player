@@ -69,6 +69,8 @@ public:
     bool updateSource(const SourceRecord &source);
     bool removeSource(int id);
     bool setEpgShift(int id, int minutes);
+    // Xtream live streams: "ts" or "m3u8" (HLS)
+    bool setOutputFormat(int id, const QString &format);
 
     // Replaces all categories and channels of a source in one transaction and
     // updates its live channel count. Favorites are kept (they use ext_id).

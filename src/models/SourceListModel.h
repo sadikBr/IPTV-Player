@@ -30,6 +30,7 @@ public:
         EpgShiftRole,
         MovieCountRole,
         SeriesCountRole,
+        OutputFormatRole,
     };
 
     explicit SourceListModel(QObject *parent = nullptr);

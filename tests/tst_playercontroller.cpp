@@ -13,6 +13,8 @@ public:
 
     QString name() const override { return QStringLiteral("fake"); }
     void setVideoOutput(QObject *) override {}
+    bool supportsLowLatency() const override { return true; }
+    void setLowLatency(bool on) override { lowLatency = on; }
     void setSource(const QUrl &url) override
     {
         source = url;
@@ -73,6 +75,7 @@ public:
     qint64 pos = 0;
     qint64 dur = 0;
     qint64 lastSeek = -1;
+    bool lowLatency = false;
 
 private:
     State m_state = State::Stopped;
@@ -206,6 +209,32 @@ private slots:
         // Opening again starts over.
         player->open(url);
         QVERIFY(!player->hasFailed());
+    }
+
+    void reconnectCanBeTurnedOff()
+    {
+        QObject owner;
+        auto [backend, player] = make(&owner);
+        player->setAutoReconnect(false);
+        player->open(url);
+        backend->startPlaying();
+        backend->fail();
+        QVERIFY(!player->isReconnecting());
+        QVERIFY(player->hasFailed());
+        QTest::qWait(200);
+        QCOMPARE(backend->sourceCount, 1);
+    }
+
+    void lowLatencyOnlyForLiveTv()
+    {
+        QObject owner;
+        auto [backend, player] = make(&owner);
+        player->setLowLatency(true);
+        player->open(url);
+        QVERIFY(backend->lowLatency);
+        player->setVod(true);
+        player->open(QUrl(QStringLiteral("http://example.com/movie/1.mp4")));
+        QVERIFY(!backend->lowLatency);
     }
 
     void pauseCancelsReconnect()

@@ -157,6 +157,8 @@ void PlayerController::startSource(qint64 startPositionMs)
         m_watchdog->stop();
         return;
     }
+    // Low latency only makes sense for live TV; movies keep full buffering.
+    m_backend->setLowLatency(m_lowLatency && !m_vod);
     m_backend->setSource(m_source);
     m_backend->setVolume(m_volume);
     m_backend->setMuted(m_muted);
@@ -252,11 +254,29 @@ void PlayerController::checkStall()
         scheduleReconnect();
 }
 
+void PlayerController::setAutoReconnect(bool on)
+{
+    if (on == m_autoReconnect)
+        return;
+    m_autoReconnect = on;
+    if (!on)
+        cancelReconnect();
+    emit optionsChanged();
+}
+
+void PlayerController::setLowLatency(bool on)
+{
+    if (on == m_lowLatency)
+        return;
+    m_lowLatency = on;
+    emit optionsChanged();
+}
+
 void PlayerController::scheduleReconnect()
 {
     if (m_reconnectTimer->isActive())
         return;
-    if (m_reconnectAttempts >= m_reconnectDelaysMs.size()) {
+    if (!m_autoReconnect || m_reconnectAttempts >= m_reconnectDelaysMs.size()) {
         // Give up: the page shows the error and its own retry options.
         m_reconnecting = false;
         m_gaveUp = true;

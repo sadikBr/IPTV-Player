@@ -5,6 +5,9 @@
 #include <QMediaFormat>
 #include <QMediaMetaData>
 #include <QMediaPlayer>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+#include <QPlaybackOptions>
+#endif
 #include <QSize>
 #include <QStringList>
 
@@ -93,9 +96,31 @@ void QtMultimediaBackend::setVideoOutput(QObject *output)
     m_player->setVideoOutput(output);
 }
 
+bool QtMultimediaBackend::supportsLowLatency() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    return true;
+#else
+    return false;
+#endif
+}
+
+void QtMultimediaBackend::setLowLatency(bool on)
+{
+    m_lowLatency = on;
+}
+
 void QtMultimediaBackend::setSource(const QUrl &url)
 {
     m_hasError = false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    // Options are read when a source is set.
+    QPlaybackOptions options;
+    options.setPlaybackIntent(m_lowLatency ? QPlaybackOptions::PlaybackIntent::LowLatencyStreaming
+                                           : QPlaybackOptions::PlaybackIntent::Playback);
+    if (m_player->playbackOptions() != options)
+        m_player->setPlaybackOptions(options);
+#endif
     m_player->setSource(url);
     updateState();
     updateStreamInfo();

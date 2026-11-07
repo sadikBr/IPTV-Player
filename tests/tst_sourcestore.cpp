@@ -81,6 +81,14 @@ private slots:
 
         const QUrl url = SourceStore::streamUrl(*read, ContentKind::Live, QStringLiteral("42"), {});
         QCOMPARE(url.toString(), QStringLiteral("http://example.com:8080/live/john/secret/42.m3u8"));
+
+        // Switching the stream format later (Settings → provider options)
+        QVERIFY(store.setOutputFormat(id, QStringLiteral("ts")));
+        QCOMPARE(SourceStore::streamUrl(*store.source(id), ContentKind::Live, QStringLiteral("42"), {})
+                         .toString(),
+                 QStringLiteral("http://example.com:8080/live/john/secret/42.ts"));
+        QVERIFY(store.setOutputFormat(id, QStringLiteral("nonsense")));
+        QCOMPARE(store.source(id)->outputFormat, QStringLiteral("ts"));
     }
 
     void replaceContentKeepsFavorites()

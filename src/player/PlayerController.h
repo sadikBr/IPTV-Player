@@ -42,6 +42,10 @@ class PlayerController : public QObject
     Q_PROPERTY(bool reconnecting READ isReconnecting NOTIFY stateChanged)
     Q_PROPERTY(int reconnectAttempt READ reconnectAttempt NOTIFY stateChanged)
     Q_PROPERTY(int maxReconnectAttempts READ maxReconnectAttempts CONSTANT)
+    // Reconnect by itself when a stream drops (Settings → Playback).
+    Q_PROPERTY(bool autoReconnect READ autoReconnect WRITE setAutoReconnect NOTIFY optionsChanged)
+    // Less buffering on live TV, if the engine supports it.
+    Q_PROPERTY(bool lowLatency READ lowLatency WRITE setLowLatency NOTIFY optionsChanged)
 
 public:
     explicit PlayerController(QObject *parent = nullptr);
@@ -83,6 +87,10 @@ public:
     bool isReconnecting() const { return m_reconnecting; }
     int reconnectAttempt() const { return m_reconnectAttempts; }
     int maxReconnectAttempts() const { return int(m_reconnectDelaysMs.size()); }
+    bool autoReconnect() const { return m_autoReconnect; }
+    void setAutoReconnect(bool on);
+    bool lowLatency() const { return m_lowLatency; }
+    void setLowLatency(bool on);
 
     // Tuning (tests shorten these).
     void setReconnectTiming(int stallTimeoutMs, int stableAfterMs, const QList<int> &delaysMs);
@@ -113,6 +121,7 @@ signals:
     void vodChanged();
     void tracksChanged();
     void ended();
+    void optionsChanged();
 
 private:
     void init();
@@ -145,6 +154,8 @@ private:
     QTimer *m_reconnectTimer = nullptr;
     QElapsedTimer m_sinceProgress;   // last time playback moved on
     QElapsedTimer m_playingSince;    // playing without trouble since
+    bool m_autoReconnect = true;
+    bool m_lowLatency = false;
     bool m_hasPlayed = false;        // reached Playing since open()
     bool m_positionMoves = false;    // the backend reports a moving position
     bool m_reconnecting = false;

@@ -240,6 +240,12 @@ void SourceManager::setEpgShift(int sourceId, int minutes)
     emit DataNotifier::instance()->epgChanged(sourceId);
 }
 
+void SourceManager::setOutputFormat(int sourceId, const QString &format)
+{
+    SourceStore(Database::connection()).setOutputFormat(sourceId, format);
+    emit DataNotifier::instance()->sourcesChanged();
+}
+
 void SourceManager::cancel()
 {
     if (!m_busy)

@@ -11,6 +11,10 @@ the app's update dialog. Keep it short and written for people using the app.
 - **Keyboard and TV remote:** the arrow keys move between everything on screen (side bar,
   categories, rows, buttons), Enter / OK opens, Escape / Back goes back.
 - **Reconnects by itself** when a channel or movie drops, freezes or keeps buffering.
+- **Playback settings:** turn automatic reconnecting off, start channels faster (less
+  buffering), or switch hardware decoding off if the picture looks wrong.
+- **Stream format per provider:** MPEG-TS or HLS, changeable any time (Settings → the
+  gear button of a provider). Try the other one if channels don't start.
 - **New app icon**, and a dark launch screen on Android.
 - **Windows installer** and **Linux AppImage**.
 - Series: all episode cards are the same size, and episode titles leave out the

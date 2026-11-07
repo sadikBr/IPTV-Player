@@ -92,6 +92,39 @@ Page {
                 }
             }
 
+            // --- Playback ---
+            Section {
+                title: qsTr("Playback")
+                Card {
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 16
+                        SwitchRow {
+                            title: qsTr("Reconnect automatically")
+                            description: qsTr("When a channel or movie drops, freezes or keeps buffering, "
+                                              + "connect again by itself.")
+                            checked: AppSettings.autoReconnect
+                            onToggled: (on) => AppSettings.autoReconnect = on
+                        }
+                        SwitchRow {
+                            visible: AppSettings.lowLatencySupported
+                            title: qsTr("Start channels faster")
+                            description: qsTr("Less buffering on live TV: channels start and switch "
+                                              + "sooner, but may stutter on a slow connection.")
+                            checked: AppSettings.lowLatency
+                            onToggled: (on) => AppSettings.lowLatency = on
+                        }
+                        SwitchRow {
+                            title: qsTr("Hardware decoding")
+                            description: qsTr("Uses the graphics card to decode video. Turn it off if you "
+                                              + "see a green or garbled picture. Applies after restarting the app.")
+                            checked: AppSettings.hardwareDecoding
+                            onToggled: (on) => AppSettings.hardwareDecoding = on
+                        }
+                    }
+                }
+            }
+
             // --- Network ---
             Section {
                 title: qsTr("Network")
@@ -340,13 +373,11 @@ Page {
 
     // --- Dialogs ---
 
-    Dialog {
+    AppDialog {
         id: removeDialog
         property int sourceId: -1
         property string sourceName
-        anchors.centerIn: parent
         width: Math.min(page.width - 48, 440)
-        modal: true
         title: qsTr("Remove provider?")
         standardButtons: Dialog.Cancel | Dialog.Ok
         Label {
@@ -358,27 +389,66 @@ Page {
         onAccepted: SourceManager.removeSource(sourceId)
     }
 
-    Dialog {
+    AppDialog {
         id: shiftDialog
         property int sourceId: -1
         property string sourceName
-        anchors.centerIn: parent
-        width: Math.min(page.width - 48, 460)
-        modal: true
-        title: qsTr("TV guide time shift")
+        property bool isXtream: false
+        property string format: "ts"
+        width: Math.min(page.width - 48, 480)
+        title: qsTr("Options for “%1”").arg(sourceName)
         standardButtons: Dialog.Cancel | Dialog.Ok
-        onAccepted: SourceManager.setEpgShift(sourceId, shiftBox.value)
+        onAccepted: {
+            SourceManager.setEpgShift(sourceId, shiftBox.value)
+            if (isXtream)
+                SourceManager.setOutputFormat(sourceId, format)
+        }
 
         ColumnLayout {
             width: shiftDialog.availableWidth
             spacing: AppTheme.spacing
+
+            // Stream format (Xtream live channels)
+            Label {
+                visible: shiftDialog.isXtream
+                text: qsTr("Live stream format")
+                font.weight: Font.DemiBold
+                color: AppTheme.textPrimary
+            }
+            Label {
+                visible: shiftDialog.isXtream
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: AppTheme.textSecondary
+                text: qsTr("If channels don't start or keep stopping, try the other format.")
+            }
+            Row {
+                visible: shiftDialog.isXtream
+                spacing: 8
+                Chip {
+                    text: qsTr("MPEG-TS")
+                    selected: shiftDialog.format === "ts"
+                    onClicked: shiftDialog.format = "ts"
+                }
+                Chip {
+                    text: qsTr("HLS (m3u8)")
+                    selected: shiftDialog.format === "m3u8"
+                    onClicked: shiftDialog.format = "m3u8"
+                }
+            }
+
+            Label {
+                Layout.topMargin: shiftDialog.isXtream ? 10 : 0
+                text: qsTr("TV guide time shift")
+                font.weight: Font.DemiBold
+                color: AppTheme.textPrimary
+            }
             Label {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 color: AppTheme.textSecondary
-                text: qsTr("If programs in the guide for “%1” start too early or too late, move "
+                text: qsTr("If programs in the guide start too early or too late, move "
                            + "all of them by this amount. Positive values make programs later.")
-                        .arg(shiftDialog.sourceName)
             }
             SpinBox {
                 id: shiftBox
@@ -425,6 +495,47 @@ Page {
         }
     }
 
+    // A setting with a title, an explanation and a switch. Plain anchors:
+    // wrapped text inside nested layouts gets the row heights wrong.
+    component SwitchRow: Item {
+        id: switchRow
+        property string title
+        property string description
+        property bool checked
+        signal toggled(bool on)
+        Layout.fillWidth: true
+        implicitHeight: Math.max(texts.implicitHeight, toggle.implicitHeight)
+        Column {
+            id: texts
+            anchors.left: parent.left
+            anchors.right: toggle.left
+            anchors.rightMargin: AppTheme.spacing
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 2
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: switchRow.title
+                font.weight: Font.DemiBold
+                color: AppTheme.textPrimary
+            }
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: switchRow.description
+                color: AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontCaption
+            }
+        }
+        AppSwitch {
+            id: toggle
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: switchRow.checked
+            onToggled: switchRow.toggled(checked)
+        }
+    }
+
     component Card: Rectangle {
         default property alias content: inner.data
         Layout.fillWidth: true
@@ -456,6 +567,7 @@ Page {
         required property int epgCount
         required property var epgLastSync
         required property int epgShiftMinutes
+        required property string outputFormat
         readonly property bool syncing: (SourceManager.busy && SourceManager.activeSourceId === sourceId)
                                         || (EpgManager.busy && EpgManager.activeSourceId === sourceId)
         readonly property bool expiresSoon: expiresAt && !isNaN(expiresAt.getTime())
@@ -537,7 +649,8 @@ Page {
                               ? (SourceManager.busy ? SourceManager.statusText : EpgManager.statusText)
                               : [qsTr("Updated %1").arg(page.timeAgo(row.lastSync)),
                                  row.epgCount > 0 ? qsTr("guide %1").arg(page.timeAgo(row.epgLastSync)) : "",
-                                 row.epgShiftMinutes !== 0 ? qsTr("guide shifted %1").arg(page.shiftText(row.epgShiftMinutes)) : ""]
+                                 row.epgShiftMinutes !== 0 ? qsTr("guide shifted %1").arg(page.shiftText(row.epgShiftMinutes)) : "",
+                                 row.type === "xtream" && row.outputFormat === "m3u8" ? qsTr("HLS streams") : ""]
                                 .filter(t => t).join("  ·  ")
                     }
                     Label {
@@ -588,11 +701,13 @@ Page {
                     onClicked: AppState.manageCategoriesRequested(row.sourceId, "live")
                 }
                 IconButton {
-                    iconName: "clock"
-                    tip: qsTr("TV guide time shift")
+                    iconName: "settings"
+                    tip: qsTr("Provider options: stream format, TV guide time shift")
                     onClicked: {
                         shiftDialog.sourceId = row.sourceId
                         shiftDialog.sourceName = row.name
+                        shiftDialog.isXtream = row.type === "xtream"
+                        shiftDialog.format = row.outputFormat || "ts"
                         shiftBox.value = row.epgShiftMinutes
                         shiftDialog.open()
                     }

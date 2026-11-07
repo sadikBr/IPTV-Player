@@ -25,6 +25,11 @@ public:
     virtual void setVideoOutput(QObject *output) = 0;
 
     virtual void setSource(const QUrl &url) = 0;
+    // Less buffering for live TV: starts faster, may stutter on slow
+    // connections. Applies from the next setSource(). Not every engine or
+    // Qt version supports it (see supportsLowLatency()).
+    virtual bool supportsLowLatency() const { return false; }
+    virtual void setLowLatency(bool on) { Q_UNUSED(on); }
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0;

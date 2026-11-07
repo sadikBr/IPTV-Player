@@ -107,11 +107,33 @@ bool SpatialNavigation::eventFilter(QObject *watched, QEvent *event)
 
     // Let the page have it first.
     m_delivering = true;
-    key->setAccepted(true);
-    QCoreApplication::sendEvent(m_window, key);
+    QQuickItem *before = m_window->activeFocusItem();
+    QQuickItem *popup = nullptr;
+    for (QQuickItem *item = before; item; item = item->parentItem()) {
+        if (item->inherits("QQuickPopupItem")) {
+            popup = item;
+            break;
+        }
+    }
+    if (popup && before != popup) {
+        // Inside a dialog: the dialog itself takes every key, so offer it to
+        // the focused control and its parents up to (not including) the
+        // dialog, like Qt does for the window.
+        key->setAccepted(false);
+        for (QQuickItem *item = before; item && item != popup && !key->isAccepted();
+             item = item->parentItem()) {
+            key->setAccepted(true);
+            QCoreApplication::sendEvent(item, key);
+        }
+    } else {
+        key->setAccepted(true);
+        QCoreApplication::sendEvent(m_window, key);
+    }
     m_delivering = false;
     QQuickItem *focus = m_window->activeFocusItem();
-    const bool nothingFocused = !focus || focus == m_window->contentItem();
+    // A dialog that has focus itself (not one of its buttons) swallows keys.
+    const bool nothingFocused = !focus || focus == m_window->contentItem()
+            || focus->inherits("QQuickPopupItem");
     if (key->isAccepted() && !nothingFocused)
         return true;
 
@@ -363,8 +385,13 @@ bool SpatialNavigation::activate()
                 QMetaObject::invokeMethod(item, "clicked");
             return true;
         }
-        if (item->activeFocusOnTab())
+        if (item->inherits("QQuickPopupItem")) {
+            // Enter on a field in a dialog (e.g. a number box): OK.
+            QObject *popup = item->parent();
+            if (popup && popup->inherits("QQuickDialog"))
+                return QMetaObject::invokeMethod(popup, "accept");
             break;
+        }
     }
     return false;
 }
