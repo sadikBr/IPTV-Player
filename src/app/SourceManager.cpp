@@ -5,6 +5,7 @@
 #include "NetworkFactory.h"
 
 #include <QFile>
+#include <QLocale>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -232,6 +233,13 @@ void SourceManager::removeSource(int sourceId)
     emit DataNotifier::instance()->contentChanged(sourceId);
 }
 
+void SourceManager::setEpgShift(int sourceId, int minutes)
+{
+    SourceStore(Database::connection()).setEpgShift(sourceId, minutes);
+    emit DataNotifier::instance()->sourcesChanged();
+    emit DataNotifier::instance()->epgChanged(sourceId);
+}
+
 void SourceManager::cancel()
 {
     if (!m_busy)
@@ -260,6 +268,12 @@ QVariantMap SourceManager::source(int sourceId) const
         { QStringLiteral("liveCount"), s->liveCount },
         { QStringLiteral("movieCount"), s->movieCount },
         { QStringLiteral("seriesCount"), s->seriesCount },
+        { QStringLiteral("epgShiftMinutes"), s->epgShiftMinutes },
+        { QStringLiteral("expiresAtText"), s->expiresAt.isValid()
+                  ? QLocale().toString(s->expiresAt.toLocalTime().date(), QLocale::ShortFormat)
+                  : QString() },
+        { QStringLiteral("epgCount"), s->epgCount },
+        { QStringLiteral("epgLastSync"), s->epgLastSync },
         { QStringLiteral("lastSync"), s->lastSync },
     };
 }

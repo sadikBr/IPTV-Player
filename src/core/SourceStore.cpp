@@ -31,7 +31,7 @@ QDateTime fromEpoch(qint64 secs)
 const QString kSourceColumns = QStringLiteral(
         "id, name, type, url, username, password, output_format, epg_url, status, expires_at, "
         "max_connections, live_count, last_sync, created_at, epg_last_sync, epg_count, "
-        "movie_count, series_count");
+        "movie_count, series_count, epg_shift_minutes");
 
 SourceRecord readSource(const QSqlQuery &q)
 {
@@ -54,6 +54,7 @@ SourceRecord readSource(const QSqlQuery &q)
     s.epgCount = q.value(15).toInt();
     s.movieCount = q.value(16).toInt();
     s.seriesCount = q.value(17).toInt();
+    s.epgShiftMinutes = q.value(18).toInt();
     return s;
 }
 
@@ -132,6 +133,19 @@ bool SourceStore::updateSource(const SourceRecord &source)
             "last_sync = :last_sync WHERE id = :id"));
     bindSource(q, source);
     q.bindValue(QStringLiteral(":id"), source.id);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool SourceStore::setEpgShift(int id, int minutes)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("UPDATE sources SET epg_shift_minutes = ? WHERE id = ?"));
+    q.addBindValue(minutes);
+    q.addBindValue(id);
     if (!q.exec()) {
         m_lastError = q.lastError().text();
         return false;

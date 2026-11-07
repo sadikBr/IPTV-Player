@@ -1,5 +1,7 @@
 #include "app/AppSettings.h"
 
+#include "NetworkFactory.h"
+
 namespace {
 constexpr int MaxRecentUrls = 10;
 const auto RecentUrlsKey = QStringLiteral("player/recentUrls");
@@ -110,6 +112,11 @@ void AppSettings::setLastChannel(int sourceId, const QString &extId, const QStri
     m_settings.setValue(LastChannelExtIdKey, extId);
     m_settings.setValue(LastChannelNameKey, name);
     emit lastChannelChanged();
+}
+
+QString AppSettings::defaultUserAgent() const
+{
+    return NetworkFactory::defaultUserAgent();
 }
 
 QString AppSettings::userAgent() const

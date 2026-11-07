@@ -3,6 +3,7 @@
 #include "SourceStore.h"
 
 #include <QAbstractListModel>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 // Unfinished movies and episodes across all sources, most recent first.
@@ -31,6 +32,9 @@ public:
     int rowCount(const QModelIndex &parent = {}) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
+
+    // All roles of one row as a map (empty if out of range).
+    Q_INVOKABLE QVariantMap get(int row) const;
 
 public slots:
     void reload();

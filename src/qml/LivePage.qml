@@ -4,35 +4,41 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Live TV browser for one source: categories on the left (or in a drop-down
-// on narrow screens), channels on the right, search on top.
+// Live TV: categories (side panel or chips), channels with what's on now.
 Page {
     id: page
 
     property int sourceId: -1
-    // Plays this channel (by ext id) as soon as the list is loaded.
-    property string autoPlayExtId: ""
-
-    property var sourceInfo: SourceManager.source(sourceId)
     property int selectedCategory: CategoryListModel.AllCategories
     property string errorText: ""
     readonly property bool wide: width >= 760
+    readonly property bool narrow: width < AppTheme.compactWidth
     readonly property bool syncing: SourceManager.busy && SourceManager.activeSourceId === sourceId
     readonly property alias channelModel: channels
 
-    signal backRequested()
     signal channelActivated(int index)
     signal guideRequested()
-    signal sectionRequested(string kind)
 
     function playIndex(index) {
         if (index >= 0 && index < channels.count)
             page.channelActivated(index)
     }
 
+    // Plays a channel by its provider id (used by "Last watched" on the home page).
+    function playExtId(extId) {
+        selectCategory(CategoryListModel.AllCategories)
+        const index = channels.indexOfExtId(extId)
+        if (index >= 0) {
+            channelList.currentIndex = index
+            channelList.positionViewAtIndex(index, ListView.Center)
+            playIndex(index)
+        }
+    }
+
     function selectCategory(categoryId) {
         selectedCategory = categoryId
         searchField.text = ""
+        channels.searchText = ""
         channelList.positionViewAtBeginning()
     }
 
@@ -59,22 +65,13 @@ Page {
     Connections {
         target: SourceManager
         function onFinished(id, ok, error, isNew) {
-            if (id !== page.sourceId)
-                return
-            page.sourceInfo = SourceManager.source(page.sourceId)
-            page.errorText = ok ? "" : error
+            if (id === page.sourceId)
+                page.errorText = ok ? "" : error
         }
     }
 
     Component.onCompleted: {
-        if (autoPlayExtId.length > 0) {
-            const index = channels.indexOfExtId(autoPlayExtId)
-            autoPlayExtId = ""
-            if (index >= 0) {
-                channelList.currentIndex = index
-                Qt.callLater(page.playIndex, index)
-            }
-        } else if (AppSettings.lastChannelSourceId === sourceId) {
+        if (AppSettings.lastChannelSourceId === sourceId) {
             const last = channels.indexOfExtId(AppSettings.lastChannelExtId)
             if (last >= 0) {
                 channelList.currentIndex = last
@@ -86,192 +83,99 @@ Page {
         channelList.forceActiveFocus()
     }
 
-    header: ToolBar {
-        Material.background: AppTheme.surface
+    header: PageHeader {
+        title: qsTr("Live TV")
+        subtitle: qsTr("%1 channels").arg(Number(AppState.sourceInfo.liveCount || 0).toLocaleString(Qt.locale(), "f", 0))
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 4
-            anchors.rightMargin: 4
-            spacing: 4
-
-            IconButton {
-                iconName: "back"
-                tip: qsTr("Providers")
-                onClicked: page.backRequested()
+        SearchField {
+            id: searchField
+            visible: !page.narrow
+            Layout.preferredWidth: 300
+            placeholderText: qsTr("Search channels")
+            onTextChanged: searchTimer.restart()
+            Keys.onDownPressed: channelList.forceActiveFocus()
+            Keys.onEscapePressed: {
+                text = ""
+                channelList.forceActiveFocus()
             }
-            Label {
-                text: page.sourceInfo.name || ""
-                font.pixelSize: 18
-                font.bold: true
-                elide: Text.ElideRight
-                color: AppTheme.textPrimary
-                visible: page.wide || !searchField.visible
-                Layout.fillWidth: !searchField.visible
-                Layout.maximumWidth: page.wide ? 260 : page.width
-            }
-            TextField {
-                id: searchField
-                objectName: "searchField"
-                visible: page.wide || searchButton.checked
-                placeholderText: qsTr("Search channels")
-                selectByMouse: true
-                Layout.fillWidth: true
-                Layout.maximumWidth: 480
-                Layout.alignment: Qt.AlignVCenter
-                onTextChanged: searchTimer.restart()
-                Keys.onDownPressed: channelList.forceActiveFocus()
-                Keys.onEscapePressed: {
-                    text = ""
-                    channelList.forceActiveFocus()
+        }
+        IconButton {
+            id: searchToggle
+            visible: page.narrow
+            iconName: checked ? "close" : "search"
+            tip: qsTr("Search")
+            checkable: true
+            onToggled: {
+                if (checked) {
+                    phoneSearch.forceActiveFocus()
+                } else {
+                    phoneSearch.text = ""
+                    channels.searchText = ""
                 }
             }
-            Item {
-                Layout.fillWidth: true
-                visible: page.wide
-            }
-            IconButton {
-                id: searchButton
-                iconName: checked ? "close" : "search"
-                tip: qsTr("Search")
-                visible: !page.wide
-                checkable: true
-                onToggled: {
-                    if (checked)
-                        searchField.forceActiveFocus()
-                    else
-                        searchField.text = ""
-                }
-            }
-            IconButton {
-                iconName: "guide"
-                tip: qsTr("TV guide")
-                onClicked: page.guideRequested()
-            }
-            IconButton {
-                iconName: "retry"
-                tip: qsTr("Update channel list and TV guide")
-                enabled: !SourceManager.busy
-                onClicked: {
-                    page.errorText = ""
-                    SourceManager.refresh(page.sourceId)
-                    EpgManager.refresh(page.sourceId)
-                }
+        }
+        IconButton {
+            iconName: "guide"
+            tip: qsTr("TV guide")
+            onClicked: page.guideRequested()
+        }
+        IconButton {
+            iconName: "retry"
+            tip: qsTr("Update channel list and TV guide")
+            enabled: !SourceManager.busy
+            onClicked: {
+                page.errorText = ""
+                SourceManager.refresh(page.sourceId)
+                EpgManager.refresh(page.sourceId)
             }
         }
     }
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 0
+        spacing: 10
 
-        SectionTabs {
+        // Search (phones)
+        SearchField {
+            id: phoneSearch
+            visible: page.narrow && searchToggle.checked
             Layout.fillWidth: true
-            sourceInfo: page.sourceInfo
-            current: "live"
-            onSectionSelected: (kind) => page.sectionRequested(kind)
-        }
-
-        // Sync progress
-        Pane {
-            Layout.fillWidth: true
-            visible: page.syncing
-            padding: AppTheme.spacing
-            background: Rectangle { color: AppTheme.surface }
-
-            RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                spacing: AppTheme.spacing
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Label {
-                        text: SourceManager.statusText
-                        color: AppTheme.textPrimary
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                    ProgressBar {
-                        Layout.fillWidth: true
-                        indeterminate: SourceManager.progress < 0
-                        value: Math.max(0, SourceManager.progress)
-                    }
-                }
-                Button {
-                    text: qsTr("Cancel")
-                    flat: true
-                    visible: SourceManager.canCancel
-                    onClicked: SourceManager.cancel()
-                }
+            Layout.leftMargin: AppTheme.margin
+            Layout.rightMargin: AppTheme.margin
+            placeholderText: qsTr("Search channels")
+            onTextChanged: {
+                searchField.text = text
+                searchTimer.restart()
             }
         }
 
-        // TV guide download (slim, it runs in the background)
-        RowLayout {
+        // Updating
+        StatusBanner {
             Layout.fillWidth: true
-            Layout.leftMargin: AppTheme.spacing
-            Layout.rightMargin: AppTheme.spacing
-            visible: EpgManager.busy && EpgManager.activeSourceId === page.sourceId && !page.syncing
-            Label {
-                text: EpgManager.statusText
-                color: AppTheme.textSecondary
-                font.pixelSize: 12
-            }
-            ProgressBar {
-                Layout.fillWidth: true
-                indeterminate: EpgManager.progress < 0
-                value: Math.max(0, EpgManager.progress)
-            }
+            Layout.leftMargin: page.narrow ? AppTheme.margin : AppTheme.pageMargin
+            Layout.rightMargin: page.narrow ? AppTheme.margin : AppTheme.pageMargin
+            visible: page.syncing || (EpgManager.busy && EpgManager.activeSourceId === page.sourceId)
+            text: page.syncing ? SourceManager.statusText : EpgManager.statusText
+            progress: page.syncing ? SourceManager.progress : EpgManager.progress
+            canCancel: page.syncing && SourceManager.canCancel
+            onCancelClicked: SourceManager.cancel()
         }
-
-        // Last refresh failed
-        Pane {
+        StatusBanner {
             Layout.fillWidth: true
+            Layout.leftMargin: page.narrow ? AppTheme.margin : AppTheme.pageMargin
+            Layout.rightMargin: page.narrow ? AppTheme.margin : AppTheme.pageMargin
             visible: page.errorText.length > 0
-            padding: AppTheme.spacing
-            background: Rectangle { color: "#33FF6B6B" }
-
-            RowLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                Label {
-                    text: qsTr("Update failed: %1").arg(page.errorText)
-                    color: AppTheme.textPrimary
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-                IconButton {
-                    iconName: "close"
-                    tip: qsTr("Dismiss")
-                    onClicked: page.errorText = ""
-                }
-            }
+            error: true
+            text: qsTr("Update failed: %1").arg(page.errorText)
+            onDismissClicked: page.errorText = ""
         }
 
-        // Category drop-down (narrow screens)
-        ComboBox {
-            id: categoryCombo
+        CategoryChips {
             visible: !page.wide && categories.count > 0
             Layout.fillWidth: true
-            Layout.margins: AppTheme.spacing
             model: categories
-            textRole: "name"
-            valueRole: "categoryId"
-            // categories.count makes these update once the list is loaded
-            currentIndex: categories.count > 0 ? categories.indexOf(page.selectedCategory) : -1
-            displayText: categories.count > 0 ? categories.nameOf(page.selectedCategory)
-                                              : qsTr("All channels")
-            onActivated: page.selectCategory(currentValue)
-
-            delegate: ItemDelegate {
-                required property int index
-                required property string name
-                required property int count
-                width: categoryCombo.width
-                text: name + "  (" + count + ")"
-                highlighted: categoryCombo.highlightedIndex === index
-            }
+            selectedCategory: page.selectedCategory
+            onCategorySelected: (id) => page.selectCategory(id)
         }
 
         RowLayout {
@@ -279,57 +183,16 @@ Page {
             Layout.fillHeight: true
             spacing: 0
 
-            // Category list (wide screens)
-            ListView {
-                id: categoryList
+            CategoryPanel {
                 visible: page.wide
-                Layout.preferredWidth: 280
+                Layout.preferredWidth: 250
                 Layout.fillHeight: true
+                Layout.leftMargin: AppTheme.pageMargin - 10
                 model: categories
-                clip: true
-                currentIndex: categories.indexOf(page.selectedCategory)
-                ScrollIndicator.vertical: ScrollIndicator {}
-
-                delegate: ItemDelegate {
-                    id: categoryDelegate
-                    required property int index
-                    required property int categoryId
-                    required property string name
-                    required property int count
-                    readonly property bool selected: categoryId === page.selectedCategory
-
-                    width: categoryList.width
-                    onClicked: page.selectCategory(categoryId)
-                    background: Rectangle {
-                        color: categoryDelegate.selected ? AppTheme.selection
-                             : categoryDelegate.hovered ? "#14FFFFFF" : "transparent"
-                    }
-                    contentItem: RowLayout {
-                        spacing: AppTheme.spacing
-                        Label {
-                            text: categoryDelegate.name
-                            elide: Text.ElideRight
-                            color: categoryDelegate.selected ? AppTheme.accent : AppTheme.textPrimary
-                            font.bold: categoryDelegate.categoryId < 0
-                            Layout.fillWidth: true
-                        }
-                        Label {
-                            text: categoryDelegate.count
-                            color: AppTheme.textSecondary
-                            font.pixelSize: 12
-                        }
-                    }
-                }
+                selectedCategory: page.selectedCategory
+                onCategorySelected: (id) => page.selectCategory(id)
             }
 
-            Rectangle {
-                visible: page.wide
-                Layout.preferredWidth: 1
-                Layout.fillHeight: true
-                color: "#22FFFFFF"
-            }
-
-            // Channels
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -338,10 +201,14 @@ Page {
                     id: channelList
                     objectName: "channelList"
                     anchors.fill: parent
+                    anchors.leftMargin: page.wide ? 16 : 8
+                    anchors.rightMargin: page.wide ? AppTheme.pageMargin - 6 : 8
                     model: channels
                     clip: true
+                    spacing: 2
                     keyNavigationEnabled: true
                     highlightMoveDuration: 0
+                    bottomMargin: 16
                     ScrollBar.vertical: ScrollBar {}
 
                     delegate: ChannelDelegate {
@@ -358,8 +225,12 @@ Page {
                     Keys.onEnterPressed: page.playIndex(currentIndex)
                     Keys.onPressed: (event) => {
                         if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_F) {
-                            searchButton.checked = true
-                            searchField.forceActiveFocus()
+                            if (page.narrow) {
+                                searchToggle.checked = true
+                                phoneSearch.forceActiveFocus()
+                            } else {
+                                searchField.forceActiveFocus()
+                            }
                             event.accepted = true
                         } else if (event.key === Qt.Key_S) {
                             channels.toggleFavorite(currentIndex)
@@ -368,30 +239,20 @@ Page {
                     }
                 }
 
-                // Empty states
-                ColumnLayout {
+                EmptyState {
                     anchors.centerIn: parent
-                    width: Math.min(parent.width - 2 * AppTheme.margin, 360)
                     visible: channels.count === 0
-                    spacing: AppTheme.spacing
-
-                    BusyIndicator {
-                        Layout.alignment: Qt.AlignHCenter
-                        visible: page.syncing && (page.sourceInfo.liveCount || 0) === 0
-                        running: visible
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        color: AppTheme.textSecondary
-                        text: channels.searchText.length > 0
-                              ? qsTr("No channels match “%1”.").arg(channels.searchText)
-                              : page.selectedCategory === CategoryListModel.FavoritesCategory
-                                ? qsTr("No favorites yet. Tap the star next to a channel to add it here.")
-                                : page.syncing ? qsTr("Loading channels…")
-                                               : qsTr("No channels in this category.")
-                    }
+                    busy: page.syncing && (AppState.sourceInfo.liveCount || 0) === 0
+                    iconName: channels.searchText.length > 0 ? "search"
+                            : page.selectedCategory === CategoryListModel.FavoritesCategory ? "star-outline" : "live"
+                    title: channels.searchText.length > 0 ? qsTr("No results")
+                         : page.selectedCategory === CategoryListModel.FavoritesCategory ? qsTr("No favorites yet")
+                         : page.syncing ? qsTr("Loading channels…") : qsTr("No channels here")
+                    text: channels.searchText.length > 0
+                          ? qsTr("No channel matches “%1”.").arg(channels.searchText)
+                          : page.selectedCategory === CategoryListModel.FavoritesCategory
+                            ? qsTr("Tap the star next to a channel to keep it here.")
+                            : ""
                 }
             }
         }

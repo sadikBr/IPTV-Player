@@ -21,12 +21,12 @@ QVariant text(const QString &value)
     return value.isNull() ? QVariant(QString(QLatin1String(""))) : QVariant(value);
 }
 
-QList<ProgramRecord> readPrograms(QSqlQuery &q)
+QList<ProgramRecord> readPrograms(QSqlQuery &q, qint64 shiftSecs)
 {
     QList<ProgramRecord> result;
     while (q.next()) {
-        result.append({ q.value(0).toLongLong(), q.value(1).toLongLong(), q.value(2).toString(),
-                        q.value(3).toString(), q.value(4).toString() });
+        result.append({ q.value(0).toLongLong() + shiftSecs, q.value(1).toLongLong() + shiftSecs,
+                        q.value(2).toString(), q.value(3).toString(), q.value(4).toString() });
     }
     return result;
 }
@@ -230,7 +230,8 @@ bool EpgStore::linkChannels(int sourceId)
     return true;
 }
 
-QList<ProgramRecord> EpgStore::nowNext(int sourceId, const QString &epgKey, qint64 now) const
+QList<ProgramRecord> EpgStore::nowNext(int sourceId, const QString &epgKey, qint64 now,
+                                       qint64 shiftSecs) const
 {
     if (epgKey.isEmpty())
         return {};
@@ -240,16 +241,16 @@ QList<ProgramRecord> EpgStore::nowNext(int sourceId, const QString &epgKey, qint
             "WHERE source_id = ? AND channel_key = ? AND stop > ? ORDER BY start LIMIT 2"));
     q.addBindValue(sourceId);
     q.addBindValue(epgKey);
-    q.addBindValue(now);
+    q.addBindValue(now - shiftSecs);
     if (!q.exec()) {
         m_lastError = q.lastError().text();
         return {};
     }
-    return readPrograms(q);
+    return readPrograms(q, shiftSecs);
 }
 
 QList<ProgramRecord> EpgStore::programs(int sourceId, const QString &epgKey, qint64 from,
-                                        qint64 to) const
+                                        qint64 to, qint64 shiftSecs) const
 {
     if (epgKey.isEmpty())
         return {};
@@ -259,13 +260,13 @@ QList<ProgramRecord> EpgStore::programs(int sourceId, const QString &epgKey, qin
             "WHERE source_id = ? AND channel_key = ? AND stop > ? AND start < ? ORDER BY start"));
     q.addBindValue(sourceId);
     q.addBindValue(epgKey);
-    q.addBindValue(from);
-    q.addBindValue(to);
+    q.addBindValue(from - shiftSecs);
+    q.addBindValue(to - shiftSecs);
     if (!q.exec()) {
         m_lastError = q.lastError().text();
         return {};
     }
-    return readPrograms(q);
+    return readPrograms(q, shiftSecs);
 }
 
 bool EpgStore::prune(int sourceId, qint64 before)

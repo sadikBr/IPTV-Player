@@ -1,482 +1,433 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Material
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Start page: your providers, "continue watching", and playing a single URL.
+// Dashboard: a hero for what to watch next, then rows of content.
 Page {
     id: page
 
-    signal playRequested(url url, string title)
-    signal sourceSelected(int sourceId)
-    signal addSourceRequested()
-    signal resumeRequested(int sourceId, string extId)
-    signal resumeVodRequested(int sourceId, string kind, string extId, string seriesExtId)
+    signal playChannelRequested(int sourceId, string extId)
+    signal playChannelIndexRequested(var model, int index)
+    signal playVodRequested(int sourceId, string kind, string extId, string seriesExtId)
+    signal openMovieRequested(string extId)
+    signal openSeriesRequested(string extId)
 
-    readonly property bool resumeAvailable: AppSettings.lastChannelExtId.length > 0
-            && sources.count > 0 && SourceManager.sourceExists(AppSettings.lastChannelSourceId)
+    readonly property bool narrow: width < AppTheme.compactWidth
+    readonly property real sideMargin: narrow ? AppTheme.margin : AppTheme.pageMargin
+    readonly property bool hasLastChannel: AppSettings.lastChannelExtId.length > 0
+            && AppSettings.lastChannelSourceId === AppState.sourceId
 
-    function submitUrl() {
-        const url = AppSettings.normalizeUrl(urlField.text)
-        if (url.toString() === "") {
-            urlField.showError = true
-            return
+    // What the hero shows: the most recent unfinished movie/episode, else the
+    // last channel, else the newest movie.
+    readonly property var hero: {
+        if (continueWatching.count > 0 && heroTick >= 0) {
+            const item = continueWatching.get(0)
+            return { kind: item.kind, eyebrow: qsTr("Continue watching"), title: item.title,
+                     subtitle: [item.subtitle, qsTr("%1 min left").arg(item.remainingMinutes)]
+                               .filter(t => t).join("  ·  "),
+                     image: item.image, progress: item.watched, action: qsTr("Resume"), data: item }
         }
-        urlField.showError = false
-        AppSettings.addRecentUrl(url.toString())
-        page.playRequested(url, "")
+        if (hasLastChannel)
+            return { kind: "live", eyebrow: qsTr("Last watched"), title: AppSettings.lastChannelName,
+                     subtitle: qsTr("Live TV"), image: "", progress: 0, action: qsTr("Watch live") }
+        if (newMovies.count > 0 && heroTick >= 0) {
+            const movie = newMovies.get(0)
+            return { kind: "newMovie", eyebrow: qsTr("New movie"), title: movie.name,
+                     subtitle: [movie.year, movie.rating ? "★ " + movie.rating : ""].filter(t => t).join("  ·  "),
+                     image: movie.logo, progress: 0, action: qsTr("Details"), data: movie }
+        }
+        return null
+    }
+    property int heroTick: 0
+
+    function greeting() {
+        const h = new Date().getHours()
+        return h < 5 ? qsTr("Good night") : h < 12 ? qsTr("Good morning")
+             : h < 18 ? qsTr("Good afternoon") : qsTr("Good evening")
     }
 
-    function timeAgo(date) {
-        if (!date || isNaN(date.getTime()))
-            return qsTr("never")
-        const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
-        if (minutes < 1) return qsTr("just now")
-        if (minutes < 60) return qsTr("%1 min ago").arg(minutes)
-        const hours = Math.floor(minutes / 60)
-        if (hours < 24) return qsTr("%1 h ago").arg(hours)
-        return qsTr("%1 days ago").arg(Math.floor(hours / 24))
-    }
-
-    function expiryText(date) {
-        if (!date || isNaN(date.getTime()))
-            return ""
-        const days = Math.floor((date.getTime() - Date.now()) / 86400000)
-        if (days < 0)
-            return qsTr("Expired on %1").arg(date.toLocaleDateString(Qt.locale(), Locale.ShortFormat))
-        return qsTr("Expires %1").arg(date.toLocaleDateString(Qt.locale(), Locale.ShortFormat))
-               + (days === 0 ? qsTr(" (today)") : days === 1 ? qsTr(" (tomorrow)")
-                  : days <= 7 ? qsTr(" (in %1 days)").arg(days) : "")
-    }
-
-    function channelCount(count) {
-        return count === 1 ? qsTr("1 channel")
-                           : qsTr("%1 channels").arg(Number(count).toLocaleString(Qt.locale(), "f", 0))
-    }
-
-    function expiryWarning(date) {
-        return date && !isNaN(date.getTime()) && date.getTime() - Date.now() < 7 * 86400000
+    function heroAction() {
+        if (!hero)
+            return
+        if (hero.kind === "live")
+            playChannelRequested(AppSettings.lastChannelSourceId, AppSettings.lastChannelExtId)
+        else if (hero.kind === "newMovie")
+            openMovieRequested(hero.data.extId)
+        else
+            playVodRequested(hero.data.sourceId, hero.data.kind, hero.data.extId, hero.data.seriesExtId)
     }
 
     background: Rectangle { color: AppTheme.background }
 
-    SourceListModel {
-        id: sources
-    }
-
     ContinueWatchingModel {
         id: continueWatching
+        onModelReset: page.heroTick++
     }
-
-    Dialog {
-        id: removeDialog
-        property int sourceId: -1
-        property string sourceName
-        anchors.centerIn: parent
-        modal: true
-        title: qsTr("Remove provider?")
-        standardButtons: Dialog.Cancel | Dialog.Ok
-        Label {
-            width: Math.min(page.width - 96, 360)
-            wrapMode: Text.Wrap
-            text: qsTr("“%1” and its favorites will be removed from this device.")
-                    .arg(removeDialog.sourceName)
-        }
-        onAccepted: SourceManager.removeSource(sourceId)
+    ChannelListModel {
+        id: favoriteChannels
+        sourceId: AppState.sourceId
+        categoryId: CategoryListModel.FavoritesCategory
+    }
+    ChannelListModel {
+        id: liveChannels
+        sourceId: AppState.sourceId
+        limit: 16
+    }
+    ChannelListModel {
+        id: newMovies
+        sourceId: AppState.sourceId
+        kind: "movie"
+        sortOrder: "newest"
+        limit: 20
+        onModelReset: page.heroTick++
+    }
+    ChannelListModel {
+        id: newSeries
+        sourceId: AppState.sourceId
+        kind: "series"
+        sortOrder: "newest"
+        limit: 20
+    }
+    ChannelListModel {
+        id: favoriteMovies
+        sourceId: AppState.sourceId
+        kind: "movie"
+        categoryId: CategoryListModel.FavoritesCategory
     }
 
     Flickable {
+        id: flick
         anchors.fill: parent
-        contentHeight: content.implicitHeight + 2 * AppTheme.margin
+        contentHeight: content.implicitHeight + 40
         clip: true
-        ScrollIndicator.vertical: ScrollIndicator {}
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar {}
 
         ColumnLayout {
             id: content
-            width: Math.min(page.width - 2 * AppTheme.margin, AppTheme.contentMaxWidth)
-            x: (page.width - width) / 2
-            y: AppTheme.margin
-            spacing: AppTheme.spacing
+            width: flick.width
+            spacing: 28
 
-            // Header
+            // Greeting
             RowLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: AppTheme.margin
-                spacing: AppTheme.spacing
-
-                Image {
-                    source: "icons/tv.svg"
-                    sourceSize: Qt.size(40, 40)
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 40
-                }
+                Layout.topMargin: page.narrow ? 16 : 28
+                Layout.leftMargin: page.sideMargin
+                Layout.rightMargin: page.narrow ? 8 : page.sideMargin
                 ColumnLayout {
-                    spacing: 0
                     Layout.fillWidth: true
+                    spacing: 2
                     Label {
-                        text: qsTr("IPTV Player")
-                        font.pixelSize: 26
-                        font.bold: true
+                        text: page.greeting()
+                        font.pixelSize: page.narrow ? 24 : AppTheme.fontH1
+                        font.weight: Font.Bold
                         color: AppTheme.textPrimary
                     }
                     Label {
-                        text: qsTr("Version %1").arg(AppSettings.appVersion)
-                        color: AppTheme.textSecondary
+                        text: new Date().toLocaleDateString(Qt.locale(), "dddd d MMMM")
+                        color: AppTheme.textTertiary
+                        font.pixelSize: AppTheme.fontSmall
                     }
+                }
+                ProviderSwitcher {
+                    visible: page.narrow && AppState.hasSource
+                    compact: true
                 }
             }
 
-            // Continue watching
-            ItemDelegate {
+            // Welcome (no provider yet)
+            Rectangle {
                 Layout.fillWidth: true
-                Layout.topMargin: AppTheme.margin
-                visible: page.resumeAvailable
-                onClicked: page.resumeRequested(AppSettings.lastChannelSourceId,
-                                                AppSettings.lastChannelExtId)
-                background: Rectangle {
-                    color: parent.hovered ? Qt.lighter(AppTheme.surface, 1.3) : AppTheme.surface
-                    radius: AppTheme.radius
-                    border.color: AppTheme.accent
-                    border.width: 1
+                Layout.leftMargin: page.sideMargin
+                Layout.rightMargin: page.sideMargin
+                Layout.preferredHeight: welcome.implicitHeight + 64
+                visible: !AppState.hasSource
+                radius: AppTheme.radiusLarge
+                border.color: AppTheme.stroke
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "#2A2160" }
+                    GradientStop { position: 1.0; color: "#0F3A4A" }
                 }
-                contentItem: RowLayout {
-                    spacing: AppTheme.spacing
-                    IconButton {
-                        iconName: "play"
-                        icon.color: AppTheme.accent
-                        onClicked: page.resumeRequested(AppSettings.lastChannelSourceId,
-                                                        AppSettings.lastChannelExtId)
+
+                ColumnLayout {
+                    id: welcome
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: page.narrow ? 24 : 40
+                    spacing: 14
+                    Label {
+                        text: qsTr("WELCOME")
+                        color: AppTheme.accent2
+                        font.pixelSize: AppTheme.fontCaption
+                        font.weight: Font.Bold
+                        font.letterSpacing: 1.5
                     }
-                    ColumnLayout {
-                        spacing: 0
+                    Label {
                         Layout.fillWidth: true
-                        Label {
-                            text: qsTr("Last channel")
-                            color: AppTheme.textSecondary
-                            font.pixelSize: 12
-                        }
-                        Label {
-                            text: AppSettings.lastChannelName
-                            color: AppTheme.textPrimary
-                            font.pixelSize: 17
-                            font.bold: true
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
+                        text: qsTr("All your TV in one place")
+                        wrapMode: Text.Wrap
+                        font.pixelSize: page.narrow ? 26 : AppTheme.fontDisplay
+                        font.weight: Font.Bold
+                        color: "white"
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 560
+                        text: qsTr("Add your IPTV provider with an Xtream Codes login or an M3U "
+                                   + "playlist link to watch live TV, movies and series, with a TV guide.")
+                        wrapMode: Text.Wrap
+                        color: "#D0D6E4"
+                        lineHeight: 1.2
+                    }
+                    AppButton {
+                        Layout.topMargin: 8
+                        text: qsTr("Add your provider")
+                        iconName: "add"
+                        onClicked: AppState.addProviderRequested()
                     }
                 }
             }
 
-            // Unfinished movies and episodes
-            Label {
-                Layout.topMargin: AppTheme.margin
-                visible: continueWatching.count > 0
-                text: qsTr("Continue watching")
-                font.pixelSize: 18
-                font.bold: true
-                color: AppTheme.textPrimary
-            }
-            ListView {
-                id: continueList
+            // Hero
+            Rectangle {
+                id: heroCard
                 Layout.fillWidth: true
-                Layout.preferredHeight: 280
-                visible: continueWatching.count > 0
-                orientation: ListView.Horizontal
-                spacing: AppTheme.spacing
+                Layout.leftMargin: page.sideMargin
+                Layout.rightMargin: page.sideMargin
+                Layout.preferredHeight: page.narrow ? 220 : 300
+                visible: AppState.hasSource && page.hero !== null
+                radius: AppTheme.radiusLarge
+                color: AppTheme.surface
+                border.color: AppTheme.stroke
                 clip: true
-                model: continueWatching
-                ScrollIndicator.horizontal: ScrollIndicator {}
 
+                // Artwork as a dimmed backdrop
+                Image {
+                    anchors.fill: parent
+                    source: page.hero ? page.hero.image : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    opacity: 0.35
+                    sourceSize.width: 640
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#F20A0C11" }
+                        GradientStop { position: 0.55; color: "#B30A0C11" }
+                        GradientStop { position: 1.0; color: "#260A0C11" }
+                    }
+                }
+                // Brand glow
+                Rectangle {
+                    width: parent.width * 0.6
+                    height: parent.height * 2
+                    x: -width * 0.3
+                    y: -height * 0.25
+                    rotation: 20
+                    opacity: 0.25
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: AppTheme.accentStrong }
+                        GradientStop { position: 1.0; color: "transparent" }
+                    }
+                }
+
+                // Poster on the right (wide screens)
+                Rectangle {
+                    visible: !page.narrow && page.hero && page.hero.image.length > 0
+                    anchors.right: parent.right
+                    anchors.rightMargin: 40
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: parent.height - 56
+                    width: height / 1.5
+                    radius: AppTheme.radius
+                    color: AppTheme.surfaceHigh
+                    clip: true
+                    rotation: 3
+                    Image {
+                        anchors.fill: parent
+                        source: page.hero ? page.hero.image : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize.width: 400
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: page.narrow ? 22 : 40
+                    width: Math.min(parent.width - (page.narrow ? 44 : 320), 620)
+                    spacing: 10
+
+                    Label {
+                        text: page.hero ? page.hero.eyebrow.toUpperCase() : ""
+                        color: AppTheme.accent2
+                        font.pixelSize: AppTheme.fontCaption
+                        font.weight: Font.Bold
+                        font.letterSpacing: 1.5
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: page.hero ? page.hero.title : ""
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        font.pixelSize: page.narrow ? 24 : AppTheme.fontDisplay
+                        font.weight: Font.Bold
+                        color: "white"
+                    }
+                    Label {
+                        visible: text.length > 0
+                        text: page.hero ? page.hero.subtitle : ""
+                        color: "#C8CEDC"
+                    }
+                    Rectangle {
+                        visible: page.hero && page.hero.progress > 0
+                        Layout.preferredWidth: 220
+                        Layout.preferredHeight: 4
+                        radius: 2
+                        color: "#33FFFFFF"
+                        Rectangle {
+                            width: parent.width * (page.hero ? page.hero.progress : 0)
+                            height: parent.height
+                            radius: 2
+                            color: AppTheme.accent
+                        }
+                    }
+                    AppButton {
+                        Layout.topMargin: 10
+                        text: page.hero ? page.hero.action : ""
+                        iconName: page.hero && page.hero.kind === "newMovie" ? "info" : "play"
+                        onClicked: page.heroAction()
+                    }
+                }
+            }
+
+            ContentRow {
+                Layout.fillWidth: true
+                sideMargin: page.sideMargin
+                title: qsTr("Continue watching")
+                model: continueWatching
+                rowHeight: 250
                 delegate: PosterCard {
                     required property int sourceId
                     required property string kind
                     required property string extId
                     required property string seriesExtId
                     required property string image
-                    required property var model // for the "subtitle" role (name clash)
                     required property int remainingMinutes
+                    required property var model // "subtitle" role (name clash)
                     required watched
                     required title
 
-                    width: 130
-                    height: continueList.height
+                    width: 140
                     poster: image
                     subtitle: [model.subtitle, qsTr("%1 min left").arg(remainingMinutes)]
                               .filter(t => t).join(" · ")
-                    onClicked: page.resumeVodRequested(sourceId, kind, extId, seriesExtId)
+                    onClicked: page.playVodRequested(sourceId, kind, extId, seriesExtId)
                 }
             }
 
-            // Providers
-            RowLayout {
+            ContentRow {
                 Layout.fillWidth: true
-                Layout.topMargin: AppTheme.margin
-                Label {
-                    text: qsTr("Your providers")
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: AppTheme.textPrimary
-                    Layout.fillWidth: true
-                }
-                Button {
-                    text: qsTr("Add")
-                    icon.source: "icons/add.svg"
-                    visible: sources.count > 0
-                    onClicked: page.addSourceRequested()
+                sideMargin: page.sideMargin
+                title: favoriteChannels.count > 0 ? qsTr("Favorite channels") : qsTr("Live TV")
+                showSeeAll: true
+                onSeeAllClicked: AppState.sectionRequested("live")
+                model: favoriteChannels.count > 0 ? favoriteChannels : liveChannels
+                rowHeight: 176
+                delegate: ChannelCard {
+                    required property int index
+                    required name
+                    required logo
+                    required nowTitle
+                    required nowProgress
+                    onClicked: page.playChannelIndexRequested(
+                                   favoriteChannels.count > 0 ? favoriteChannels : liveChannels, index)
                 }
             }
 
-            // No providers yet
-            Pane {
+            ContentRow {
                 Layout.fillWidth: true
-                visible: sources.count === 0
-                padding: AppTheme.margin * 1.5
-                background: Rectangle { color: AppTheme.surface; radius: AppTheme.radius }
-
-                ColumnLayout {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    spacing: AppTheme.spacing
-                    Label {
-                        Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        horizontalAlignment: Text.AlignHCenter
-                        color: AppTheme.textSecondary
-                        text: qsTr("Add your IPTV provider to browse and watch channels. "
-                                   + "You need either an Xtream Codes login (server, username, "
-                                   + "password) or an M3U playlist link.")
-                    }
-                    Button {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("Add provider")
-                        highlighted: true
-                        onClicked: page.addSourceRequested()
-                    }
-                }
+                sideMargin: page.sideMargin
+                title: qsTr("Favorite movies")
+                model: favoriteMovies
+                rowHeight: 285
+                delegate: posterDelegate
             }
 
-            Repeater {
-                model: sources
-
-                delegate: ItemDelegate {
-                    id: sourceCard
-
-                    required property int sourceId
-                    required property string name
-                    required property string type
-                    required property int liveCount
-                    required property var lastSync
-                    required property var expiresAt
-                    required property string status
-                    required property int epgCount
-                    required property var epgLastSync
-                    readonly property bool syncing: SourceManager.busy
-                                                    && SourceManager.activeSourceId === sourceId
-
-                    Layout.fillWidth: true
-                    padding: AppTheme.margin
-                    rightPadding: 4
-                    onClicked: page.sourceSelected(sourceId)
-
-                    background: Rectangle {
-                        color: sourceCard.hovered ? Qt.lighter(AppTheme.surface, 1.3) : AppTheme.surface
-                        radius: AppTheme.radius
-                    }
-
-                    contentItem: RowLayout {
-                        spacing: AppTheme.spacing
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            RowLayout {
-                                spacing: 8
-                                Layout.fillWidth: true
-                                Label {
-                                    text: sourceCard.name
-                                    font.pixelSize: 17
-                                    font.bold: true
-                                    color: AppTheme.textPrimary
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
-                                Rectangle {
-                                    radius: 4
-                                    color: "#22FFFFFF"
-                                    implicitWidth: typeLabel.implicitWidth + 10
-                                    implicitHeight: typeLabel.implicitHeight + 4
-                                    Label {
-                                        id: typeLabel
-                                        anchors.centerIn: parent
-                                        text: sourceCard.type === "xtream" ? "Xtream" : "M3U"
-                                        color: AppTheme.textSecondary
-                                        font.pixelSize: 11
-                                    }
-                                }
-                            }
-                            Label {
-                                text: sourceCard.syncing
-                                      ? SourceManager.statusText
-                                      : page.channelCount(sourceCard.liveCount) + " · "
-                                        + qsTr("updated %1").arg(page.timeAgo(sourceCard.lastSync))
-                                        + (sourceCard.epgCount > 0
-                                           ? " · " + qsTr("TV guide %1").arg(page.timeAgo(sourceCard.epgLastSync))
-                                           : "")
-                                color: AppTheme.textSecondary
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                visible: text.length > 0
-                                text: {
-                                    const parts = []
-                                    if (sourceCard.status && sourceCard.status !== "Active")
-                                        parts.push(sourceCard.status)
-                                    const expiry = page.expiryText(sourceCard.expiresAt)
-                                    if (expiry)
-                                        parts.push(expiry)
-                                    return parts.join(" · ")
-                                }
-                                color: page.expiryWarning(sourceCard.expiresAt)
-                                       || (sourceCard.status && sourceCard.status !== "Active")
-                                       ? AppTheme.error : AppTheme.textSecondary
-                                font.pixelSize: 12
-                            }
-                            ProgressBar {
-                                visible: sourceCard.syncing
-                                Layout.fillWidth: true
-                                indeterminate: SourceManager.progress < 0
-                                value: Math.max(0, SourceManager.progress)
-                            }
-                        }
-
-                        IconButton {
-                            iconName: "more"
-                            tip: qsTr("More")
-                            icon.color: AppTheme.textSecondary
-                            onClicked: sourceMenu.popup()
-
-                            Menu {
-                                id: sourceMenu
-                                MenuItem {
-                                    text: qsTr("Update channel list")
-                                    enabled: !SourceManager.busy
-                                    onTriggered: SourceManager.refresh(sourceCard.sourceId)
-                                }
-                                MenuItem {
-                                    text: qsTr("Update TV guide")
-                                    enabled: EpgManager.canHaveGuide(sourceCard.sourceId)
-                                    onTriggered: EpgManager.refresh(sourceCard.sourceId)
-                                }
-                                MenuItem {
-                                    text: qsTr("Remove")
-                                    onTriggered: {
-                                        removeDialog.sourceId = sourceCard.sourceId
-                                        removeDialog.sourceName = sourceCard.name
-                                        removeDialog.open()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Play a single URL
-            Pane {
+            ContentRow {
                 Layout.fillWidth: true
-                Layout.topMargin: 2 * AppTheme.margin
-                padding: AppTheme.margin
-                background: Rectangle { color: AppTheme.surface; radius: AppTheme.radius }
+                sideMargin: page.sideMargin
+                title: qsTr("Recently added movies")
+                showSeeAll: true
+                onSeeAllClicked: AppState.sectionRequested("movie")
+                model: newMovies
+                rowHeight: 285
+                delegate: posterDelegate
+            }
 
-                ColumnLayout {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    spacing: AppTheme.spacing
-
-                    Label {
-                        text: qsTr("Play a stream URL")
-                        font.pixelSize: 16
-                        font.bold: true
-                        color: AppTheme.textPrimary
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        color: AppTheme.textSecondary
-                        text: qsTr("Paste a single .m3u8 or .ts link to test a stream.")
-                    }
-
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: page.width < AppTheme.compactWidth ? 1 : 2
-                        columnSpacing: AppTheme.spacing
-                        rowSpacing: AppTheme.spacing
-
-                        TextField {
-                            id: urlField
-
-                            property bool showError: false
-
-                            objectName: "urlField"
-                            Layout.fillWidth: true
-                            placeholderText: "http://host:port/live/user/pass/12345.m3u8"
-                            inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
-                                              | Qt.ImhNoPredictiveText
-                            selectByMouse: true
-                            onAccepted: page.submitUrl()
-                            onTextChanged: showError = false
-                        }
-                        Button {
-                            text: qsTr("Play")
-                            enabled: urlField.text.trim().length > 0
-                            Layout.fillWidth: page.width < AppTheme.compactWidth
-                            onClicked: page.submitUrl()
-                        }
-                    }
-
-                    Label {
-                        visible: urlField.showError
-                        text: qsTr("That doesn't look like a valid URL.")
-                        color: AppTheme.error
-                    }
-
-                    // Recent URLs
-                    Repeater {
-                        model: AppSettings.recentUrls
-
-                        delegate: ItemDelegate {
-                            id: recentItem
-
-                            required property string modelData
-
-                            Layout.fillWidth: true
-                            padding: 4
-                            onClicked: {
-                                AppSettings.addRecentUrl(modelData)
-                                page.playRequested(modelData, "")
-                            }
-                            contentItem: RowLayout {
-                                spacing: AppTheme.spacing
-                                Label {
-                                    text: recentItem.modelData
-                                    elide: Text.ElideMiddle
-                                    color: AppTheme.textSecondary
-                                    Layout.fillWidth: true
-                                }
-                                IconButton {
-                                    iconName: "close"
-                                    tip: qsTr("Remove")
-                                    icon.color: AppTheme.textSecondary
-                                    onClicked: AppSettings.removeRecentUrl(recentItem.modelData)
-                                }
-                            }
-                        }
+            ContentRow {
+                Layout.fillWidth: true
+                sideMargin: page.sideMargin
+                title: qsTr("Recently added series")
+                showSeeAll: true
+                onSeeAllClicked: AppState.sectionRequested("series")
+                model: newSeries
+                rowHeight: 285
+                delegate: Component {
+                    PosterCard {
+                        required property string extId
+                        required property string name
+                        required property string logo
+                        required property string year
+                        required rating
+                        required favorite
+                        width: 150
+                        title: name
+                        poster: logo
+                        subtitle: year
+                        onClicked: page.openSeriesRequested(extId)
                     }
                 }
             }
+
+            // Provider content still loading
+            EmptyState {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 20
+                visible: AppState.hasSource && page.hero === null && liveChannels.count === 0
+                busy: SourceManager.busy
+                iconName: "live"
+                title: SourceManager.busy ? qsTr("Loading your channels…") : qsTr("Nothing here yet")
+                text: SourceManager.busy ? SourceManager.statusText
+                                         : qsTr("Update the provider in Settings to load its channels.")
+            }
+        }
+    }
+
+    Component {
+        id: posterDelegate
+        PosterCard {
+            required property string extId
+            required property string name
+            required property string logo
+            required property string year
+            required rating
+            required watched
+            required favorite
+            width: 150
+            title: name
+            poster: logo
+            subtitle: year
+            onClicked: page.openMovieRequested(extId)
         }
     }
 }

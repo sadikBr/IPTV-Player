@@ -91,23 +91,31 @@ Page {
 
     IconButton {
         z: 2
-        x: 4
-        y: 4
+        x: 12
+        y: 12
+        filled: true
         iconName: "back"
         tip: qsTr("Back")
         onClicked: page.backRequested()
     }
 
-    ListView {
+    // A plain scrolling column: a season has at most a few dozen episodes, and
+    // this keeps the details at the top when their height settles after loading.
+    Flickable {
         id: list
         anchors.fill: parent
         anchors.topMargin: page.narrow ? 48 : 56
-        model: episodes
+        contentHeight: column.implicitHeight + AppTheme.margin * 2
         clip: true
+        boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 
-        header: ColumnLayout {
-            width: list.width
+      Column {
+        id: column
+        width: list.width
+
+        ColumnLayout {
+            width: column.width
             spacing: AppTheme.spacing
 
             GridLayout {
@@ -160,11 +168,10 @@ Page {
                     }
                     RowLayout {
                         spacing: AppTheme.spacing
-                        Button {
+                        AppButton {
                             objectName: "playButton"
-                            highlighted: true
                             enabled: page.resumeEpisode !== null
-                            icon.source: "icons/play.svg"
+                            iconName: "play"
                             text: page.resumeEpisode
                                   ? (page.resumeEpisode.watched > 0 && page.resumeEpisode.watched < 1
                                      ? qsTr("Continue S%1 E%2") : qsTr("Play S%1 E%2"))
@@ -173,9 +180,11 @@ Page {
                             onClicked: page.episodeRequested(page.resumeEpisode.extId, false)
                         }
                         IconButton {
-                            iconName: page.info.favorite ? "star" : "star-outline"
+                            iconName: page.info.favorite ? "heart" : "heart-outline"
                             tip: page.info.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
-                            icon.color: page.info.favorite ? AppTheme.favorite : AppTheme.textPrimary
+                            iconColor: page.info.favorite ? AppTheme.live : AppTheme.textPrimary
+                        filled: true
+                        size: 44
                             onClicked: {
                                 VodManager.setFavorite(page.sourceId, "series", page.extId, !page.info.favorite)
                                 page.info = VodManager.series(page.sourceId, page.extId)
@@ -205,23 +214,31 @@ Page {
             }
 
             // Seasons
-            TabBar {
-                id: seasonBar
+            ListView {
                 Layout.fillWidth: true
                 Layout.topMargin: AppTheme.margin
+                Layout.preferredHeight: 34
                 visible: allEpisodes.seasons.length > 1
-                Material.background: "transparent"
-                currentIndex: allEpisodes.seasons.indexOf(page.selectedSeason)
-
-                Repeater {
-                    model: allEpisodes.seasons
-                    delegate: TabButton {
-                        required property var modelData
-                        text: qsTr("Season %1").arg(modelData)
-                        width: Math.max(implicitWidth, 110)
-                        onClicked: page.selectedSeason = modelData
-                    }
+                orientation: ListView.Horizontal
+                spacing: 8
+                leftMargin: AppTheme.margin
+                rightMargin: AppTheme.margin
+                clip: true
+                model: allEpisodes.seasons
+                delegate: Chip {
+                    required property var modelData
+                    text: qsTr("Season %1").arg(modelData)
+                    selected: page.selectedSeason === modelData
+                    onClicked: page.selectedSeason = modelData
                 }
+            }
+            Label {
+                Layout.leftMargin: AppTheme.margin
+                Layout.topMargin: allEpisodes.seasons.length > 1 ? 4 : AppTheme.margin
+                visible: episodes.count > 0
+                text: qsTr("%1 episodes").arg(episodes.count)
+                color: AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontCaption
             }
 
             BusyIndicator {
@@ -241,7 +258,9 @@ Page {
             }
         }
 
-        delegate: ItemDelegate {
+        Repeater {
+          model: episodes
+          delegate: ItemDelegate {
             id: episodeDelegate
             required property int index
             required property string extId
@@ -252,11 +271,19 @@ Page {
             required property int durationSecs
             required property real watched
 
-            width: list.width
+            width: column.width
             padding: AppTheme.spacing
             leftPadding: AppTheme.margin
             rightPadding: AppTheme.margin
+            hoverEnabled: true
             onClicked: page.episodeRequested(extId, false)
+            background: Rectangle {
+                x: 6
+                width: parent.width - 12
+                height: parent.height
+                radius: AppTheme.radius
+                color: episodeDelegate.hovered ? AppTheme.surface : "transparent"
+            }
 
             contentItem: RowLayout {
                 spacing: AppTheme.margin
@@ -333,7 +360,8 @@ Page {
             }
         }
 
-        footer: Item { height: AppTheme.margin * 2 }
+        }
+      }
     }
 
     Keys.onEscapePressed: page.backRequested()

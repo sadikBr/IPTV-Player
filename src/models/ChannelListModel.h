@@ -23,6 +23,10 @@ class ChannelListModel : public QAbstractListModel
     Q_PROPERTY(int categoryId READ categoryId WRITE setCategoryId NOTIFY categoryIdChanged)
     Q_PROPERTY(QString searchText READ searchText WRITE setSearchText NOTIFY searchTextChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // "default" (provider order) or "newest" (most recently added first)
+    Q_PROPERTY(QString sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
+    // Maximum number of rows, 0 = all (home page rows)
+    Q_PROPERTY(int limit READ limit WRITE setLimit NOTIFY limitChanged)
 
 public:
     enum Role {
@@ -50,6 +54,10 @@ public:
     int categoryId() const { return m_categoryId; }
     void setCategoryId(int id);
     QString searchText() const { return m_searchText; }
+    QString sortOrder() const { return m_sortOrder; }
+    void setSortOrder(const QString &order);
+    int limit() const { return m_limit; }
+    void setLimit(int limit);
     void setSearchText(const QString &text);
 
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -71,6 +79,8 @@ signals:
     void kindChanged();
     void categoryIdChanged();
     void searchTextChanged();
+    void sortOrderChanged();
+    void limitChanged();
     void countChanged();
 
 private:
@@ -105,6 +115,8 @@ private:
     QString m_kind = QStringLiteral("live");
     int m_categoryId = -1; // CategoryListModel::AllCategories
     QString m_searchText;
+    QString m_sortOrder = QStringLiteral("default");
+    int m_limit = 0;
     iptv::SourceRecord m_source;
     QList<Row> m_rows;
     mutable QHash<int, NowNext> m_guideCache; // by row, filled on demand

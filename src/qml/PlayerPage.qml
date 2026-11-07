@@ -22,6 +22,8 @@ Page {
     property bool startFromBeginning: false
 
     property ApplicationWindow appWindow
+    // Hides the app navigation while playing.
+    readonly property bool immersive: true
 
     readonly property bool hasChannels: channelModel !== null && channelModel.count > 0
     readonly property bool isVod: vodKind.length > 0
@@ -273,6 +275,21 @@ Page {
         visible: running
     }
 
+    // Big play button while paused (easy to hit on touch screens)
+    IconButton {
+        anchors.centerIn: parent
+        size: 76
+        filled: true
+        iconName: "play"
+        iconColor: "white"
+        tip: qsTr("Play")
+        visible: !player.playing && !player.busy && !player.failed && !page.nextEpisodePending
+        onClicked: {
+            player.togglePause()
+            page.showControls()
+        }
+    }
+
     // Error state
     Pane {
         anchors.centerIn: parent
@@ -300,20 +317,20 @@ Page {
             }
             RowLayout {
                 Layout.alignment: Qt.AlignRight
-                Button {
+                AppButton {
                     text: qsTr("Back")
-                    flat: true
+                    variant: "ghost"
                     onClicked: page.closeRequested()
                 }
-                Button {
-                    text: page.hasChannels ? qsTr("Next channel") : ""
+                AppButton {
+                    text: qsTr("Next channel")
                     visible: page.hasChannels
-                    flat: true
+                    variant: "secondary"
                     onClicked: page.playChannel(page.channelIndex + 1)
                 }
-                Button {
+                AppButton {
                     text: qsTr("Retry")
-                    highlighted: true
+                    iconName: "retry"
                     onClicked: player.retry()
                 }
             }
@@ -345,14 +362,14 @@ Page {
                 Layout.maximumWidth: 320
             }
             RowLayout {
-                Button {
+                AppButton {
                     text: qsTr("Cancel")
-                    flat: true
+                    variant: "ghost"
                     onClicked: page.nextEpisodePending = false
                 }
-                Button {
+                AppButton {
                     text: qsTr("Play now")
-                    highlighted: true
+                    iconName: "play"
                     onClicked: page.playEpisode(page.episodeIndex + 1)
                 }
             }

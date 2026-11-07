@@ -53,45 +53,79 @@ qt_add_executable(iptvplayer
 
 set(QML_SOURCES
     qml/Main.qml
-    qml/AppTheme.qml
-    qml/HomePage.qml
-    qml/PlayerPage.qml
-    qml/PlayerControls.qml
-    qml/IconButton.qml
-    qml/Osd.qml
-    qml/ChannelDelegate.qml
-    qml/LivePage.qml
     qml/AddSourcePage.qml
+    qml/AppButton.qml
+    qml/AppState.qml
+    qml/AppTextField.qml
+    qml/AppTheme.qml
+    qml/Avatar.qml
+    qml/BottomNav.qml
+    qml/CategoryChips.qml
+    qml/CategoryPanel.qml
+    qml/ChannelCard.qml
+    qml/ChannelDelegate.qml
+    qml/Chip.qml
+    qml/ContentRow.qml
+    qml/EmptyState.qml
     qml/GuidePage.qml
-    qml/SectionTabs.qml
-    qml/PosterCard.qml
-    qml/VodPage.qml
+    qml/HomePage.qml
+    qml/IconButton.qml
+    qml/LivePage.qml
     qml/MovieDetailsPage.qml
+    qml/NavRail.qml
+    qml/Osd.qml
+    qml/PageHeader.qml
+    qml/PlayerControls.qml
+    qml/PlayerPage.qml
+    qml/PosterCard.qml
+    qml/ProviderSwitcher.qml
+    qml/SearchField.qml
     qml/SeriesDetailsPage.qml
+    qml/SettingsPage.qml
+    qml/StatusBanner.qml
+    qml/VodPage.qml
 )
 set(QML_RESOURCES
     qml/icons/add.svg
     qml/icons/back.svg
+    qml/icons/check.svg
+    qml/icons/chevron-down.svg
+    qml/icons/chevron-right.svg
+    qml/icons/clock.svg
     qml/icons/close.svg
+    qml/icons/delete.svg
+    qml/icons/film.svg
     qml/icons/folder.svg
     qml/icons/fullscreen-exit.svg
     qml/icons/fullscreen.svg
     qml/icons/guide.svg
+    qml/icons/heart-outline.svg
+    qml/icons/heart.svg
+    qml/icons/home.svg
     qml/icons/info.svg
+    qml/icons/link.svg
     qml/icons/list.svg
+    qml/icons/live.svg
     qml/icons/more.svg
     qml/icons/mute.svg
     qml/icons/next.svg
     qml/icons/pause.svg
+    qml/icons/person.svg
     qml/icons/play.svg
     qml/icons/previous.svg
     qml/icons/retry.svg
     qml/icons/search.svg
+    qml/icons/series.svg
+    qml/icons/settings.svg
     qml/icons/star-outline.svg
     qml/icons/star.svg
     qml/icons/subtitles.svg
     qml/icons/tv.svg
     qml/icons/volume.svg
+    qml/fonts/Inter-Bold.ttf
+    qml/fonts/Inter-Medium.ttf
+    qml/fonts/Inter-Regular.ttf
+    qml/fonts/Inter-SemiBold.ttf
 )
 
 # Serve the files from the module root (next to its qmldir) instead of a qml/
@@ -101,7 +135,7 @@ foreach(file IN LISTS QML_SOURCES QML_RESOURCES)
     string(REGEX REPLACE "^qml/" "" alias "${file}")
     set_source_files_properties(${file} PROPERTIES QT_RESOURCE_ALIAS ${alias})
 endforeach()
-set_source_files_properties(qml/AppTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/AppTheme.qml qml/AppState.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(iptvplayer
     URI IPTVPlayer

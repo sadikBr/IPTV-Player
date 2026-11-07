@@ -218,12 +218,14 @@ Each phase ends with something that runs and can be tested on a real device.
 - [x] M3U playlists: movies, and series grouped from "Show S01 E02" names
 
 ### Phase 4b — Design pass (≈ 1 week)
-Once all main screens exist, redesign them together so they feel like one product:
-- [ ] Visual direction: typography, spacing, colour, icons, motion; light touches of brand
-- [ ] Home as a dashboard: continue watching, favorites row, recently added movies/series
-- [ ] Poster/backdrop-led screens for movies and series; better empty and loading states
-- [ ] Player overlay redesign (bigger touch targets on phones, cleaner info layout)
-- [ ] Review on phone, tablet, desktop and TV distance
+- [x] Visual direction: dark cinematic theme, violet→cyan accent, Inter typeface, design
+      tokens in `AppTheme.qml`, shared components (buttons, chips, cards, search, empty states)
+- [x] App shell: side navigation (desktop) / bottom tabs (phones), provider switcher
+- [x] Home as a dashboard: hero, continue watching, favorite channels, recently added rows
+- [x] Poster-led movie/series screens; category chips on phones; better empty and loading states
+- [x] Settings screen: providers, User-Agent, guide time shift, single-URL player
+- [x] Player overlay polish (big play button on touch, new buttons)
+- [ ] Review on a real phone, tablet and TV (you)
 
 ### Phase 5 — Polish & platform work (≈ 1–2 weeks)
 - [ ] Responsive layouts: phone portrait, phone landscape, tablet, desktop
@@ -281,4 +283,6 @@ Once all main screens exist, redesign them together so they feel like one produc
 - **Phase 3:** done — TV guide: now/next in the channel list and player, guide grid
 - **Phase 4:** done — movies and series with details, seasons/episodes, resume, next episode,
   audio/subtitle tracks, "Continue watching"
-- **Next:** Phase 4b — UI design pass (requested: the current look is functional but plain)
+- **Phase 4b:** done — new design, app shell, dashboard, settings, guide time shift
+- **Next:** Phase 5 — polish & platform work (Android TV remote navigation, auto-reconnect,
+  installers), plus whatever comes up in daily use

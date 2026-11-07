@@ -111,10 +111,19 @@ bool EpgManager::hasGuide(int sourceId) const
     return source && source->epgCount > 0;
 }
 
+namespace {
+qint64 shiftOf(int sourceId)
+{
+    const auto source = SourceStore(Database::connection()).source(sourceId);
+    return source ? qint64(source->epgShiftMinutes) * 60 : 0;
+}
+} // namespace
+
 QVariantMap EpgManager::nowNext(int sourceId, const QString &epgKey) const
 {
     const qint64 now = QDateTime::currentSecsSinceEpoch();
-    const QList<ProgramRecord> list = EpgStore(Database::connection()).nowNext(sourceId, epgKey, now);
+    const QList<ProgramRecord> list =
+            EpgStore(Database::connection()).nowNext(sourceId, epgKey, now, shiftOf(sourceId));
     QVariantMap result;
     int i = 0;
     if (i < list.size() && list.at(i).start <= now)
@@ -131,7 +140,7 @@ QVariantList EpgManager::programs(int sourceId, const QString &epgKey, const QDa
     QVariantList result;
     const auto list = EpgStore(Database::connection())
                               .programs(sourceId, epgKey, from.toSecsSinceEpoch(),
-                                        to.toSecsSinceEpoch());
+                                        to.toSecsSinceEpoch(), shiftOf(sourceId));
     result.reserve(list.size());
     for (const ProgramRecord &p : list)
         result.append(toMap(p, now));

@@ -8,9 +8,11 @@ import IPTVPlayer
 Page {
     id: page
 
+    // Channels to show: the Live TV list when opened from there, else all channels.
     property ChannelListModel channelModel: null
+    readonly property ChannelListModel activeModel: channelModel ? channelModel : ownChannels
     property int sourceId: -1
-    property string sourceName
+    property bool showBack: false
 
     signal backRequested()
     signal channelActivated(int index)
@@ -84,38 +86,24 @@ Page {
 
     Component.onCompleted: Qt.callLater(scrollToNow)
 
-    header: ToolBar {
-        Material.background: AppTheme.surface
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 4
-            anchors.rightMargin: 8
-            spacing: 4
+    header: PageHeader {
+        title: qsTr("TV guide")
+        subtitle: page.dayText(page.dateAt(grid.contentX + grid.width / 2))
+        showBack: page.showBack
+        onBackClicked: page.backRequested()
 
-            IconButton {
-                iconName: "back"
-                tip: qsTr("Back")
-                onClicked: page.backRequested()
-            }
-            Label {
-                text: qsTr("TV guide")
-                font.pixelSize: 18
-                font.bold: true
-                color: AppTheme.textPrimary
-            }
-            Label {
-                text: page.dayText(page.dateAt(grid.contentX + grid.width / 2))
-                color: AppTheme.textSecondary
-                Layout.leftMargin: AppTheme.spacing
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-            }
-            Button {
-                text: qsTr("Now")
-                flat: true
-                onClicked: page.scrollToNow()
-            }
+        AppButton {
+            variant: "secondary"
+            text: qsTr("Now")
+            iconName: "clock"
+            implicitHeight: 38
+            onClicked: page.scrollToNow()
         }
+    }
+
+    ChannelListModel {
+        id: ownChannels
+        sourceId: page.channelModel ? -1 : page.sourceId
     }
 
     // Time ruler
@@ -163,7 +151,7 @@ Page {
         y: page.rulerHeight
         width: page.channelColumnWidth
         height: parent.height - y
-        model: page.channelModel
+        model: page.activeModel
         contentY: grid.contentY
         interactive: false
         clip: true
@@ -180,7 +168,7 @@ Page {
             padding: 6
             onClicked: page.channelActivated(index)
             background: Rectangle {
-                color: channelCell.hovered ? "#14FFFFFF" : AppTheme.surface
+                color: channelCell.hovered ? AppTheme.surfaceHover : AppTheme.backgroundRaised
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width
@@ -219,7 +207,7 @@ Page {
         y: page.rulerHeight
         width: parent.width - x
         height: parent.height - y
-        model: page.channelModel
+        model: page.activeModel
         contentWidth: page.gridWidth
         flickableDirection: Flickable.HorizontalAndVerticalFlick
         boundsBehavior: Flickable.StopAtBounds
@@ -273,9 +261,9 @@ Page {
                     y: 3
                     width: Math.max(2, Math.min(page.gridWidth, page.xFor(modelData.stop)) - startX - 2)
                     height: page.rowHeight - 7
-                    radius: 4
-                    color: blockArea.containsMouse ? Qt.lighter(AppTheme.surface, 1.5)
-                         : onAir ? "#2A4FC3F7" : AppTheme.surface
+                    radius: AppTheme.radiusSmall
+                    color: blockArea.containsMouse ? AppTheme.surfaceHover
+                         : onAir ? AppTheme.selection : AppTheme.surface
                     border.color: onAir ? AppTheme.accent : "transparent"
                     border.width: 1
                     clip: true
@@ -323,7 +311,7 @@ Page {
         y: page.rulerHeight - 6
         width: 2
         height: parent.height - y
-        color: AppTheme.error
+        color: AppTheme.live
     }
 
     // No guide yet
@@ -362,7 +350,7 @@ Page {
                 indeterminate: EpgManager.progress < 0
                 value: Math.max(0, EpgManager.progress)
             }
-            Button {
+            AppButton {
                 text: qsTr("Download guide")
                 visible: EpgManager.canHaveGuide(page.sourceId)
                          && !(EpgManager.busy && EpgManager.activeSourceId === page.sourceId)

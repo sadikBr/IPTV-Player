@@ -112,6 +112,12 @@ private slots:
 
         QVERIFY(store.nowNext(m_sourceId, QString(), utc(2026, 11, 7, 18, 10)).isEmpty());
 
+        // A +1 h correction: at 19:10 the 18:00 program (shown as 19:00) is on air
+        const auto shifted = store.nowNext(m_sourceId, QStringLiteral("bbc1.uk"),
+                                           utc(2026, 11, 7, 19, 10), 3600);
+        QCOMPARE(shifted.at(0).title, QStringLiteral("BBC News at Six"));
+        QCOMPARE(shifted.at(0).start, utc(2026, 11, 7, 19, 0));
+
         const auto range = store.programs(m_sourceId, QStringLiteral("bbc1.uk"),
                                           utc(2026, 11, 7, 17, 30), utc(2026, 11, 7, 19, 0));
         QCOMPARE(range.size(), 3);

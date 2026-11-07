@@ -46,6 +46,12 @@ QVariant SourceListModel::data(const QModelIndex &index, int role) const
         return s.epgLastSync;
     case EpgCountRole:
         return s.epgCount;
+    case EpgShiftRole:
+        return s.epgShiftMinutes;
+    case MovieCountRole:
+        return s.movieCount;
+    case SeriesCountRole:
+        return s.seriesCount;
     default:
         return {};
     }
@@ -66,7 +72,15 @@ QHash<int, QByteArray> SourceListModel::roleNames() const
         { MaxConnectionsRole, "maxConnections" },
         { EpgLastSyncRole, "epgLastSync" },
         { EpgCountRole, "epgCount" },
+        { EpgShiftRole, "epgShiftMinutes" },
+        { MovieCountRole, "movieCount" },
+        { SeriesCountRole, "seriesCount" },
     };
+}
+
+int SourceListModel::sourceIdAt(int row) const
+{
+    return row >= 0 && row < m_sources.size() ? m_sources.at(row).id : -1;
 }
 
 void SourceListModel::reload()

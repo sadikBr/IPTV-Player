@@ -112,7 +112,7 @@ Item {
                 iconName: root.favorite ? "star" : "star-outline"
                 tip: root.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
                 visible: root.hasChannels
-                icon.color: root.favorite ? AppTheme.favorite : "white"
+                iconColor: root.favorite ? AppTheme.favorite : "white"
                 onClicked: { root.favoriteClicked(); root.activity() }
             }
             IconButton {
@@ -207,7 +207,7 @@ Item {
 
                 Rectangle {
                     visible: root.player && root.player.live
-                    color: "#E53935"
+                    color: AppTheme.live
                     radius: 4
                     implicitWidth: liveLabel.implicitWidth + 12
                     implicitHeight: liveLabel.implicitHeight + 4

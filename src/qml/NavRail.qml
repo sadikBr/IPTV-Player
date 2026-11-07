@@ -1,0 +1,147 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.impl
+import QtQuick.Layouts
+import IPTVPlayer
+
+// Side navigation for wide screens.
+Rectangle {
+    id: root
+
+    color: AppTheme.backgroundRaised
+
+    Rectangle {
+        anchors.right: parent.right
+        width: 1
+        height: parent.height
+        color: AppTheme.stroke
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        anchors.rightMargin: 17
+        spacing: 6
+
+        // Brand
+        RowLayout {
+            Layout.bottomMargin: 18
+            Layout.leftMargin: 6
+            spacing: 10
+            Rectangle {
+                Layout.preferredWidth: 34
+                Layout.preferredHeight: 34
+                radius: 10
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: AppTheme.accentStrong }
+                    GradientStop { position: 1.0; color: "#2FB9DC" }
+                }
+                IconImage {
+                    anchors.centerIn: parent
+                    source: "icons/play.svg"
+                    sourceSize: Qt.size(18, 18)
+                    color: "white"
+                }
+            }
+            Label {
+                text: "IPTV Player"
+                font.pixelSize: 18
+                font.weight: Font.Bold
+                color: AppTheme.textPrimary
+            }
+        }
+
+        ProviderSwitcher {
+            Layout.fillWidth: true
+            Layout.bottomMargin: 14
+            visible: AppState.hasSource
+        }
+
+        NavItem { section: "home"; iconName: "home"; text: qsTr("Home") }
+        NavItem {
+            section: "live"; iconName: "live"; text: qsTr("Live TV")
+            visible: AppState.hasSource
+        }
+        NavItem {
+            section: "movie"; iconName: "film"; text: qsTr("Movies")
+            visible: (AppState.sourceInfo.movieCount || 0) > 0
+        }
+        NavItem {
+            section: "series"; iconName: "series"; text: qsTr("Series")
+            visible: (AppState.sourceInfo.seriesCount || 0) > 0
+        }
+        NavItem {
+            section: "guide"; iconName: "guide"; text: qsTr("TV guide")
+            visible: AppState.hasSource
+        }
+
+        Item { Layout.fillHeight: true }
+
+        // Background work
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.bottomMargin: 8
+            spacing: 6
+            visible: SourceManager.busy || EpgManager.busy
+            Label {
+                Layout.fillWidth: true
+                text: SourceManager.busy ? SourceManager.statusText : EpgManager.statusText
+                color: AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontCaption
+                elide: Text.ElideRight
+            }
+            ProgressBar {
+                Layout.fillWidth: true
+                indeterminate: (SourceManager.busy ? SourceManager.progress : EpgManager.progress) < 0
+                value: Math.max(0, SourceManager.busy ? SourceManager.progress : EpgManager.progress)
+            }
+        }
+
+        NavItem { section: "settings"; iconName: "settings"; text: qsTr("Settings") }
+    }
+
+    component NavItem: AbstractButton {
+        id: item
+        property string section
+        property string iconName
+        readonly property bool active: AppState.section === section
+
+        Layout.fillWidth: true
+        implicitHeight: 44
+        hoverEnabled: true
+        focusPolicy: Qt.TabFocus
+        onClicked: AppState.sectionRequested(section)
+
+        background: Rectangle {
+            radius: AppTheme.radius
+            color: item.active ? AppTheme.selection : item.hovered ? AppTheme.hover : "transparent"
+            Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+            Rectangle {
+                visible: item.active
+                x: 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: 3
+                height: 20
+                radius: 1.5
+                color: AppTheme.accent
+            }
+        }
+        contentItem: RowLayout {
+            spacing: 14
+            IconImage {
+                Layout.leftMargin: 14
+                source: "icons/" + item.iconName + ".svg"
+                sourceSize: Qt.size(20, 20)
+                color: item.active ? AppTheme.accent : AppTheme.textSecondary
+            }
+            Label {
+                Layout.fillWidth: true
+                text: item.text
+                font.pixelSize: AppTheme.fontBody
+                font.weight: item.active ? Font.DemiBold : Font.Medium
+                color: item.active ? AppTheme.textPrimary : AppTheme.textSecondary
+            }
+        }
+    }
+}

@@ -60,6 +60,18 @@ QHash<int, QByteArray> ContinueWatchingModel::roleNames() const
     };
 }
 
+QVariantMap ContinueWatchingModel::get(int row) const
+{
+    QVariantMap map;
+    if (row < 0 || row >= m_items.size())
+        return map;
+    const QModelIndex idx = index(row);
+    const auto roles = roleNames();
+    for (auto it = roles.begin(); it != roles.end(); ++it)
+        map.insert(QString::fromLatin1(it.value()), data(idx, it.key()));
+    return map;
+}
+
 void ContinueWatchingModel::reload()
 {
     const int oldCount = int(m_items.size());

@@ -31,6 +31,7 @@ struct SourceRecord
     int epgCount = 0;
     int movieCount = 0;
     int seriesCount = 0;
+    int epgShiftMinutes = 0; // added to all guide times (fixes providers with wrong time zones)
 
     bool isXtream() const { return type == QLatin1String("xtream"); }
 };
@@ -66,6 +67,7 @@ public:
     int addSource(const SourceRecord &source); // returns the new id, or -1
     bool updateSource(const SourceRecord &source);
     bool removeSource(int id);
+    bool setEpgShift(int id, int minutes);
 
     // Replaces all categories and channels of a source in one transaction and
     // updates its live channel count. Favorites are kept (they use ext_id).

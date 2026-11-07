@@ -33,9 +33,11 @@ public:
     bool linkChannels(int sourceId);
 
     // The program on air at `now` (if any) followed by the next one.
-    QList<ProgramRecord> nowNext(int sourceId, const QString &epgKey, qint64 now) const;
-    QList<ProgramRecord> programs(int sourceId, const QString &epgKey, qint64 from,
-                                  qint64 to) const;
+    // shiftSecs is added to the guide's times (per-provider correction).
+    QList<ProgramRecord> nowNext(int sourceId, const QString &epgKey, qint64 now,
+                                 qint64 shiftSecs = 0) const;
+    QList<ProgramRecord> programs(int sourceId, const QString &epgKey, qint64 from, qint64 to,
+                                  qint64 shiftSecs = 0) const;
 
     // Removes programs that ended before `before`.
     bool prune(int sourceId, qint64 before);

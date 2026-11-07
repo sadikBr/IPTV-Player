@@ -50,6 +50,8 @@ public:
     // Refreshes in the background if the last sync is older than maxAgeHours.
     Q_INVOKABLE bool refreshIfStale(int sourceId, int maxAgeHours);
     Q_INVOKABLE void removeSource(int sourceId);
+    // Corrects TV guide times of a provider by this many minutes.
+    Q_INVOKABLE void setEpgShift(int sourceId, int minutes);
     Q_INVOKABLE void cancel();
 
     Q_INVOKABLE QVariantMap source(int sourceId) const;

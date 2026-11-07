@@ -27,8 +27,12 @@ ChannelListModel::ChannelListModel(QObject *parent) : QAbstractListModel(parent)
         if (sourceId == m_sourceId && m_kind == QLatin1String("movie"))
             reload();
     });
-    connect(DataNotifier::instance(), &DataNotifier::sourcesChanged, this,
-            &ChannelListModel::reloadSource);
+    connect(DataNotifier::instance(), &DataNotifier::sourcesChanged, this, [this] {
+        const int shift = m_source.epgShiftMinutes;
+        reloadSource();
+        if (shift != m_source.epgShiftMinutes)
+            refreshGuide();
+    });
     connect(DataNotifier::instance(), &DataNotifier::epgChanged, this, [this](int sourceId) {
         // Channel/guide links may have changed too.
         if (sourceId == m_sourceId)
@@ -51,7 +55,9 @@ const ChannelListModel::NowNext &ChannelListModel::nowNext(int row) const
     const Row &r = m_rows.at(row);
     if (!r.epgKey.isEmpty() && m_kind == QLatin1String("live")) {
         const qint64 now = QDateTime::currentSecsSinceEpoch();
-        const auto programs = EpgStore(Database::connection()).nowNext(m_sourceId, r.epgKey, now);
+        const auto programs = EpgStore(Database::connection())
+                                      .nowNext(m_sourceId, r.epgKey, now,
+                                               qint64(m_source.epgShiftMinutes) * 60);
         int i = 0;
         if (i < programs.size() && programs.at(i).start <= now) {
             const auto &p = programs.at(i++);
@@ -88,6 +94,24 @@ void ChannelListModel::setKind(const QString &kind)
         return;
     m_kind = kind;
     emit kindChanged();
+    reload();
+}
+
+void ChannelListModel::setSortOrder(const QString &order)
+{
+    if (order == m_sortOrder)
+        return;
+    m_sortOrder = order;
+    emit sortOrderChanged();
+    reload();
+}
+
+void ChannelListModel::setLimit(int limit)
+{
+    if (limit == m_limit)
+        return;
+    m_limit = limit;
+    emit limitChanged();
     reload();
 }
 
@@ -249,7 +273,10 @@ void ChannelListModel::reload()
         } else if (m_categoryId > 0) {
             sql += QStringLiteral(" AND c.category_id = :category");
         }
-        sql += QStringLiteral(" ORDER BY c.position");
+        sql += m_sortOrder == QLatin1String("newest") ? QStringLiteral(" ORDER BY c.position DESC")
+                                                      : QStringLiteral(" ORDER BY c.position");
+        if (m_limit > 0)
+            sql += QStringLiteral(" LIMIT %1").arg(m_limit);
 
         QSqlQuery q(Database::connection());
         q.setForwardOnly(true);

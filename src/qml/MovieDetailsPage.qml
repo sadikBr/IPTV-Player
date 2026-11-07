@@ -73,8 +73,9 @@ Page {
 
     IconButton {
         z: 2
-        x: 4
-        y: 4
+        x: 12
+        y: 12
+        filled: true
         iconName: "back"
         tip: qsTr("Back")
         onClicked: page.backRequested()
@@ -137,25 +138,26 @@ Page {
                 RowLayout {
                     Layout.topMargin: AppTheme.spacing
                     spacing: AppTheme.spacing
-                    Button {
+                    AppButton {
                         objectName: "playButton"
-                        highlighted: true
-                        icon.source: "icons/play.svg"
+                        iconName: "play"
                         text: page.resumeMs > 0
                               ? qsTr("Resume from %1").arg(page.formatDuration(Math.round(page.resumeMs / 1000)))
                               : qsTr("Play")
                         onClicked: page.playRequested(false)
                     }
-                    Button {
+                    AppButton {
                         visible: page.resumeMs > 0
-                        flat: true
+                        variant: "secondary"
                         text: qsTr("From the start")
                         onClicked: page.playRequested(true)
                     }
                     IconButton {
-                        iconName: page.info.favorite ? "star" : "star-outline"
+                        iconName: page.info.favorite ? "heart" : "heart-outline"
                         tip: page.info.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
-                        icon.color: page.info.favorite ? AppTheme.favorite : AppTheme.textPrimary
+                        iconColor: page.info.favorite ? AppTheme.live : AppTheme.textPrimary
+                        filled: true
+                        size: 44
                         onClicked: {
                             VodManager.setFavorite(page.sourceId, "movie", page.extId, !page.info.favorite)
                             page.refresh()

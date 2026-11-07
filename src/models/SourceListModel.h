@@ -27,6 +27,9 @@ public:
         MaxConnectionsRole,
         EpgLastSyncRole,
         EpgCountRole,
+        EpgShiftRole,
+        MovieCountRole,
+        SeriesCountRole,
     };
 
     explicit SourceListModel(QObject *parent = nullptr);
@@ -34,6 +37,9 @@ public:
     int rowCount(const QModelIndex &parent = {}) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
+
+    // Id of the provider in a row (-1 if out of range).
+    Q_INVOKABLE int sourceIdAt(int row) const;
 
 public slots:
     void reload();

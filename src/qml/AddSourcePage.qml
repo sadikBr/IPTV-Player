@@ -65,38 +65,36 @@ Page {
         onAccepted: m3uUrlField.text = selectedFile.toString()
     }
 
-    header: ToolBar {
-        Material.background: AppTheme.surface
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 4
-            IconButton {
-                iconName: "back"
-                tip: qsTr("Back")
-                enabled: !page.waiting
-                onClicked: page.backRequested()
-            }
-            Label {
-                text: qsTr("Add provider")
-                font.pixelSize: 18
-                font.bold: true
-                color: AppTheme.textPrimary
-                Layout.fillWidth: true
-            }
-        }
+    header: PageHeader {
+        title: qsTr("Add provider")
+        subtitle: qsTr("Xtream Codes login or M3U playlist")
+        showBack: true
+        onBackClicked: if (!page.waiting) page.backRequested()
     }
 
     Flickable {
         anchors.fill: parent
-        contentHeight: form.implicitHeight + 2 * AppTheme.margin
+        contentHeight: form.implicitHeight + 80
         clip: true
         ScrollIndicator.vertical: ScrollIndicator {}
 
+        // Card behind the form
+        Rectangle {
+            x: form.x - 24
+            y: form.y - 20
+            width: form.width + 48
+            height: form.height + 40
+            radius: AppTheme.radiusLarge
+            color: AppTheme.surface
+            border.color: AppTheme.stroke
+            visible: page.width >= AppTheme.compactWidth
+        }
+
         ColumnLayout {
             id: form
-            width: Math.min(page.width - 2 * AppTheme.margin, 560)
+            width: Math.min(page.width - 2 * (page.width >= AppTheme.compactWidth ? 48 : AppTheme.margin), 560)
             x: (page.width - width) / 2
-            y: AppTheme.margin
+            y: 28
             spacing: AppTheme.spacing
 
             TabBar {
@@ -126,7 +124,7 @@ Page {
                                    + "(…/get.php?username=…&password=…) into the server field and the "
                                    + "rest fills in automatically.")
                     }
-                    TextField {
+                    AppTextField {
                         id: serverField
                         objectName: "serverField"
                         Layout.fillWidth: true
@@ -139,7 +137,7 @@ Page {
                                 page.fillXtream(credentials)
                         }
                     }
-                    TextField {
+                    AppTextField {
                         id: userField
                         Layout.fillWidth: true
                         placeholderText: qsTr("Username")
@@ -148,7 +146,7 @@ Page {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        TextField {
+                        AppTextField {
                             id: passwordField
                             Layout.fillWidth: true
                             placeholderText: qsTr("Password")
@@ -162,7 +160,7 @@ Page {
                             text: qsTr("Show")
                         }
                     }
-                    TextField {
+                    AppTextField {
                         id: xtreamName
                         Layout.fillWidth: true
                         placeholderText: qsTr("Name (optional)")
@@ -194,7 +192,7 @@ Page {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        TextField {
+                        AppTextField {
                             id: m3uUrlField
                             objectName: "m3uUrlField"
                             Layout.fillWidth: true
@@ -206,7 +204,7 @@ Page {
                         IconButton {
                             iconName: "folder"
                             tip: qsTr("Choose file")
-                            icon.color: AppTheme.textPrimary
+                            iconColor: AppTheme.textPrimary
                             onClicked: fileDialog.open()
                         }
                     }
@@ -228,7 +226,8 @@ Page {
                                 text: qsTr("This link contains an Xtream login. Using it loads faster "
                                            + "and will support movies, series and the TV guide.")
                             }
-                            Button {
+                            AppButton {
+                                variant: "secondary"
                                 text: qsTr("Use Xtream")
                                 onClicked: {
                                     page.fillXtream(page.m3uCredentials)
@@ -238,14 +237,14 @@ Page {
                         }
                     }
 
-                    TextField {
+                    AppTextField {
                         id: epgField
                         Layout.fillWidth: true
                         placeholderText: qsTr("TV guide (XMLTV) URL (optional)")
                         inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
                         selectByMouse: true
                     }
-                    TextField {
+                    AppTextField {
                         id: m3uName
                         Layout.fillWidth: true
                         placeholderText: qsTr("Name (optional)")
@@ -296,9 +295,9 @@ Page {
                 Layout.fillWidth: true
                 Layout.topMargin: AppTheme.spacing
                 Item { Layout.fillWidth: true }
-                Button {
+                AppButton {
                     text: qsTr("Cancel")
-                    flat: true
+                    variant: "ghost"
                     onClicked: {
                         if (page.waiting)
                             SourceManager.cancel()
@@ -306,9 +305,9 @@ Page {
                             page.backRequested()
                     }
                 }
-                Button {
-                    text: qsTr("Add")
-                    highlighted: true
+                AppButton {
+                    text: qsTr("Add provider")
+                    iconName: "add"
                     enabled: page.canSave
                     onClicked: page.save()
                 }

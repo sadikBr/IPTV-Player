@@ -168,6 +168,10 @@ const QList<QStringList> &migrations()
                 PRIMARY KEY (source_id, kind, ext_id)))"),
             QStringLiteral("CREATE INDEX idx_watch_progress_recent ON watch_progress(updated_at)"),
         },
+        // Version 4: per-provider TV guide time correction
+        {
+            QStringLiteral("ALTER TABLE sources ADD COLUMN epg_shift_minutes INTEGER NOT NULL DEFAULT 0"),
+        },
     };
     return list;
 }

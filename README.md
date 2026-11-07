@@ -8,37 +8,37 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.4 (milestone 4): live TV, TV guide, movies and series.**
+**Version 0.5 (design pass): live TV, TV guide, movies and series in a new look.**
 
+- **New design:** dark cinematic theme with a violet-to-cyan accent and the Inter typeface;
+  side navigation on desktop (Home, Live TV, Movies, Series, TV guide, Settings) and a
+  bottom tab bar on phones; switch providers from the navigation
+- **Home dashboard:** a hero for what to watch next, then rows for continue watching,
+  favorite channels, favorite movies and recently added movies and series
 - Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
   Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
-- **Live TV:** categories, search (accents ignored), favorites, channel logos
-- **TV guide:** what's on now under every channel, now/next in the player, and a
-  3-day guide grid. Xtream guides download automatically; for M3U the playlist's
-  guide link or the one you enter is used (`.xml.gz` supported)
-- **Movies:** poster grid by category with search and favorites; details page with
-  plot, cast, director, duration and rating; play or resume where you stopped
-- **Series:** poster grid; series page with seasons and episodes; continue with the
-  right episode; the next episode starts automatically after a 10 s countdown.
-  For M3U playlists, episodes are grouped by name ("Show S01 E02")
-- **Continue watching** row on the home page for unfinished movies and episodes
-- Player: seek bar, audio track and subtitle selection (when the file has several),
-  previous/next channel or episode, channel list panel, channel number entry,
-  stream info, full screen
-- Lists refresh once a day and the guide every 12 hours (or use the refresh button)
-- Xtream account status and expiry date shown on the home page
-- Android: screen stays on while playing; back button goes back one screen; stream
-  stops in the background and resumes when you return
-
-Next: a design pass over the whole UI.
+- **Live TV:** categories (side panel or chips), search (accents ignored), favorites,
+  channel logos and what's on now
+- **TV guide:** now/next under every channel and in the player, and a 3-day guide grid.
+  Xtream guides download automatically; for M3U the playlist's guide link or the one you
+  enter is used (`.xml.gz` supported). **Time shift per provider** in Settings for guides
+  with wrong time zones
+- **Movies and series:** poster grids with ratings, details pages, seasons and episodes,
+  resume where you stopped, next episode after a 10 s countdown, favorites
+- **Settings:** manage providers (use, update, guide time shift, remove), User-Agent,
+  play a single stream URL
+- Player: seek bar, audio and subtitle tracks, previous/next channel or episode, channel
+  list, channel number entry, stream info, full screen
+- Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)
+- Android: screen stays on while playing; back button goes back one screen
 
 ### Troubleshooting
 
 - **"The server closed the connection" / "Connection reset by peer":** many providers only
   answer clients that look like a known player. The app identifies itself as VLC
-  (`VLC/3.0.20 LibVLC/3.0.20`). To use a different User-Agent, set `userAgent=...` under
-  `[network]` in the settings file (Linux: `~/.config/IPTVPlayer/IPTV Player.conf`); a
-  settings screen will follow.
+  (`VLC/3.0.20 LibVLC/3.0.20`). To use a different one, go to **Settings → Network**.
+- **Guide times are off by a fixed amount:** Settings → Providers → clock button, and
+  shift that provider's guide by the difference.
 - **"Network unreachable":** the network or DNS hands out an address that can't be
   reached (for example a `64:ff9b::` IPv6 address on a network without IPv6). Check the
   connection, VPN and DNS settings.
@@ -157,8 +157,11 @@ src/
   player/QtMultimediaBackend.*  Qt Multimedia implementation
   player/PlayerController.*     QML-facing player (wake lock, background handling)
   platform/ScreenWakeLock.*     keep screen on (Android)
-  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, GuidePage, VodPage,
-                           MovieDetailsPage, SeriesDetailsPage, PlayerPage, ...
+  qml/                     UI. Main.qml is the app shell (navigation); pages: HomePage,
+                           LivePage, GuidePage, VodPage, MovieDetailsPage, SeriesDetailsPage,
+                           SettingsPage, AddSourcePage, PlayerPage. AppTheme.qml holds the
+                           design tokens; AppButton, Chip, PosterCard, ... are the components
+  qml/fonts/               Inter typeface (SIL Open Font License, see Inter-LICENSE.txt)
 tests/                     unit tests and fixtures (sample M3U, Xtream responses)
 .github/workflows/build.yml  CI for Linux, Windows, Android
 ```
