@@ -4,6 +4,10 @@ namespace {
 constexpr int MaxRecentUrls = 10;
 const auto RecentUrlsKey = QStringLiteral("player/recentUrls");
 const auto VolumeKey = QStringLiteral("player/volume");
+const auto LastSourceKey = QStringLiteral("browse/lastSourceId");
+const auto LastChannelSourceKey = QStringLiteral("browse/lastChannelSourceId");
+const auto LastChannelExtIdKey = QStringLiteral("browse/lastChannelExtId");
+const auto LastChannelNameKey = QStringLiteral("browse/lastChannelName");
 } // namespace
 
 AppSettings::AppSettings(QObject *parent) : QObject(parent)
@@ -69,4 +73,40 @@ void AppSettings::saveRecentUrls()
 {
     m_settings.setValue(RecentUrlsKey, m_recentUrls);
     emit recentUrlsChanged();
+}
+
+int AppSettings::lastSourceId() const
+{
+    return m_settings.value(LastSourceKey, -1).toInt();
+}
+
+void AppSettings::setLastSourceId(int id)
+{
+    if (id == lastSourceId())
+        return;
+    m_settings.setValue(LastSourceKey, id);
+    emit lastSourceIdChanged();
+}
+
+int AppSettings::lastChannelSourceId() const
+{
+    return m_settings.value(LastChannelSourceKey, -1).toInt();
+}
+
+QString AppSettings::lastChannelExtId() const
+{
+    return m_settings.value(LastChannelExtIdKey).toString();
+}
+
+QString AppSettings::lastChannelName() const
+{
+    return m_settings.value(LastChannelNameKey).toString();
+}
+
+void AppSettings::setLastChannel(int sourceId, const QString &extId, const QString &name)
+{
+    m_settings.setValue(LastChannelSourceKey, sourceId);
+    m_settings.setValue(LastChannelExtIdKey, extId);
+    m_settings.setValue(LastChannelNameKey, name);
+    emit lastChannelChanged();
 }

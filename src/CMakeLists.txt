@@ -1,7 +1,33 @@
+# Core logic without UI: parsers, provider APIs and storage. Shared with the tests.
+add_library(iptvcore STATIC
+    core/Types.h
+    core/Types.cpp
+    core/M3uParser.h
+    core/M3uParser.cpp
+    core/XtreamApi.h
+    core/XtreamApi.cpp
+    core/Database.h
+    core/Database.cpp
+    core/SourceStore.h
+    core/SourceStore.cpp
+)
+target_include_directories(iptvcore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core)
+target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Sql)
+
 qt_add_executable(iptvplayer
     main.cpp
     app/AppSettings.h
     app/AppSettings.cpp
+    app/NetworkFactory.h
+    app/NetworkFactory.cpp
+    app/SourceManager.h
+    app/SourceManager.cpp
+    models/SourceListModel.h
+    models/SourceListModel.cpp
+    models/CategoryListModel.h
+    models/CategoryListModel.cpp
+    models/ChannelListModel.h
+    models/ChannelListModel.cpp
     player/PlayerBackend.h
     player/QtMultimediaBackend.h
     player/QtMultimediaBackend.cpp
@@ -18,17 +44,30 @@ set(QML_SOURCES
     qml/PlayerPage.qml
     qml/PlayerControls.qml
     qml/IconButton.qml
+    qml/Osd.qml
+    qml/ChannelDelegate.qml
+    qml/LivePage.qml
+    qml/AddSourcePage.qml
 )
 set(QML_RESOURCES
+    qml/icons/add.svg
     qml/icons/back.svg
     qml/icons/close.svg
-    qml/icons/fullscreen.svg
+    qml/icons/folder.svg
     qml/icons/fullscreen-exit.svg
+    qml/icons/fullscreen.svg
     qml/icons/info.svg
+    qml/icons/list.svg
+    qml/icons/more.svg
     qml/icons/mute.svg
+    qml/icons/next.svg
     qml/icons/pause.svg
     qml/icons/play.svg
+    qml/icons/previous.svg
     qml/icons/retry.svg
+    qml/icons/search.svg
+    qml/icons/star-outline.svg
+    qml/icons/star.svg
     qml/icons/tv.svg
     qml/icons/volume.svg
 )
@@ -52,12 +91,15 @@ qt_add_qml_module(iptvplayer
 target_include_directories(iptvplayer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/app
-    ${CMAKE_CURRENT_SOURCE_DIR}/player)
+    ${CMAKE_CURRENT_SOURCE_DIR}/player
+    ${CMAKE_CURRENT_SOURCE_DIR}/models)
 
 target_compile_definitions(iptvplayer PRIVATE
     APP_VERSION="${PROJECT_VERSION}")
 
 target_link_libraries(iptvplayer PRIVATE
+    iptvcore
+    Qt6::Concurrent
     Qt6::Core
     Qt6::Gui
     Qt6::Network
@@ -87,6 +129,6 @@ endif()
 if(NOT ANDROID)
     add_test(NAME qml_smoke COMMAND iptvplayer --smoke-test)
     set_tests_properties(qml_smoke PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;IPTV_SMOKE_PLAYLIST=${CMAKE_SOURCE_DIR}/tests/fixtures/playlist.m3u"
         TIMEOUT 30)
 endif()

@@ -44,7 +44,7 @@ guide (EPG).
 | JSON | `QJsonDocument` | Xtream API responses |
 | XML (EPG) | `QXmlStreamReader` (streaming) | XMLTV files can be 50–200 MB, so they must not be loaded into memory all at once |
 | Storage | **SQLite** via Qt SQL | Channels, EPG, favorites, watch history |
-| Secrets | **QtKeychain** | Keep provider passwords in the OS keychain, not in plain text |
+| Secrets | App-private SQLite database | Simple and works everywhere (desktop keyrings are often missing on tiling WMs). QtKeychain can be added later if wanted |
 | Build | **CMake** + `qt_add_qml_module` | The standard for Qt 6, needed for Android packaging |
 | CI | **GitHub Actions** + `jurplel/install-qt-action` | Build all platforms on each push |
 | Tests | **Qt Test** | Parsers and API client tested with recorded fixtures |
@@ -194,13 +194,13 @@ Each phase ends with something that runs and can be tested on a real device.
 - [x] Keep the screen awake while playing (mobile), handle app pause/resume
 
 ### Phase 2 — Sources & live TV (≈ 1–2 weeks)
-- [ ] `M3uProvider` (parser + tests with fixtures)
-- [ ] `XtreamProvider` (API client + account info/expiry + tests)
-- [ ] "Add source" screen; password stored with QtKeychain
-- [ ] SQLite database + migrations + Repository; sync with a progress bar
-- [ ] Live page: categories → channels (with logos, lazy-loaded and cached), search
-- [ ] Tap a channel to play; channel up/down and a channel list overlay inside the player
-- [ ] Favorites and last-watched channel
+- [x] M3U parser (+ tests with fixtures)
+- [x] Xtream API client (+ account info/expiry + tests)
+- [x] "Add provider" screen (password stored in the app's private database, see §2)
+- [x] SQLite database + migrations + store; sync on a worker thread with a progress bar
+- [x] Live page: categories → channels (with logos, lazy-loaded and cached), search
+- [x] Tap a channel to play; channel up/down, number entry and a channel list overlay in the player
+- [x] Favorites and last-watched channel ("Continue watching")
 
 **→ First usable version: you can watch live TV.**
 
@@ -267,6 +267,7 @@ Each phase ends with something that runs and can be tested on a real device.
 ## 10. Progress
 
 - **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/Android, release on `v*` tags
-- **Phase 1:** done — URL player with controls, stream info, wake lock, background handling.
-  **To do (you):** test real streams from your provider on PC and phone and note what fails
-- **Next:** Phase 2 — sources and live TV
+- **Phase 1:** done — URL player with controls, stream info, wake lock, background handling
+- **Phase 2:** done — Xtream + M3U providers, live TV browser, favorites, zapping.
+  **To do (you):** add your provider on PC and phone and report what doesn't work
+- **Next:** Phase 3 — TV guide (EPG)

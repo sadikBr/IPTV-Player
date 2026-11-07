@@ -8,15 +8,29 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.1 (milestones 0–1):** paste a stream URL and play it.
+**Version 0.2 (milestone 2): watch live TV from your provider.**
 
-- Plays HLS (`.m3u8`) and MPEG-TS (`.ts`) streams, plus anything else FFmpeg can open
-- Play/pause, reconnect, volume, mute, full screen, auto-hiding controls
-- Stream info panel (codec, resolution, frame rate) — press **I** or tap ⓘ
-- Recent URLs remembered
-- Android: screen stays on while playing; stream stops in the background and resumes when you return
+- Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
+  Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
+- Browse live channels by category, search by name (accents ignored), mark favorites
+- Channel logos are cached on disk; channel lists are stored locally and refreshed
+  automatically once a day (or with the refresh button)
+- Player: previous/next channel, channel list panel, type a channel number to jump,
+  stream info panel, full screen, volume, reconnect
+- "Continue watching" on the home page; the last provider reopens on start-up
+- Xtream account status and expiry date shown on the home page
+- Android: screen stays on while playing; stream stops in the background and resumes
+  when you return
 
-Adding a provider and browsing channels comes next (milestone 2).
+Next: TV guide (milestone 3), then movies and series (milestone 4).
+
+### Where your data is stored
+
+Providers, channel lists and favorites are kept in a SQLite database in the app's
+private data folder (Linux: `~/.local/share/IPTVPlayer/IPTV Player/`, Windows:
+`%APPDATA%\IPTVPlayer\IPTV Player\`, Android: the app's private storage). Your
+provider password is stored there as well; it is not sent anywhere except to your
+provider.
 
 ## Download
 
@@ -54,17 +68,25 @@ Then in **GitHub → Settings → Secrets and variables → Actions**, add:
 
 Keep `release.keystore` safe and out of the repository.
 
-## Keyboard shortcuts (player)
+## Keyboard shortcuts
+
+**Player**
 
 | Key | Action |
 |---|---|
+| ↑ / ↓, Page Up / Page Down | Previous / next channel |
+| 0–9 | Type a channel number to jump to it |
+| L | Channel list |
+| S | Add / remove favorite |
 | Space / K | Play / pause |
-| F / F11 / double-click | Full screen |
+| + / − or mouse wheel | Volume (↑ / ↓ when playing a single URL) |
 | M | Mute |
-| ↑ / ↓ | Volume |
+| F / F11 / double-click | Full screen |
 | ← / → | Seek 10 s (movies) |
 | I | Stream info |
-| Esc / Backspace | Exit full screen / back |
+| Esc / Backspace | Close panel, exit full screen, back |
+
+**Channel list:** ↑ / ↓ to move, Enter to play, S to favorite, Ctrl+F to search.
 
 ## Building from source
 
@@ -91,7 +113,7 @@ install `intel-media-driver` (Intel) or `libva-mesa-driver` (AMD).
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/path/to/Qt/6.10.1/gcc_64
 cmake --build build
 ./build/bin/IPTVPlayer
-ctest --test-dir build --output-on-failure   # off-screen UI smoke test
+ctest --test-dir build --output-on-failure   # unit tests + off-screen UI smoke test
 ```
 
 Or open `CMakeLists.txt` in Qt Creator and press Run. For Android, pick an Android kit in
@@ -102,11 +124,15 @@ Qt Creator (it needs JDK 17, the Android SDK and NDK r27c).
 ```
 src/
   main.cpp                 app entry point (+ --smoke-test mode)
+  core/                    no UI: M3U parser, Xtream API, SQLite storage (unit tested)
   app/AppSettings.*        persisted settings, exposed to QML
+  app/SourceManager.*      add/refresh/remove providers (download, parse, save)
+  models/                  list models for QML: providers, categories, channels
   player/PlayerBackend.h   player interface (allows other engines later, e.g. mpv)
   player/QtMultimediaBackend.*  Qt Multimedia implementation
   player/PlayerController.*     QML-facing player (wake lock, background handling)
   platform/ScreenWakeLock.*     keep screen on (Android)
-  qml/                     UI: Main, HomePage, PlayerPage, PlayerControls, ...
+  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, PlayerPage, ...
+tests/                     unit tests and fixtures (sample M3U, Xtream responses)
 .github/workflows/build.yml  CI for Linux, Windows, Android
 ```

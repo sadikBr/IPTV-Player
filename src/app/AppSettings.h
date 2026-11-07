@@ -16,6 +16,10 @@ class AppSettings : public QObject
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(QStringList recentUrls READ recentUrls NOTIFY recentUrlsChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    Q_PROPERTY(int lastSourceId READ lastSourceId WRITE setLastSourceId NOTIFY lastSourceIdChanged)
+    Q_PROPERTY(int lastChannelSourceId READ lastChannelSourceId NOTIFY lastChannelChanged)
+    Q_PROPERTY(QString lastChannelExtId READ lastChannelExtId NOTIFY lastChannelChanged)
+    Q_PROPERTY(QString lastChannelName READ lastChannelName NOTIFY lastChannelChanged)
 
 public:
     explicit AppSettings(QObject *parent = nullptr);
@@ -34,9 +38,21 @@ public:
     qreal volume() const { return m_volume; }
     void setVolume(qreal volume);
 
+    // The source shown last, reopened on start-up.
+    int lastSourceId() const;
+    void setLastSourceId(int id);
+
+    // The channel watched last ("Continue watching").
+    int lastChannelSourceId() const;
+    QString lastChannelExtId() const;
+    QString lastChannelName() const;
+    Q_INVOKABLE void setLastChannel(int sourceId, const QString &extId, const QString &name);
+
 signals:
     void recentUrlsChanged();
     void volumeChanged();
+    void lastSourceIdChanged();
+    void lastChannelChanged();
 
 private:
     void saveRecentUrls();

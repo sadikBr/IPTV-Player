@@ -1,0 +1,19 @@
+﻿#EXTM3U url-tvg="http://epg.example.com/guide.xml.gz" x-tvg-url="http://other.example.com/x.xml"
+#EXTINF:-1 tvg-id="bbc1.uk" tvg-name="BBC One" tvg-logo="http://logos.example.com/bbc1.png" group-title="UK | General",BBC One HD
+http://example.com:8080/live/user/pass/1001.ts
+#EXTINF:-1 group-title="News, World" tvg-id="cnn.us" tvg-chno="42",CNN International
+#EXTVLCOPT:http-user-agent=SomePlayer/1.0
+http://example.com:8080/live/user/pass/1002.ts
+
+#EXTINF:-1,Channel Without Attributes
+#EXTGRP:Misc
+http://example.com/streams/misc1.m3u8
+#EXTINF:-1 tvg-name="Name From Attr" group-title="UK | General",
+http://example.com:8080/live/user/pass/1003.ts
+#EXTINF:-1 tvg-logo="http://logos.example.com/movie.jpg" group-title="Movies | Action",Some Movie (2024)
+http://example.com:8080/movie/user/pass/5001.mkv
+#EXTINF:-1 group-title="Series | Drama",Some Show S01 E01
+http://example.com:8080/series/user/pass/7001.mp4
+http://example.com/bare-url-without-extinf.ts
+#EXTINF:-1 tvg-id="" group-title="UK | General",Café TV Élite
+http://example.com:8080/live/user/pass/1004.ts

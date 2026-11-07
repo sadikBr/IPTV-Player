@@ -12,12 +12,18 @@ Item {
     property string title
     property bool fullScreen: false
     property bool infoVisible: false
+    property bool hasChannels: false
+    property bool favorite: false
     readonly property bool compact: width < AppTheme.compactWidth
     readonly property bool interacting: seekSlider.pressed || volumeSlider.pressed
 
     signal backClicked()
     signal fullScreenClicked()
     signal infoClicked()
+    signal previousChannel()
+    signal nextChannel()
+    signal channelListClicked()
+    signal favoriteClicked()
     signal activity()
 
     function formatTime(ms) {
@@ -58,6 +64,13 @@ Item {
                 elide: Text.ElideMiddle
                 color: "white"
                 font.pixelSize: 16
+            }
+            IconButton {
+                iconName: root.favorite ? "star" : "star-outline"
+                tip: root.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
+                visible: root.hasChannels
+                icon.color: root.favorite ? AppTheme.favorite : "white"
+                onClicked: { root.favoriteClicked(); root.activity() }
             }
             IconButton {
                 iconName: "info"
@@ -126,9 +139,21 @@ Item {
                 spacing: AppTheme.spacing / 2
 
                 IconButton {
+                    iconName: "previous"
+                    tip: qsTr("Previous channel (Page Up)")
+                    visible: root.hasChannels
+                    onClicked: { root.previousChannel(); root.activity() }
+                }
+                IconButton {
                     iconName: root.player && (root.player.playing || root.player.busy) ? "pause" : "play"
                     tip: qsTr("Play / Pause (Space)")
                     onClicked: { root.player.togglePause(); root.activity() }
+                }
+                IconButton {
+                    iconName: "next"
+                    tip: qsTr("Next channel (Page Down)")
+                    visible: root.hasChannels
+                    onClicked: { root.nextChannel(); root.activity() }
                 }
                 IconButton {
                     iconName: "retry"
@@ -173,6 +198,12 @@ Item {
                         root.player.volume = value
                         root.activity()
                     }
+                }
+                IconButton {
+                    iconName: "list"
+                    tip: qsTr("Channel list (L)")
+                    visible: root.hasChannels
+                    onClicked: { root.channelListClicked(); root.activity() }
                 }
                 IconButton {
                     iconName: root.fullScreen ? "fullscreen-exit" : "fullscreen"
