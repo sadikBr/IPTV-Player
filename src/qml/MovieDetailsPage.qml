@@ -1,10 +1,9 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Material
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Poster, details and play/resume buttons for one movie.
+// Cinematic movie page: full-width backdrop, poster, details, play/resume.
 Page {
     id: page
 
@@ -15,6 +14,7 @@ Page {
     property double resumeMs: VodManager.resumePosition(sourceId, "movie", extId)
     property string errorText: ""
     readonly property bool narrow: width < AppTheme.compactWidth
+    readonly property real sideMargin: narrow ? AppTheme.margin : AppTheme.pageMargin
     readonly property bool loading: VodManager.isLoading(sourceId, extId) && loadingTick >= 0
     property int loadingTick: 0
 
@@ -25,13 +25,6 @@ Page {
     function refresh() {
         info = VodManager.movie(sourceId, extId)
         resumeMs = VodManager.resumePosition(sourceId, "movie", extId)
-    }
-
-    function formatDuration(secs) {
-        if (!secs) return ""
-        const h = Math.floor(secs / 3600)
-        const m = Math.round((secs % 3600) / 60)
-        return h > 0 ? qsTr("%1 h %2 min").arg(h).arg(m) : qsTr("%1 min").arg(m)
     }
 
     background: Rectangle { color: AppTheme.background }
@@ -50,114 +43,113 @@ Page {
         function onLoadingChanged() { page.loadingTick++ }
     }
 
-    // Backdrop
-    Image {
-        id: backdrop
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: Math.min(parent.height * 0.6, width * 0.56)
-        source: page.info.backdrop || ""
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        opacity: 0.35
-        visible: status === Image.Ready
-    }
-    Rectangle {
-        anchors.fill: backdrop
-        visible: backdrop.visible
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "transparent" }
-            GradientStop { position: 1.0; color: AppTheme.background }
-        }
-    }
-
-    IconButton {
-        z: 2
-        x: 12
-        y: 12
-        filled: true
-        iconName: "back"
-        tip: qsTr("Back")
-        onClicked: page.backRequested()
-    }
-
     Flickable {
+        id: flick
         anchors.fill: parent
-        contentHeight: content.implicitHeight + 2 * AppTheme.margin
+        contentHeight: content.y + content.implicitHeight + 48
         clip: true
-        ScrollIndicator.vertical: ScrollIndicator {}
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: AppScrollBar {}
+
+        DetailsBackdrop {
+            id: backdrop
+            width: flick.width
+            height: page.narrow ? 300 : Math.max(420, Math.min(page.height * 0.78, flick.width * 0.5))
+            backdrop: page.info.backdrop || ""
+            poster: page.info.poster || ""
+        }
 
         GridLayout {
             id: content
-            width: Math.min(page.width - 2 * AppTheme.margin, 1000)
-            x: (page.width - width) / 2
-            y: page.narrow ? 56 : 72
+            x: page.sideMargin
+            y: page.narrow ? 180 : Math.max(120, backdrop.height - 340)
+            width: Math.min(flick.width - 2 * page.sideMargin, 1180)
             columns: page.narrow ? 1 : 2
-            columnSpacing: AppTheme.margin * 1.5
+            columnSpacing: 40
             rowSpacing: AppTheme.margin
 
             // Poster
-            Rectangle {
+            Item {
                 Layout.alignment: Qt.AlignTop | (page.narrow ? Qt.AlignHCenter : Qt.AlignLeft)
-                Layout.preferredWidth: page.narrow ? 160 : 260
+                Layout.preferredWidth: page.narrow ? 150 : 250
                 Layout.preferredHeight: Layout.preferredWidth * 1.5
-                radius: 8
-                color: AppTheme.surface
-                clip: true
-                Image {
+                Shadow { target: posterFrame; spread: 30 }
+                Rectangle {
+                    id: posterFrame
                     anchors.fill: parent
-                    source: page.info.poster || ""
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    sourceSize.width: 520
+                    radius: AppTheme.radius
+                    color: AppTheme.surfaceHigh
+                    clip: true
+                    Image {
+                        anchors.fill: parent
+                        source: page.info.poster || ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize.width: 500
+                    }
                 }
             }
 
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignTop
-                spacing: AppTheme.spacing
+                Layout.topMargin: page.narrow ? 0 : 40
+                spacing: 14
 
+                Label {
+                    text: qsTr("MOVIE")
+                    color: AppTheme.accent
+                    font.pixelSize: AppTheme.fontCaption
+                    font.weight: Font.Bold
+                    font.letterSpacing: 2
+                }
                 Label {
                     Layout.fillWidth: true
                     text: page.info.name || ""
                     wrapMode: Text.Wrap
-                    font.pixelSize: page.narrow ? 24 : 32
-                    font.bold: true
-                    color: AppTheme.textPrimary
+                    font.pixelSize: page.narrow ? 28 : AppTheme.fontHero
+                    font.weight: Font.Bold
+                    font.letterSpacing: -0.5
+                    lineHeight: 1.05
+                    color: "white"
                 }
-                Label {
+                Flow {
                     Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    color: AppTheme.textSecondary
-                    text: [page.info.year, page.formatDuration(page.info.durationSecs),
-                           page.info.rating ? "★ " + page.info.rating : "", page.info.genre]
-                          .filter(t => t).join("  ·  ")
+                    spacing: 8
+                    MetaPill { text: page.info.year || "" }
+                    MetaPill { text: AppTheme.duration(page.info.durationSecs); iconName: "clock" }
+                    MetaPill {
+                        text: page.info.rating || ""
+                        iconName: "star"
+                        iconColor: AppTheme.favorite
+                    }
+                    MetaPill { text: page.info.genre || "" }
                 }
 
                 RowLayout {
-                    Layout.topMargin: AppTheme.spacing
-                    spacing: AppTheme.spacing
+                    Layout.topMargin: 8
+                    spacing: 12
                     AppButton {
                         objectName: "playButton"
                         iconName: "play"
                         text: page.resumeMs > 0
-                              ? qsTr("Resume from %1").arg(page.formatDuration(Math.round(page.resumeMs / 1000)))
+                              ? qsTr("Resume from %1").arg(AppTheme.duration(Math.round(page.resumeMs / 1000)))
                               : qsTr("Play")
                         onClicked: page.playRequested(false)
                     }
                     AppButton {
                         visible: page.resumeMs > 0
                         variant: "secondary"
+                        iconName: "retry"
                         text: qsTr("From the start")
                         onClicked: page.playRequested(true)
                     }
                     IconButton {
-                        iconName: page.info.favorite ? "heart" : "heart-outline"
-                        tip: page.info.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
-                        iconColor: page.info.favorite ? AppTheme.live : AppTheme.textPrimary
-                        filled: true
                         size: 44
+                        filled: true
+                        iconName: page.info.favorite ? "heart" : "heart-outline"
+                        iconColor: page.info.favorite ? AppTheme.accent : AppTheme.textPrimary
+                        tip: page.info.favorite ? qsTr("Remove from My movies") : qsTr("Add to My movies")
                         onClicked: {
                             VodManager.setFavorite(page.sourceId, "movie", page.extId, !page.info.favorite)
                             page.refresh()
@@ -178,30 +170,61 @@ Page {
                 }
                 Label {
                     Layout.fillWidth: true
-                    Layout.topMargin: AppTheme.spacing
+                    Layout.maximumWidth: 760
+                    Layout.topMargin: 6
                     visible: text.length > 0
                     text: page.info.plot || ""
                     wrapMode: Text.Wrap
-                    color: AppTheme.textPrimary
-                    font.pixelSize: 15
-                    lineHeight: 1.2
+                    color: "#D0D0D6"
+                    font.pixelSize: AppTheme.fontH3
+                    lineHeight: 1.35
                 }
-                Label {
-                    Layout.fillWidth: true
-                    visible: !!page.info.director
-                    wrapMode: Text.Wrap
-                    color: AppTheme.textSecondary
-                    text: qsTr("Director: %1").arg(page.info.director || "")
-                }
-                Label {
-                    Layout.fillWidth: true
-                    visible: !!page.info.cast
-                    wrapMode: Text.Wrap
-                    color: AppTheme.textSecondary
-                    text: qsTr("Cast: %1").arg(page.info.cast || "")
+
+                GridLayout {
+                    Layout.topMargin: 6
+                    Layout.maximumWidth: 760
+                    columns: 2
+                    columnSpacing: 16
+                    rowSpacing: 6
+                    visible: !!page.info.director || !!page.info.cast
+                    Label {
+                        visible: !!page.info.director
+                        text: qsTr("Director")
+                        color: AppTheme.textTertiary
+                        Layout.alignment: Qt.AlignTop
+                    }
+                    Label {
+                        visible: !!page.info.director
+                        Layout.fillWidth: true
+                        text: page.info.director || ""
+                        wrapMode: Text.Wrap
+                        color: AppTheme.textSecondary
+                    }
+                    Label {
+                        visible: !!page.info.cast
+                        text: qsTr("Cast")
+                        color: AppTheme.textTertiary
+                        Layout.alignment: Qt.AlignTop
+                    }
+                    Label {
+                        visible: !!page.info.cast
+                        Layout.fillWidth: true
+                        text: page.info.cast || ""
+                        wrapMode: Text.Wrap
+                        color: AppTheme.textSecondary
+                    }
                 }
             }
         }
+    }
+
+    IconButton {
+        x: 16
+        y: 16
+        filled: true
+        iconName: "back"
+        tip: qsTr("Back")
+        onClicked: page.backRequested()
     }
 
     Keys.onEscapePressed: page.backRequested()

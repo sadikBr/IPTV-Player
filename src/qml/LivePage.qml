@@ -15,6 +15,8 @@ Page {
     readonly property bool narrow: width < AppTheme.compactWidth
     readonly property bool syncing: SourceManager.busy && SourceManager.activeSourceId === sourceId
     readonly property alias channelModel: channels
+    readonly property bool gridMode: AppSettings.liveViewMode === "grid"
+    readonly property Item activeView: gridMode ? channelGrid : channelList
 
     signal channelActivated(int index)
     signal guideRequested()
@@ -29,8 +31,8 @@ Page {
         selectCategory(CategoryListModel.AllCategories)
         const index = channels.indexOfExtId(extId)
         if (index >= 0) {
-            channelList.currentIndex = index
-            channelList.positionViewAtIndex(index, ListView.Center)
+            activeView.currentIndex = index
+            activeView.positionViewAtIndex(index, ListView.Center)
             playIndex(index)
         }
     }
@@ -40,6 +42,7 @@ Page {
         searchField.text = ""
         channels.searchText = ""
         channelList.positionViewAtBeginning()
+        channelGrid.positionViewAtBeginning()
     }
 
     background: Rectangle { color: AppTheme.background }
@@ -74,13 +77,13 @@ Page {
         if (AppSettings.lastChannelSourceId === sourceId) {
             const last = channels.indexOfExtId(AppSettings.lastChannelExtId)
             if (last >= 0) {
-                channelList.currentIndex = last
-                channelList.positionViewAtIndex(last, ListView.Center)
+                activeView.currentIndex = last
+                activeView.positionViewAtIndex(last, ListView.Center)
             }
         }
         SourceManager.refreshIfStale(sourceId, 24)
         EpgManager.refreshIfStale(sourceId, 12)
-        channelList.forceActiveFocus()
+        activeView.forceActiveFocus()
     }
 
     header: PageHeader {
@@ -113,6 +116,11 @@ Page {
                     channels.searchText = ""
                 }
             }
+        }
+        IconButton {
+            iconName: page.gridMode ? "list" : "grid"
+            tip: page.gridMode ? qsTr("Show as list") : qsTr("Show as grid")
+            onClicked: AppSettings.liveViewMode = page.gridMode ? "list" : "grid"
         }
         IconButton {
             iconName: "guide"
@@ -197,9 +205,72 @@ Page {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
+                // Tiles
+                GridView {
+                    id: channelGrid
+                    visible: page.gridMode
+                    anchors.fill: parent
+                    anchors.leftMargin: page.wide ? 18 : AppTheme.margin - 6
+                    anchors.rightMargin: page.wide ? AppTheme.pageMargin - 10 : AppTheme.margin - 6
+                    readonly property int columns: Math.max(2, Math.floor(width / (page.narrow ? 160 : 220)))
+                    cellWidth: Math.floor(width / columns)
+                    cellHeight: page.narrow ? 170 : 196
+                    model: channels
+                    clip: true
+                    keyNavigationEnabled: true
+                    highlightMoveDuration: 0
+                    topMargin: 6
+                    bottomMargin: 16
+                    cacheBuffer: cellHeight * 2
+                    ScrollBar.vertical: AppScrollBar {}
+
+                    delegate: Item {
+                        id: tile
+                        required property int index
+                        required property string name
+                        required property string logo
+                        required property int number
+                        required property bool favorite
+                        required property string nowTitle
+                        required property real nowProgress
+                        width: channelGrid.cellWidth
+                        height: channelGrid.cellHeight
+
+                        ChannelCard {
+                            anchors.fill: parent
+                            anchors.margins: page.narrow ? 6 : 9
+                            name: tile.name
+                            logo: tile.logo
+                            number: tile.number
+                            favorite: tile.favorite
+                            nowTitle: tile.nowTitle
+                            nowProgress: tile.nowProgress
+                            current: tile.GridView.isCurrentItem && channelGrid.activeFocus
+                            onClicked: {
+                                channelGrid.currentIndex = tile.index
+                                page.playIndex(tile.index)
+                            }
+                            onPressAndHold: channels.toggleFavorite(tile.index)
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 1200
+                            ToolTip.text: qsTr("Long-press or S to add/remove favorite")
+                        }
+                    }
+
+                    Keys.onReturnPressed: page.playIndex(currentIndex)
+                    Keys.onEnterPressed: page.playIndex(currentIndex)
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_S) {
+                            channels.toggleFavorite(currentIndex)
+                            event.accepted = true
+                        }
+                    }
+                }
+
                 ListView {
                     id: channelList
                     objectName: "channelList"
+                    visible: !page.gridMode
                     anchors.fill: parent
                     anchors.leftMargin: page.wide ? 16 : 8
                     anchors.rightMargin: page.wide ? AppTheme.pageMargin - 6 : 8
@@ -209,7 +280,7 @@ Page {
                     keyNavigationEnabled: true
                     highlightMoveDuration: 0
                     bottomMargin: 16
-                    ScrollBar.vertical: ScrollBar {}
+                    ScrollBar.vertical: AppScrollBar {}
 
                     delegate: ChannelDelegate {
                         width: channelList.width

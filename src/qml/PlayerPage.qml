@@ -466,7 +466,7 @@ Page {
             clip: true
             currentIndex: page.channelIndex
             highlightMoveDuration: 0
-            ScrollIndicator.vertical: ScrollIndicator {}
+            ScrollBar.vertical: AppScrollBar {}
 
             delegate: ChannelDelegate {
                 width: channelList.width

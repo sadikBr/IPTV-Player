@@ -76,7 +76,7 @@ Page {
         anchors.fill: parent
         contentHeight: form.implicitHeight + 80
         clip: true
-        ScrollIndicator.vertical: ScrollIndicator {}
+        ScrollBar.vertical: AppScrollBar {}
 
         // Card behind the form
         Rectangle {

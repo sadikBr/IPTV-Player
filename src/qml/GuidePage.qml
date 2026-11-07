@@ -213,8 +213,8 @@ Page {
         boundsBehavior: Flickable.StopAtBounds
         clip: true
         cacheBuffer: page.rowHeight * 4
-        ScrollBar.horizontal: ScrollBar {}
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.horizontal: AppScrollBar {}
+        ScrollBar.vertical: AppScrollBar {}
 
         delegate: Item {
             id: row

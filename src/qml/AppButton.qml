@@ -1,62 +1,69 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Controls.impl
+import QtQuick.Templates as T
 import IPTVPlayer
 
-// Pill-shaped button. variant: "primary" (gradient), "secondary" or "ghost".
-Button {
+// Button variants:
+//  "primary"   white with dark text (the main action, e.g. Play)
+//  "accent"    the warm accent colour
+//  "secondary" translucent glass, works on top of artwork
+//  "ghost"     text only
+T.Button {
     id: control
 
     property string variant: "primary"
     property string iconName
 
-    readonly property bool primary: variant === "primary"
+    readonly property color textColor: variant === "primary" ? "#0B0B0D"
+                                     : variant === "accent" ? "white" : AppTheme.textPrimary
 
+    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
+                            implicitContentWidth + leftPadding + rightPadding)
     implicitHeight: 44
-    leftPadding: iconName ? 18 : 22
-    rightPadding: 22
+    leftPadding: iconName ? 18 : 24
+    rightPadding: 24
+    spacing: 8
+    font.family: AppTheme.fontFamily
     font.pixelSize: AppTheme.fontBody
     font.weight: Font.DemiBold
+    font.capitalization: Font.MixedCase
     hoverEnabled: true
-    opacity: enabled ? 1 : 0.45
+    opacity: enabled ? 1 : 0.4
 
     icon.source: iconName ? "icons/" + iconName + ".svg" : ""
     icon.width: 20
     icon.height: 20
-    icon.color: primary ? "white" : AppTheme.textPrimary
+    icon.color: textColor
 
     contentItem: IconLabel {
-        spacing: 8
+        spacing: control.spacing
         display: control.display
         icon: control.icon
         text: control.text
         font: control.font
-        color: control.primary ? "white" : AppTheme.textPrimary
+        color: control.textColor
     }
 
     background: Rectangle {
         implicitWidth: 64
-        radius: height / 2
-        color: control.variant === "secondary"
-               ? (control.hovered ? AppTheme.surfaceHover : AppTheme.surfaceHigh)
-               : control.variant === "ghost" ? (control.hovered ? AppTheme.hover : "transparent")
-                                             : AppTheme.accentStrong
-        border.width: control.variant === "secondary" ? 1 : 0
-        border.color: AppTheme.strokeStrong
-        gradient: control.primary ? primaryGradient : null
-
-        Gradient {
-            id: primaryGradient
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: control.hovered ? "#7B6BFF" : AppTheme.accentStrong }
-            GradientStop { position: 1.0; color: control.hovered ? "#4BDBF7" : "#2FB9DC" }
+        radius: AppTheme.radius - 2
+        color: {
+            switch (control.variant) {
+            case "primary": return control.pressed ? "#D9D9DC" : control.hovered ? "#EDEDF0" : "white"
+            case "accent": return control.pressed ? AppTheme.accentStrong : control.hovered ? "#FF6E4F" : AppTheme.accent
+            case "secondary": return control.pressed ? "#59FFFFFF" : control.hovered ? AppTheme.glassHover : AppTheme.glass
+            default: return control.hovered ? AppTheme.hover : "transparent"
+            }
         }
+        border.width: control.variant === "secondary" ? 1 : 0
+        border.color: AppTheme.glassStroke
+        Behavior on color { ColorAnimation { duration: AppTheme.fast } }
 
         // Focus ring (keyboard / remote)
         Rectangle {
             anchors.fill: parent
             anchors.margins: -3
-            radius: height / 2
+            radius: parent.radius + 3
             color: "transparent"
             border.color: AppTheme.accent
             border.width: 2

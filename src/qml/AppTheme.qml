@@ -3,38 +3,48 @@ import QtQuick
 
 // Design tokens: colours, type scale, spacing and motion. Every screen uses
 // these instead of hard-coded values so the app looks like one product.
+//
+// Direction: cinematic. Neutral near-black surfaces let posters and
+// backdrops bring the colour; one warm accent marks what's active.
 QtObject {
     // --- Colour ---
-    // Surfaces, darkest to lightest
-    readonly property color background: "#0A0C11"
-    readonly property color backgroundRaised: "#0E1118"
-    readonly property color surface: "#141822"
-    readonly property color surfaceHigh: "#1B2030"
-    readonly property color surfaceHover: "#232A3C"
-    readonly property color stroke: "#232937"
-    readonly property color strokeStrong: "#333B4E"
+    // Surfaces, darkest to lightest (neutral, no tint)
+    readonly property color background: "#0B0B0D"
+    readonly property color backgroundRaised: "#0F0F12"
+    readonly property color surface: "#16161A"
+    readonly property color surfaceHigh: "#1E1E23"
+    readonly property color surfaceHover: "#26262C"
+    readonly property color stroke: "#232328"
+    readonly property color strokeStrong: "#34343B"
+
+    // Glass: translucent panels over artwork
+    readonly property color glass: "#33FFFFFF"
+    readonly property color glassHover: "#4DFFFFFF"
+    readonly property color glassStroke: "#29FFFFFF"
 
     // Text
-    readonly property color textPrimary: "#F3F5FA"
-    readonly property color textSecondary: "#A6AEC0"
-    readonly property color textTertiary: "#6E768A"
+    readonly property color textPrimary: "#F5F5F7"
+    readonly property color textSecondary: "#A3A3AB"
+    readonly property color textTertiary: "#6B6B74"
 
-    // Brand: violet to cyan
-    readonly property color accent: "#8B7BFF"
-    readonly property color accentStrong: "#6C5CF5"
-    readonly property color accent2: "#38D3F2"
-    readonly property color selection: "#2B8B7BFF"
-    readonly property color hover: "#12FFFFFF"
+    // The one accent: warm orange-red
+    readonly property color accent: "#FF5A36"
+    readonly property color accentStrong: "#E8462A"
+    readonly property color accentSoft: "#26FF5A36"
+    readonly property color accent2: "#FF8A5B"   // lighter tint for small highlights
+    readonly property color selection: "#1FFFFFFF"
+    readonly property color hover: "#0FFFFFFF"
 
     // Meaning
-    readonly property color live: "#FF4D63"
-    readonly property color favorite: "#FFC857"
-    readonly property color error: "#FF6B7A"
-    readonly property color success: "#3DDC97"
-    readonly property color overlay: "#D907080C"
+    readonly property color live: "#FF3B4E"
+    readonly property color favorite: "#FFC24B"
+    readonly property color error: "#FF6B6B"
+    readonly property color success: "#34D399"
+    readonly property color overlay: "#E6000000"
 
     // --- Type ---
     readonly property string fontFamily: "Inter"
+    readonly property int fontHero: 48
     readonly property int fontDisplay: 36
     readonly property int fontH1: 28
     readonly property int fontH2: 20
@@ -46,10 +56,10 @@ QtObject {
     // --- Layout ---
     readonly property int spacing: 12
     readonly property int margin: 16
-    readonly property int pageMargin: 28   // left/right margin on wide screens
-    readonly property int radiusSmall: 8
-    readonly property int radius: 12
-    readonly property int radiusLarge: 18
+    readonly property int pageMargin: 40   // left/right margin on wide screens
+    readonly property int radiusSmall: 6
+    readonly property int radius: 10
+    readonly property int radiusLarge: 16
     readonly property int contentMaxWidth: 1400
 
     // Phones in portrait are narrower than this.
@@ -60,6 +70,7 @@ QtObject {
     // --- Motion ---
     readonly property int fast: 120
     readonly property int normal: 220
+    readonly property int slow: 600
 
     // "18:30" (24-hour, no seconds)
     function time(date) {
@@ -70,5 +81,14 @@ QtObject {
     function initials(name) {
         const words = (name || "?").trim().split(/\s+/)
         return (words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : "")).toUpperCase()
+    }
+
+    // "1 h 45 min" / "45 min"
+    function duration(secs) {
+        if (!secs)
+            return ""
+        const h = Math.floor(secs / 3600)
+        const m = Math.round((secs % 3600) / 60)
+        return h > 0 ? (m > 0 ? h + " h " + m + " min" : h + " h") : m + " min"
     }
 }

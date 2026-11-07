@@ -55,6 +55,7 @@ set(QML_SOURCES
     qml/Main.qml
     qml/AddSourcePage.qml
     qml/AppButton.qml
+    qml/AppScrollBar.qml
     qml/AppState.qml
     qml/AppTextField.qml
     qml/AppTheme.qml
@@ -66,11 +67,14 @@ set(QML_SOURCES
     qml/ChannelDelegate.qml
     qml/Chip.qml
     qml/ContentRow.qml
+    qml/DetailsBackdrop.qml
     qml/EmptyState.qml
+    qml/EpisodeCard.qml
     qml/GuidePage.qml
     qml/HomePage.qml
     qml/IconButton.qml
     qml/LivePage.qml
+    qml/MetaPill.qml
     qml/MovieDetailsPage.qml
     qml/NavRail.qml
     qml/Osd.qml
@@ -82,6 +86,7 @@ set(QML_SOURCES
     qml/SearchField.qml
     qml/SeriesDetailsPage.qml
     qml/SettingsPage.qml
+    qml/Shadow.qml
     qml/StatusBanner.qml
     qml/VodPage.qml
 )
@@ -98,6 +103,7 @@ set(QML_RESOURCES
     qml/icons/folder.svg
     qml/icons/fullscreen-exit.svg
     qml/icons/fullscreen.svg
+    qml/icons/grid.svg
     qml/icons/guide.svg
     qml/icons/heart-outline.svg
     qml/icons/heart.svg
@@ -126,6 +132,7 @@ set(QML_RESOURCES
     qml/fonts/Inter-Medium.ttf
     qml/fonts/Inter-Regular.ttf
     qml/fonts/Inter-SemiBold.ttf
+    qml/images/shadow.png
 )
 
 # Serve the files from the module root (next to its qmldir) instead of a qml/

@@ -4,7 +4,7 @@ import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Dashboard: a hero for what to watch next, then rows of content.
+// Cinematic home: a full-width rotating hero with backdrops, then rows.
 Page {
     id: page
 
@@ -16,54 +16,107 @@ Page {
 
     readonly property bool narrow: width < AppTheme.compactWidth
     readonly property real sideMargin: narrow ? AppTheme.margin : AppTheme.pageMargin
-    readonly property bool hasLastChannel: AppSettings.lastChannelExtId.length > 0
-            && AppSettings.lastChannelSourceId === AppState.sourceId
 
-    // What the hero shows: the most recent unfinished movie/episode, else the
-    // last channel, else the newest movie.
-    readonly property var hero: {
-        if (continueWatching.count > 0 && heroTick >= 0) {
-            const item = continueWatching.get(0)
-            return { kind: item.kind, eyebrow: qsTr("Continue watching"), title: item.title,
-                     subtitle: [item.subtitle, qsTr("%1 min left").arg(item.remainingMinutes)]
-                               .filter(t => t).join("  ·  "),
-                     image: item.image, progress: item.watched, action: qsTr("Resume"), data: item }
-        }
-        if (hasLastChannel)
-            return { kind: "live", eyebrow: qsTr("Last watched"), title: AppSettings.lastChannelName,
-                     subtitle: qsTr("Live TV"), image: "", progress: 0, action: qsTr("Watch live") }
-        if (newMovies.count > 0 && heroTick >= 0) {
-            const movie = newMovies.get(0)
-            return { kind: "newMovie", eyebrow: qsTr("New movie"), title: movie.name,
-                     subtitle: [movie.year, movie.rating ? "★ " + movie.rating : ""].filter(t => t).join("  ·  "),
-                     image: movie.logo, progress: 0, action: qsTr("Details"), data: movie }
-        }
-        return null
-    }
-    property int heroTick: 0
+    // Hero slides: what you were watching, the newest movies and series.
+    property var heroItems: []
+    property int heroIndex: 0
+    readonly property var hero: heroItems.length > 0 ? heroItems[Math.min(heroIndex, heroItems.length - 1)] : null
+    property var requestedDetails: ({})
 
-    function greeting() {
-        const h = new Date().getHours()
-        return h < 5 ? qsTr("Good night") : h < 12 ? qsTr("Good morning")
-             : h < 18 ? qsTr("Good afternoon") : qsTr("Good evening")
+    function metaLine(parts) {
+        return parts.filter(t => t && String(t).length > 0).join("  ·  ")
     }
 
-    function heroAction() {
-        if (!hero)
+    function rebuildHero() {
+        const items = []
+        const sourceId = AppState.sourceId
+        if (sourceId <= 0) {
+            heroItems = []
             return
-        if (hero.kind === "live")
-            playChannelRequested(AppSettings.lastChannelSourceId, AppSettings.lastChannelExtId)
-        else if (hero.kind === "newMovie")
-            openMovieRequested(hero.data.extId)
+        }
+
+        if (continueWatching.count > 0) {
+            const c = continueWatching.get(0)
+            if (c.sourceId === sourceId) {
+                const info = c.kind === "movie" ? VodManager.movie(sourceId, c.extId)
+                                                : VodManager.series(sourceId, c.seriesExtId)
+                items.push({
+                    type: "continue", kind: c.kind, extId: c.extId, seriesExtId: c.seriesExtId,
+                    eyebrow: qsTr("Continue watching"), title: c.title,
+                    meta: metaLine([c.subtitle, qsTr("%1 min left").arg(c.remainingMinutes)]),
+                    plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || c.image,
+                    progress: c.watched, action: qsTr("Resume")
+                })
+                requestDetails(c.kind === "movie" ? "movie" : "series",
+                               c.kind === "movie" ? c.extId : c.seriesExtId, info)
+            }
+        }
+        for (let i = 0; i < Math.min(5, newMovies.count); ++i) {
+            const m = newMovies.get(i)
+            const info = VodManager.movie(sourceId, m.extId)
+            items.push({
+                type: "movie", kind: "movie", extId: m.extId,
+                eyebrow: qsTr("New movie"), title: info.name || m.name,
+                meta: metaLine([info.year || m.year, info.rating ? "★ " + info.rating : "",
+                                AppTheme.duration(info.durationSecs), info.genre]),
+                plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || m.logo,
+                progress: m.watched, action: m.watched > 0 ? qsTr("Resume") : qsTr("Play")
+            })
+            requestDetails("movie", m.extId, info)
+        }
+        for (let j = 0; j < Math.min(2, newSeries.count); ++j) {
+            const s = newSeries.get(j)
+            const info = VodManager.series(sourceId, s.extId)
+            items.push({
+                type: "series", kind: "series", extId: s.extId,
+                eyebrow: qsTr("New series"), title: info.name || s.name,
+                meta: metaLine([info.year || s.year, info.rating ? "★ " + info.rating : "", info.genre]),
+                plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || s.logo,
+                progress: 0, action: qsTr("Watch")
+            })
+            requestDetails("series", s.extId, info)
+        }
+        heroItems = items
+        if (heroIndex >= items.length)
+            heroIndex = 0
+    }
+
+    // Backdrops come with the details; fetch them once per title.
+    function requestDetails(kind, extId, info) {
+        if (info.backdrop || requestedDetails[kind + extId])
+            return
+        requestedDetails[kind + extId] = true
+        if (kind === "movie")
+            VodManager.fetchMovie(AppState.sourceId, extId)
         else
-            playVodRequested(hero.data.sourceId, hero.data.kind, hero.data.extId, hero.data.seriesExtId)
+            VodManager.fetchSeries(AppState.sourceId, extId)
+    }
+
+    function heroPlay(item) {
+        if (!item)
+            return
+        if (item.type === "continue")
+            playVodRequested(AppState.sourceId, item.kind, item.extId, item.seriesExtId)
+        else if (item.type === "movie")
+            playVodRequested(AppState.sourceId, "movie", item.extId, "")
+        else
+            openSeriesRequested(item.extId)
+    }
+
+    function heroDetails(item) {
+        if (!item)
+            return
+        if (item.kind === "movie")
+            openMovieRequested(item.extId)
+        else
+            openSeriesRequested(item.type === "continue" ? item.seriesExtId : item.extId)
     }
 
     background: Rectangle { color: AppTheme.background }
 
     ContinueWatchingModel {
         id: continueWatching
-        onModelReset: page.heroTick++
+        onModelReset: rebuildTimer.restart()
     }
     ChannelListModel {
         id: favoriteChannels
@@ -73,22 +126,23 @@ Page {
     ChannelListModel {
         id: liveChannels
         sourceId: AppState.sourceId
-        limit: 16
+        limit: 20
     }
     ChannelListModel {
         id: newMovies
         sourceId: AppState.sourceId
         kind: "movie"
         sortOrder: "newest"
-        limit: 20
-        onModelReset: page.heroTick++
+        limit: 24
+        onModelReset: rebuildTimer.restart()
     }
     ChannelListModel {
         id: newSeries
         sourceId: AppState.sourceId
         kind: "series"
         sortOrder: "newest"
-        limit: 20
+        limit: 24
+        onModelReset: rebuildTimer.restart()
     }
     ChannelListModel {
         id: favoriteMovies
@@ -97,181 +151,161 @@ Page {
         categoryId: CategoryListModel.FavoritesCategory
     }
 
+    // Coalesce rebuilds (several models reset at once).
+    Timer {
+        id: rebuildTimer
+        interval: 50
+        onTriggered: page.rebuildHero()
+    }
+
+    Connections {
+        target: VodManager
+        function onDetailsLoaded() { rebuildTimer.restart() }
+        function onSeriesLoaded() { rebuildTimer.restart() }
+    }
+    Connections {
+        target: AppState
+        function onSourceIdChanged() {
+            page.requestedDetails = ({})
+            rebuildTimer.restart()
+        }
+    }
+
+    Component.onCompleted: rebuildHero()
+
+    // Next slide every 8 s (not while the mouse is on the hero).
+    Timer {
+        interval: 8000
+        repeat: true
+        running: page.heroItems.length > 1 && !heroHover.hovered && page.visible
+        onTriggered: page.heroIndex = (page.heroIndex + 1) % page.heroItems.length
+    }
+
     Flickable {
         id: flick
         anchors.fill: parent
-        contentHeight: content.implicitHeight + 40
+        contentHeight: content.implicitHeight + 48
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: AppScrollBar {}
 
         ColumnLayout {
             id: content
             width: flick.width
-            spacing: 28
+            spacing: 36
 
-            // Greeting
-            RowLayout {
+            // ---------- Hero ----------
+            Item {
+                id: heroArea
                 Layout.fillWidth: true
-                Layout.topMargin: page.narrow ? 16 : 28
-                Layout.leftMargin: page.sideMargin
-                Layout.rightMargin: page.narrow ? 8 : page.sideMargin
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Label {
-                        text: page.greeting()
-                        font.pixelSize: page.narrow ? 24 : AppTheme.fontH1
-                        font.weight: Font.Bold
-                        color: AppTheme.textPrimary
-                    }
-                    Label {
-                        text: new Date().toLocaleDateString(Qt.locale(), "dddd d MMMM")
-                        color: AppTheme.textTertiary
-                        font.pixelSize: AppTheme.fontSmall
-                    }
-                }
-                ProviderSwitcher {
-                    visible: page.narrow && AppState.hasSource
-                    compact: true
-                }
-            }
+                Layout.preferredHeight: page.narrow ? Math.max(420, page.height * 0.62)
+                                                    : Math.max(460, Math.min(page.height * 0.72, 640))
+                visible: AppState.hasSource && page.heroItems.length > 0
 
-            // Welcome (no provider yet)
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.leftMargin: page.sideMargin
-                Layout.rightMargin: page.sideMargin
-                Layout.preferredHeight: welcome.implicitHeight + 64
-                visible: !AppState.hasSource
-                radius: AppTheme.radiusLarge
-                border.color: AppTheme.stroke
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: "#2A2160" }
-                    GradientStop { position: 1.0; color: "#0F3A4A" }
-                }
+                HoverHandler { id: heroHover }
 
-                ColumnLayout {
-                    id: welcome
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.margins: page.narrow ? 24 : 40
-                    spacing: 14
-                    Label {
-                        text: qsTr("WELCOME")
-                        color: AppTheme.accent2
-                        font.pixelSize: AppTheme.fontCaption
-                        font.weight: Font.Bold
-                        font.letterSpacing: 1.5
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        text: qsTr("All your TV in one place")
-                        wrapMode: Text.Wrap
-                        font.pixelSize: page.narrow ? 26 : AppTheme.fontDisplay
-                        font.weight: Font.Bold
-                        color: "white"
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 560
-                        text: qsTr("Add your IPTV provider with an Xtream Codes login or an M3U "
-                                   + "playlist link to watch live TV, movies and series, with a TV guide.")
-                        wrapMode: Text.Wrap
-                        color: "#D0D6E4"
-                        lineHeight: 1.2
-                    }
-                    AppButton {
-                        Layout.topMargin: 8
-                        text: qsTr("Add your provider")
-                        iconName: "add"
-                        onClicked: AppState.addProviderRequested()
-                    }
-                }
-            }
-
-            // Hero
-            Rectangle {
-                id: heroCard
-                Layout.fillWidth: true
-                Layout.leftMargin: page.sideMargin
-                Layout.rightMargin: page.sideMargin
-                Layout.preferredHeight: page.narrow ? 220 : 300
-                visible: AppState.hasSource && page.hero !== null
-                radius: AppTheme.radiusLarge
-                color: AppTheme.surface
-                border.color: AppTheme.stroke
-                clip: true
-
-                // Artwork as a dimmed backdrop
-                Image {
-                    anchors.fill: parent
-                    source: page.hero ? page.hero.image : ""
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    opacity: 0.35
-                    sourceSize.width: 640
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: "#F20A0C11" }
-                        GradientStop { position: 0.55; color: "#B30A0C11" }
-                        GradientStop { position: 1.0; color: "#260A0C11" }
-                    }
-                }
-                // Brand glow
-                Rectangle {
-                    width: parent.width * 0.6
-                    height: parent.height * 2
-                    x: -width * 0.3
-                    y: -height * 0.25
-                    rotation: 20
-                    opacity: 0.25
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: AppTheme.accentStrong }
-                        GradientStop { position: 1.0; color: "transparent" }
-                    }
-                }
-
-                // Poster on the right (wide screens)
-                Rectangle {
-                    visible: !page.narrow && page.hero && page.hero.image.length > 0
-                    anchors.right: parent.right
-                    anchors.rightMargin: 40
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: parent.height - 56
-                    width: height / 1.5
-                    radius: AppTheme.radius
-                    color: AppTheme.surfaceHigh
-                    clip: true
-                    rotation: 3
-                    Image {
+                // Backdrops (cross-fade between slides)
+                Repeater {
+                    model: page.heroItems
+                    delegate: Item {
+                        required property var modelData
+                        required property int index
                         anchors.fill: parent
-                        source: page.hero ? page.hero.image : ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        sourceSize.width: 400
+                        opacity: index === page.heroIndex ? 1 : 0
+                        visible: opacity > 0
+                        Behavior on opacity { NumberAnimation { duration: AppTheme.slow; easing.type: Easing.InOutQuad } }
+
+                        Image {
+                            anchors.fill: parent
+                            source: modelData.backdrop
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize.width: 1600
+                            visible: modelData.backdrop.length > 0
+                        }
+                        // No backdrop: the poster large on the right
+                        Item {
+                            visible: modelData.backdrop.length === 0 && modelData.poster.length > 0
+                            anchors.fill: parent
+                            Image {
+                                id: blurredPoster
+                                anchors.fill: parent
+                                source: modelData.poster
+                                fillMode: Image.PreserveAspectCrop
+                                sourceSize.width: 48 // tiny on purpose: looks blurred when stretched
+                                smooth: true
+                                opacity: 0.35
+                            }
+                            Shadow { target: posterCard; spread: 30 }
+                            Rectangle {
+                                id: posterCard
+                                visible: !page.narrow
+                                anchors.right: parent.right
+                                anchors.rightMargin: page.sideMargin + 20
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: parent.height * 0.72
+                                width: height / 1.5
+                                radius: AppTheme.radius
+                                color: AppTheme.surface
+                                clip: true
+                                Image {
+                                    anchors.fill: parent
+                                    source: modelData.poster
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    sourceSize.width: 500
+                                }
+                            }
+                        }
                     }
                 }
 
-                ColumnLayout {
+                // Shade so the text stays readable
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#F00B0B0D" }
+                        GradientStop { position: 0.45; color: "#990B0B0D" }
+                        GradientStop { position: 1.0; color: "#000B0B0D" }
+                    }
+                }
+                Rectangle {
                     anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.leftMargin: page.narrow ? 22 : 40
-                    width: Math.min(parent.width - (page.narrow ? 44 : 320), 620)
-                    spacing: 10
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: parent.height * 0.5
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#000B0B0D" }
+                        GradientStop { position: 1.0; color: AppTheme.background }
+                    }
+                }
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 90
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#990B0B0D" }
+                        GradientStop { position: 1.0; color: "#000B0B0D" }
+                    }
+                }
+
+                // Text and actions
+                ColumnLayout {
+                    id: heroText
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    anchors.leftMargin: page.sideMargin
+                    anchors.bottomMargin: page.narrow ? 36 : 64
+                    width: Math.min(parent.width - 2 * page.sideMargin, 620)
+                    spacing: 12
 
                     Label {
                         text: page.hero ? page.hero.eyebrow.toUpperCase() : ""
-                        color: AppTheme.accent2
+                        color: AppTheme.accent
                         font.pixelSize: AppTheme.fontCaption
                         font.weight: Font.Bold
-                        font.letterSpacing: 1.5
+                        font.letterSpacing: 2
                     }
                     Label {
                         Layout.fillWidth: true
@@ -279,93 +313,212 @@ Page {
                         wrapMode: Text.Wrap
                         maximumLineCount: 2
                         elide: Text.ElideRight
-                        font.pixelSize: page.narrow ? 24 : AppTheme.fontDisplay
+                        font.pixelSize: page.narrow ? 30 : AppTheme.fontHero
                         font.weight: Font.Bold
+                        font.letterSpacing: -0.5
+                        lineHeight: 1.05
                         color: "white"
                     }
                     Label {
                         visible: text.length > 0
-                        text: page.hero ? page.hero.subtitle : ""
-                        color: "#C8CEDC"
+                        text: page.hero ? page.hero.meta : ""
+                        color: "#D6D6DB"
+                        font.pixelSize: AppTheme.fontBody
+                        font.weight: Font.Medium
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        visible: text.length > 0 && !page.narrow
+                        text: page.hero ? page.hero.plot : ""
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 3
+                        elide: Text.ElideRight
+                        color: "#B8B8C0"
+                        lineHeight: 1.25
                     }
                     Rectangle {
                         visible: page.hero && page.hero.progress > 0
-                        Layout.preferredWidth: 220
+                        Layout.preferredWidth: 240
                         Layout.preferredHeight: 4
                         radius: 2
-                        color: "#33FFFFFF"
+                        color: "#40FFFFFF"
                         Rectangle {
-                            width: parent.width * (page.hero ? page.hero.progress : 0)
+                            width: parent.width * (page.hero ? Math.min(1, page.hero.progress) : 0)
                             height: parent.height
                             radius: 2
                             color: AppTheme.accent
                         }
                     }
+                    RowLayout {
+                        Layout.topMargin: 8
+                        spacing: 12
+                        AppButton {
+                            text: page.hero ? page.hero.action : ""
+                            iconName: "play"
+                            onClicked: page.heroPlay(page.hero)
+                        }
+                        AppButton {
+                            variant: "secondary"
+                            text: qsTr("Details")
+                            iconName: "info"
+                            onClicked: page.heroDetails(page.hero)
+                        }
+                    }
+                }
+
+                // Slide dots
+                Row {
+                    // Phones: centred under the buttons; wide: bottom right.
+                    x: page.narrow ? (parent.width - width) / 2 : parent.width - width - page.sideMargin
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: page.narrow ? 12 : 76
+                    spacing: 8
+                    visible: page.heroItems.length > 1
+                    Repeater {
+                        model: page.heroItems.length
+                        delegate: Rectangle {
+                            required property int index
+                            width: index === page.heroIndex ? 26 : 8
+                            height: 8
+                            radius: 4
+                            color: index === page.heroIndex ? "white" : "#66FFFFFF"
+                            Behavior on width { NumberAnimation { duration: AppTheme.normal } }
+                            TapHandler { onTapped: page.heroIndex = parent.index }
+                        }
+                    }
+                }
+
+                // Provider switch on phones
+                ProviderSwitcher {
+                    visible: page.narrow
+                    compact: true
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 12
+                }
+            }
+
+            // ---------- Welcome (no provider yet) ----------
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.max(460, page.height * 0.7)
+                visible: !AppState.hasSource
+
+                // Warm glow
+                Rectangle {
+                    width: parent.width * 1.2
+                    height: parent.height * 1.4
+                    x: parent.width * 0.35
+                    y: -parent.height * 0.5
+                    rotation: -18
+                    opacity: 0.22
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "transparent" }
+                        GradientStop { position: 0.5; color: AppTheme.accent }
+                        GradientStop { position: 1.0; color: "transparent" }
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: page.sideMargin
+                    width: Math.min(parent.width - 2 * page.sideMargin, 600)
+                    spacing: 16
+                    Label {
+                        text: qsTr("WELCOME")
+                        color: AppTheme.accent
+                        font.pixelSize: AppTheme.fontCaption
+                        font.weight: Font.Bold
+                        font.letterSpacing: 2
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: qsTr("All your TV, movies and series in one place.")
+                        wrapMode: Text.Wrap
+                        font.pixelSize: page.narrow ? 32 : AppTheme.fontHero
+                        font.weight: Font.Bold
+                        font.letterSpacing: -0.5
+                        lineHeight: 1.05
+                        color: "white"
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: qsTr("Add your IPTV provider with an Xtream Codes login or an M3U playlist "
+                                   + "link. Live TV, the TV guide, movies and series appear here.")
+                        wrapMode: Text.Wrap
+                        color: AppTheme.textSecondary
+                        font.pixelSize: AppTheme.fontH3
+                        lineHeight: 1.3
+                    }
                     AppButton {
-                        Layout.topMargin: 10
-                        text: page.hero ? page.hero.action : ""
-                        iconName: page.hero && page.hero.kind === "newMovie" ? "info" : "play"
-                        onClicked: page.heroAction()
+                        Layout.topMargin: 12
+                        text: qsTr("Add your provider")
+                        iconName: "add"
+                        onClicked: AppState.addProviderRequested()
                     }
                 }
             }
 
+            // ---------- Rows ----------
             ContentRow {
                 Layout.fillWidth: true
+                Layout.topMargin: heroArea.visible ? -28 : 16
                 sideMargin: page.sideMargin
                 title: qsTr("Continue watching")
                 model: continueWatching
-                rowHeight: 250
+                rowHeight: page.narrow ? 236 : 300
                 delegate: continueDelegate
             }
 
             ContentRow {
                 Layout.fillWidth: true
                 sideMargin: page.sideMargin
-                title: favoriteChannels.count > 0 ? qsTr("Favorite channels") : qsTr("Live TV")
+                title: favoriteChannels.count > 0 ? qsTr("Your channels") : qsTr("Live TV")
                 showSeeAll: true
                 onSeeAllClicked: AppState.sectionRequested("live")
                 model: favoriteChannels.count > 0 ? favoriteChannels : liveChannels
-                rowHeight: 176
+                rowHeight: 196
                 delegate: channelDelegate
             }
 
             ContentRow {
                 Layout.fillWidth: true
                 sideMargin: page.sideMargin
-                title: qsTr("Favorite movies")
+                title: qsTr("My movies")
                 model: favoriteMovies
-                rowHeight: 285
+                rowHeight: page.narrow ? 236 : 316
                 delegate: movieDelegate
             }
 
             ContentRow {
                 Layout.fillWidth: true
                 sideMargin: page.sideMargin
-                title: qsTr("Recently added movies")
+                title: qsTr("New movies")
                 showSeeAll: true
                 onSeeAllClicked: AppState.sectionRequested("movie")
                 model: newMovies
-                rowHeight: 285
+                rowHeight: page.narrow ? 236 : 316
                 delegate: movieDelegate
             }
 
             ContentRow {
                 Layout.fillWidth: true
                 sideMargin: page.sideMargin
-                title: qsTr("Recently added series")
+                title: qsTr("New series")
                 showSeeAll: true
                 onSeeAllClicked: AppState.sectionRequested("series")
                 model: newSeries
-                rowHeight: 285
+                rowHeight: page.narrow ? 236 : 316
                 delegate: seriesDelegate
             }
 
             // Provider content still loading
             EmptyState {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 20
-                visible: AppState.hasSource && page.hero === null && liveChannels.count === 0
+                Layout.topMargin: 40
+                visible: AppState.hasSource && page.heroItems.length === 0 && liveChannels.count === 0
                 busy: SourceManager.busy
                 iconName: "live"
                 title: SourceManager.busy ? qsTr("Loading your channels…") : qsTr("Nothing here yet")
@@ -392,15 +545,14 @@ Page {
             required property string image
             required property real watched
             required property int remainingMinutes
-            width: 140
-            height: ListView.view ? ListView.view.height : 250
+            width: page.narrow ? 124 : 164
+            height: ListView.view ? ListView.view.height : 300
             PosterCard {
                 anchors.fill: parent
                 title: cw.title
                 poster: cw.image
                 watched: cw.watched
-                subtitle: [cw.subtitle, qsTr("%1 min left").arg(cw.remainingMinutes)]
-                          .filter(t => t).join(" · ")
+                subtitle: page.metaLine([cw.subtitle, qsTr("%1 min left").arg(cw.remainingMinutes)])
                 onClicked: page.playVodRequested(cw.sourceId, cw.kind, cw.extId, cw.seriesExtId)
             }
         }
@@ -415,10 +567,11 @@ Page {
             required property string logo
             required property string nowTitle
             required property real nowProgress
-            width: 210
-            height: 170
+            width: 230
+            height: 180
             ChannelCard {
                 anchors.fill: parent
+                anchors.bottomMargin: 10
                 name: ch.name
                 logo: ch.logo
                 nowTitle: ch.nowTitle
@@ -440,8 +593,8 @@ Page {
             required property string rating
             required property real watched
             required property bool favorite
-            width: 150
-            height: ListView.view ? ListView.view.height : 285
+            width: page.narrow ? 124 : 172
+            height: ListView.view ? ListView.view.height : 316
             PosterCard {
                 anchors.fill: parent
                 title: mv.name
@@ -465,8 +618,8 @@ Page {
             required property string year
             required property string rating
             required property bool favorite
-            width: 150
-            height: ListView.view ? ListView.view.height : 285
+            width: page.narrow ? 124 : 172
+            height: ListView.view ? ListView.view.height : 316
             PosterCard {
                 anchors.fill: parent
                 title: sr.name

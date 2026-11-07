@@ -15,7 +15,7 @@ Rectangle {
     gradient: Gradient {
         orientation: Gradient.Horizontal
         GradientStop { position: 0.0; color: AppTheme.accentStrong }
-        GradientStop { position: 1.0; color: "#2FB9DC" }
+        GradientStop { position: 1.0; color: AppTheme.accent2 }
     }
 
     Label {

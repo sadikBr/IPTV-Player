@@ -131,3 +131,16 @@ void AppSettings::setUserAgent(const QString &userAgent)
     m_settings.setValue(UserAgentKey, userAgent.trimmed());
     emit userAgentChanged();
 }
+
+QString AppSettings::liveViewMode() const
+{
+    return m_settings.value(QStringLiteral("browse/liveViewMode"), QStringLiteral("grid")).toString();
+}
+
+void AppSettings::setLiveViewMode(const QString &mode)
+{
+    if (mode == liveViewMode())
+        return;
+    m_settings.setValue(QStringLiteral("browse/liveViewMode"), mode);
+    emit liveViewModeChanged();
+}

@@ -9,7 +9,7 @@ Rectangle {
     id: root
 
     implicitHeight: 64
-    color: AppTheme.backgroundRaised
+    color: "#F20B0B0D"
 
     Rectangle {
         width: parent.width
@@ -66,12 +66,12 @@ Rectangle {
                     width: 54
                     height: 28
                     radius: 14
-                    color: tab.active ? AppTheme.selection : "transparent"
+                    color: tab.active ? AppTheme.surfaceHigh : "transparent"
                     IconImage {
                         anchors.centerIn: parent
                         source: "icons/" + tab.iconName + ".svg"
                         sourceSize: Qt.size(20, 20)
-                        color: tab.active ? AppTheme.accent : AppTheme.textSecondary
+                        color: tab.active ? AppTheme.textPrimary : AppTheme.textSecondary
                     }
                 }
                 Label {

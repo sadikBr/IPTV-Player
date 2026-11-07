@@ -15,7 +15,7 @@ ListView {
     topMargin: 4
     bottomMargin: 12
     boundsBehavior: Flickable.StopAtBounds
-    ScrollBar.vertical: ScrollBar {}
+    ScrollBar.vertical: AppScrollBar {}
 
 
     delegate: ItemDelegate {

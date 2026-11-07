@@ -1,37 +1,29 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Controls.impl
 import IPTVPlayer
 
-// Pill-shaped search box with an icon and a clear button.
-TextField {
+// Search box: rounded, with a magnifier icon and a clear button.
+AppTextField {
     id: control
 
     implicitHeight: 40
-    leftPadding: 42
+    iconSpace: 26
     rightPadding: text.length > 0 ? 40 : 16
-    topPadding: 0
-    bottomPadding: 0
-    verticalAlignment: TextInput.AlignVCenter
-    font.pixelSize: AppTheme.fontBody
-    color: AppTheme.textPrimary
-    placeholderTextColor: AppTheme.textTertiary
-    selectByMouse: true
-    selectionColor: AppTheme.accentStrong
 
     background: Rectangle {
         radius: height / 2
         color: control.activeFocus ? AppTheme.surfaceHigh : AppTheme.surface
         border.width: 1
-        border.color: control.activeFocus ? AppTheme.accent : AppTheme.stroke
-        Behavior on border.color { ColorAnimation { duration: AppTheme.fast } }
+        border.color: control.activeFocus ? AppTheme.strokeStrong
+                    : control.hovered ? AppTheme.strokeStrong : AppTheme.stroke
+        Behavior on color { ColorAnimation { duration: AppTheme.fast } }
 
         IconImage {
             x: 14
             anchors.verticalCenter: parent.verticalCenter
             source: "icons/search.svg"
             sourceSize: Qt.size(18, 18)
-            color: AppTheme.textTertiary
+            color: control.activeFocus ? AppTheme.textPrimary : AppTheme.textTertiary
         }
     }
 

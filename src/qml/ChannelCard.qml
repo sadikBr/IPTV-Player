@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
@@ -11,74 +12,106 @@ ItemDelegate {
     property string logo
     property string nowTitle
     property real nowProgress: 0
+    property int number: 0
+    property bool favorite: false
+    property bool current: false
 
-    width: 210
-    height: 170
+    readonly property bool emphasized: hovered || visualFocus
+
     padding: 0
     hoverEnabled: true
 
-    background: Rectangle {
-        radius: AppTheme.radius
-        color: root.hovered ? AppTheme.surfaceHover : AppTheme.surface
-        border.color: root.hovered || root.visualFocus ? AppTheme.accent : AppTheme.stroke
-        border.width: 1
-        Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+    background: Item {
+        Shadow {
+            target: card
+            opacity: root.emphasized ? 1 : 0.5
+            Behavior on opacity { NumberAnimation { duration: AppTheme.normal } }
+        }
+        Rectangle {
+            id: card
+            anchors.fill: parent
+            radius: AppTheme.radius
+            color: root.emphasized ? AppTheme.surfaceHover : AppTheme.surface
+            border.width: root.current || root.visualFocus ? 2 : 1
+            border.color: root.current || root.visualFocus ? AppTheme.accent : AppTheme.stroke
+            scale: root.emphasized ? 1.03 : 1
+            Behavior on scale { NumberAnimation { duration: AppTheme.normal; easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+        }
     }
 
     contentItem: ColumnLayout {
         spacing: 0
+        scale: root.emphasized ? 1.03 : 1
+        Behavior on scale { NumberAnimation { duration: AppTheme.normal; easing.type: Easing.OutCubic } }
 
         // Logo area
-        Rectangle {
+        Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 100
-            Layout.margins: 1
-            radius: AppTheme.radius - 1
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: AppTheme.surfaceHigh }
-                GradientStop { position: 1.0; color: AppTheme.surface }
-            }
+            Layout.fillHeight: true
+            Layout.minimumHeight: 70
+
             Label {
                 anchors.centerIn: parent
                 visible: logoImage.status !== Image.Ready
                 text: AppTheme.initials(root.name)
-                font.pixelSize: 26
+                font.pixelSize: 28
                 font.weight: Font.Bold
                 color: AppTheme.textTertiary
             }
             Image {
                 id: logoImage
                 anchors.fill: parent
-                anchors.margins: 18
+                anchors.margins: 20
+                anchors.topMargin: 24
                 source: root.logo
                 asynchronous: true
                 fillMode: Image.PreserveAspectFit
-                sourceSize: Qt.size(200, 120)
+                sourceSize: Qt.size(240, 140)
             }
             // LIVE badge
             Rectangle {
                 anchors.top: parent.top
                 anchors.left: parent.left
-                anchors.margins: 8
-                width: liveLabel.implicitWidth + 12
+                anchors.margins: 10
+                width: liveRow.implicitWidth + 12
                 height: 18
                 radius: 4
-                color: AppTheme.live
-                Label {
-                    id: liveLabel
+                color: "#26FF3B4E"
+                Row {
+                    id: liveRow
                     anchors.centerIn: parent
-                    text: qsTr("LIVE")
-                    color: "white"
-                    font.pixelSize: 10
-                    font.weight: Font.Bold
+                    spacing: 4
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: AppTheme.live
+                    }
+                    Label {
+                        text: root.number > 0 ? qsTr("LIVE · %1").arg(root.number) : qsTr("LIVE")
+                        color: AppTheme.live
+                        font.pixelSize: 10
+                        font.weight: Font.Bold
+                    }
                 }
+            }
+            IconImage {
+                visible: root.favorite
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 10
+                source: "icons/star.svg"
+                sourceSize: Qt.size(16, 16)
+                color: AppTheme.favorite
             }
         }
 
         ColumnLayout {
             Layout.fillWidth: true
             Layout.margins: 12
-            Layout.topMargin: 10
+            Layout.topMargin: 0
             spacing: 4
             Label {
                 Layout.fillWidth: true
@@ -90,17 +123,18 @@ ItemDelegate {
             }
             Label {
                 Layout.fillWidth: true
-                text: root.nowTitle || qsTr("Live channel")
+                text: root.nowTitle || qsTr("No programme information")
                 elide: Text.ElideRight
                 font.pixelSize: AppTheme.fontCaption
-                color: AppTheme.textSecondary
+                color: root.nowTitle ? AppTheme.textSecondary : AppTheme.textTertiary
             }
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 3
+                Layout.topMargin: 4
                 radius: 1.5
-                color: AppTheme.surfaceHigh
-                visible: root.nowTitle.length > 0
+                color: AppTheme.surfaceHover
+                opacity: root.nowTitle.length > 0 ? 1 : 0
                 Rectangle {
                     width: parent.width * root.nowProgress
                     height: parent.height
@@ -110,7 +144,4 @@ ItemDelegate {
             }
         }
     }
-
-    scale: pressed ? 0.98 : 1
-    Behavior on scale { NumberAnimation { duration: AppTheme.fast } }
 }

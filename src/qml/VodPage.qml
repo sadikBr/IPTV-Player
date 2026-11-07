@@ -161,7 +161,7 @@ Page {
                     cacheBuffer: cellHeight * 2
                     bottomMargin: 16
                     topMargin: 4
-                    ScrollBar.vertical: ScrollBar {}
+                    ScrollBar.vertical: AppScrollBar {}
 
                     delegate: Item {
                         id: cell

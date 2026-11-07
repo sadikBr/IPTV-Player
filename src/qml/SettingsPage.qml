@@ -64,7 +64,7 @@ Page {
         contentHeight: content.implicitHeight + 40
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: AppScrollBar {}
 
         ColumnLayout {
             id: content
@@ -226,7 +226,7 @@ Page {
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: AppTheme.accentStrong }
-                                GradientStop { position: 1.0; color: "#2FB9DC" }
+                                GradientStop { position: 1.0; color: AppTheme.accent2 }
                             }
                             IconImage {
                                 anchors.centerIn: parent

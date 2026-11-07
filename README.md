@@ -8,13 +8,15 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.5 (design pass): live TV, TV guide, movies and series in a new look.**
+**Version 0.6 (cinematic redesign): live TV, TV guide, movies and series.**
 
-- **New design:** dark cinematic theme with a violet-to-cyan accent and the Inter typeface;
-  side navigation on desktop (Home, Live TV, Movies, Series, TV guide, Settings) and a
-  bottom tab bar on phones; switch providers from the navigation
-- **Home dashboard:** a hero for what to watch next, then rows for continue watching,
-  favorite channels, favorite movies and recently added movies and series
+- **Cinematic design:** neutral near-black surfaces with one warm accent, artwork-first
+  screens, soft shadows, the Inter typeface; side navigation on desktop (Home, Live TV,
+  Movies, Series, TV guide, Settings) and a bottom tab bar on phones
+- **Home:** a full-width rotating hero with backdrops (what you're watching, new movies and
+  series), then rows for continue watching, your channels, my movies, new movies and series
+- **Details pages** with full-width backdrops; episodes as cards with stills and progress
+- **Live TV** as a grid of channel tiles with what's on now (or a compact list)
 - Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
   Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
 - **Live TV:** categories (side panel or chips), search (accents ignored), favorites,

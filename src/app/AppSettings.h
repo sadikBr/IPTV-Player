@@ -19,6 +19,8 @@ class AppSettings : public QObject
     // Sent to providers with every request; empty = default (VLC).
     Q_PROPERTY(QString userAgent READ userAgent WRITE setUserAgent NOTIFY userAgentChanged)
     Q_PROPERTY(QString defaultUserAgent READ defaultUserAgent CONSTANT)
+    // Live TV layout: "grid" or "list"
+    Q_PROPERTY(QString liveViewMode READ liveViewMode WRITE setLiveViewMode NOTIFY liveViewModeChanged)
     Q_PROPERTY(int lastSourceId READ lastSourceId WRITE setLastSourceId NOTIFY lastSourceIdChanged)
     Q_PROPERTY(int lastChannelSourceId READ lastChannelSourceId NOTIFY lastChannelChanged)
     Q_PROPERTY(QString lastChannelExtId READ lastChannelExtId NOTIFY lastChannelChanged)
@@ -41,6 +43,9 @@ public:
     qreal volume() const { return m_volume; }
     void setVolume(qreal volume);
 
+    QString liveViewMode() const;
+    void setLiveViewMode(const QString &mode);
+
     QString userAgent() const;
     QString defaultUserAgent() const;
     void setUserAgent(const QString &userAgent);
@@ -59,6 +64,7 @@ signals:
     void recentUrlsChanged();
     void volumeChanged();
     void userAgentChanged();
+    void liveViewModeChanged();
     void lastSourceIdChanged();
     void lastChannelChanged();
 

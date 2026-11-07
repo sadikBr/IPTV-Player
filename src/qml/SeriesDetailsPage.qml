@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Controls.Material
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Series overview with a season picker and the episode list.
+// Cinematic series page: backdrop, details, season chips and episode cards.
 Page {
     id: page
 
@@ -17,6 +17,7 @@ Page {
     property int loadingTick: 0
     readonly property bool loading: loadingTick >= 0 && VodManager.isLoading(sourceId, extId)
     readonly property bool narrow: width < AppTheme.compactWidth
+    readonly property real sideMargin: narrow ? AppTheme.margin : AppTheme.pageMargin
     readonly property var resumeEpisode: allEpisodes.count > 0 && resumeTick >= 0
                                          ? allEpisodes.get(allEpisodes.resumeIndex()) : null
     property int resumeTick: 0
@@ -69,105 +70,100 @@ Page {
         }
     }
 
-    Image {
-        id: backdrop
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: Math.min(parent.height * 0.5, width * 0.5)
-        source: page.info.backdrop || ""
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        opacity: 0.3
-        visible: status === Image.Ready
-    }
-    Rectangle {
-        anchors.fill: backdrop
-        visible: backdrop.visible
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "transparent" }
-            GradientStop { position: 1.0; color: AppTheme.background }
-        }
-    }
-
-    IconButton {
-        z: 2
-        x: 12
-        y: 12
-        filled: true
-        iconName: "back"
-        tip: qsTr("Back")
-        onClicked: page.backRequested()
-    }
-
-    // A plain scrolling column: a season has at most a few dozen episodes, and
-    // this keeps the details at the top when their height settles after loading.
     Flickable {
-        id: list
+        id: flick
         anchors.fill: parent
-        anchors.topMargin: page.narrow ? 48 : 56
-        contentHeight: column.implicitHeight + AppTheme.margin * 2
+        contentHeight: content.y + content.implicitHeight + 48
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar {}
+        ScrollBar.vertical: AppScrollBar {}
 
-      Column {
-        id: column
-        width: list.width
+        DetailsBackdrop {
+            id: backdrop
+            width: flick.width
+            height: page.narrow ? 300 : Math.max(420, Math.min(page.height * 0.78, flick.width * 0.5))
+            backdrop: page.info.backdrop || ""
+            poster: page.info.poster || ""
+        }
 
         ColumnLayout {
-            width: column.width
-            spacing: AppTheme.spacing
+            id: content
+            x: page.sideMargin
+            y: page.narrow ? 180 : Math.max(120, backdrop.height - 340)
+            width: Math.min(flick.width - 2 * page.sideMargin, 1180)
+            spacing: 28
 
+            // ---- Details ----
             GridLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: AppTheme.margin
-                Layout.rightMargin: AppTheme.margin
                 columns: page.narrow ? 1 : 2
-                columnSpacing: AppTheme.margin * 1.5
+                columnSpacing: 40
                 rowSpacing: AppTheme.margin
 
-                Rectangle {
+                Item {
                     Layout.alignment: Qt.AlignTop | (page.narrow ? Qt.AlignHCenter : Qt.AlignLeft)
-                    Layout.preferredWidth: page.narrow ? 140 : 220
+                    Layout.preferredWidth: page.narrow ? 150 : 250
                     Layout.preferredHeight: Layout.preferredWidth * 1.5
-                    radius: 8
-                    color: AppTheme.surface
-                    clip: true
-                    Image {
+                    Shadow { target: posterFrame; spread: 30 }
+                    Rectangle {
+                        id: posterFrame
                         anchors.fill: parent
-                        source: page.info.poster || ""
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        sourceSize.width: 440
+                        radius: AppTheme.radius
+                        color: AppTheme.surfaceHigh
+                        clip: true
+                        Image {
+                            anchors.fill: parent
+                            source: page.info.poster || ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            sourceSize.width: 500
+                        }
                     }
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    spacing: AppTheme.spacing
+                    Layout.topMargin: page.narrow ? 0 : 40
+                    spacing: 14
 
+                    Label {
+                        text: qsTr("SERIES")
+                        color: AppTheme.accent
+                        font.pixelSize: AppTheme.fontCaption
+                        font.weight: Font.Bold
+                        font.letterSpacing: 2
+                    }
                     Label {
                         Layout.fillWidth: true
                         text: page.info.name || ""
                         wrapMode: Text.Wrap
-                        font.pixelSize: page.narrow ? 24 : 30
-                        font.bold: true
-                        color: AppTheme.textPrimary
+                        font.pixelSize: page.narrow ? 28 : AppTheme.fontHero
+                        font.weight: Font.Bold
+                        font.letterSpacing: -0.5
+                        lineHeight: 1.05
+                        color: "white"
                     }
-                    Label {
+                    Flow {
                         Layout.fillWidth: true
-                        wrapMode: Text.Wrap
-                        color: AppTheme.textSecondary
-                        text: [page.info.year,
-                               allEpisodes.seasons.length > 0
-                               ? (allEpisodes.seasons.length === 1 ? qsTr("1 season")
-                                  : qsTr("%1 seasons").arg(allEpisodes.seasons.length)) : "",
-                               page.info.rating ? "★ " + page.info.rating : "", page.info.genre]
-                              .filter(t => t).join("  ·  ")
+                        spacing: 8
+                        MetaPill { text: page.info.year || "" }
+                        MetaPill {
+                            text: allEpisodes.seasons.length === 0 ? ""
+                                : allEpisodes.seasons.length === 1 ? qsTr("1 season")
+                                : qsTr("%1 seasons").arg(allEpisodes.seasons.length)
+                        }
+                        MetaPill {
+                            text: page.info.rating || ""
+                            iconName: "star"
+                            iconColor: AppTheme.favorite
+                        }
+                        MetaPill { text: page.info.genre || "" }
                     }
+
                     RowLayout {
-                        spacing: AppTheme.spacing
+                        Layout.topMargin: 8
+                        spacing: 12
                         AppButton {
                             objectName: "playButton"
                             enabled: page.resumeEpisode !== null
@@ -180,11 +176,11 @@ Page {
                             onClicked: page.episodeRequested(page.resumeEpisode.extId, false)
                         }
                         IconButton {
+                            size: 44
+                            filled: true
                             iconName: page.info.favorite ? "heart" : "heart-outline"
+                            iconColor: page.info.favorite ? AppTheme.accent : AppTheme.textPrimary
                             tip: page.info.favorite ? qsTr("Remove from favorites") : qsTr("Add to favorites")
-                            iconColor: page.info.favorite ? AppTheme.live : AppTheme.textPrimary
-                        filled: true
-                        size: 44
                             onClicked: {
                                 VodManager.setFavorite(page.sourceId, "series", page.extId, !page.info.favorite)
                                 page.info = VodManager.series(page.sourceId, page.extId)
@@ -193,16 +189,20 @@ Page {
                     }
                     Label {
                         Layout.fillWidth: true
+                        Layout.maximumWidth: 760
+                        Layout.topMargin: 6
                         visible: text.length > 0
                         text: page.info.plot || ""
                         wrapMode: Text.Wrap
                         maximumLineCount: 6
                         elide: Text.ElideRight
-                        color: AppTheme.textPrimary
-                        lineHeight: 1.2
+                        color: "#D0D0D6"
+                        font.pixelSize: AppTheme.fontH3
+                        lineHeight: 1.35
                     }
                     Label {
                         Layout.fillWidth: true
+                        Layout.maximumWidth: 760
                         visible: !!page.info.cast
                         wrapMode: Text.Wrap
                         maximumLineCount: 2
@@ -213,155 +213,87 @@ Page {
                 }
             }
 
-            // Seasons
-            ListView {
+            // ---- Episodes ----
+            ColumnLayout {
                 Layout.fillWidth: true
-                Layout.topMargin: AppTheme.margin
-                Layout.preferredHeight: 34
-                visible: allEpisodes.seasons.length > 1
-                orientation: ListView.Horizontal
-                spacing: 8
-                leftMargin: AppTheme.margin
-                rightMargin: AppTheme.margin
-                clip: true
-                model: allEpisodes.seasons
-                delegate: Chip {
-                    required property var modelData
-                    text: qsTr("Season %1").arg(modelData)
-                    selected: page.selectedSeason === modelData
-                    onClicked: page.selectedSeason = modelData
-                }
-            }
-            Label {
-                Layout.leftMargin: AppTheme.margin
-                Layout.topMargin: allEpisodes.seasons.length > 1 ? 4 : AppTheme.margin
-                visible: episodes.count > 0
-                text: qsTr("%1 episodes").arg(episodes.count)
-                color: AppTheme.textTertiary
-                font.pixelSize: AppTheme.fontCaption
-            }
+                spacing: 14
 
-            BusyIndicator {
-                Layout.alignment: Qt.AlignHCenter
-                visible: page.loading && episodes.count === 0
-                running: visible
-            }
-            Label {
-                Layout.fillWidth: true
-                Layout.margins: AppTheme.margin
-                visible: !page.loading && episodes.count === 0
-                wrapMode: Text.Wrap
-                horizontalAlignment: Text.AlignHCenter
-                color: page.errorText ? AppTheme.error : AppTheme.textSecondary
-                text: page.errorText ? qsTr("Couldn't load the episodes: %1").arg(page.errorText)
-                                     : qsTr("No episodes found.")
-            }
-        }
-
-        Repeater {
-          model: episodes
-          delegate: ItemDelegate {
-            id: episodeDelegate
-            required property int index
-            required property string extId
-            required property string title
-            required property int episode
-            required property string plot
-            required property string image
-            required property int durationSecs
-            required property real watched
-
-            width: column.width
-            padding: AppTheme.spacing
-            leftPadding: AppTheme.margin
-            rightPadding: AppTheme.margin
-            hoverEnabled: true
-            onClicked: page.episodeRequested(extId, false)
-            background: Rectangle {
-                x: 6
-                width: parent.width - 12
-                height: parent.height
-                radius: AppTheme.radius
-                color: episodeDelegate.hovered ? AppTheme.surface : "transparent"
-            }
-
-            contentItem: RowLayout {
-                spacing: AppTheme.margin
-
-                // Thumbnail (or the episode number)
-                Rectangle {
-                    Layout.preferredWidth: page.narrow ? 112 : 176
-                    Layout.preferredHeight: Layout.preferredWidth * 9 / 16
-                    Layout.alignment: Qt.AlignTop
-                    radius: 6
-                    color: AppTheme.surface
-                    clip: true
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 16
                     Label {
-                        anchors.centerIn: parent
-                        visible: thumb.status !== Image.Ready
-                        text: episodeDelegate.episode
-                        font.pixelSize: 22
-                        font.bold: true
-                        color: AppTheme.textSecondary
+                        text: qsTr("Episodes")
+                        font.pixelSize: AppTheme.fontH2
+                        font.weight: Font.Bold
+                        color: AppTheme.textPrimary
                     }
-                    Image {
-                        id: thumb
-                        anchors.fill: parent
-                        source: episodeDelegate.image
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        sourceSize.width: 352
+                    Label {
+                        visible: episodes.count > 0
+                        text: qsTr("%1 in this season").arg(episodes.count)
+                        color: AppTheme.textTertiary
+                        font.pixelSize: AppTheme.fontSmall
+                        Layout.fillWidth: true
                     }
-                    Rectangle {
-                        visible: episodeDelegate.watched > 0
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 4
-                        color: "#88000000"
-                        Rectangle {
-                            width: parent.width * episodeDelegate.watched
-                            height: parent.height
-                            color: AppTheme.accent
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    visible: allEpisodes.seasons.length > 1
+                    Repeater {
+                        model: allEpisodes.seasons
+                        delegate: Chip {
+                            required property var modelData
+                            text: qsTr("Season %1").arg(modelData)
+                            selected: page.selectedSeason === modelData
+                            onClicked: page.selectedSeason = modelData
                         }
                     }
                 }
 
-                ColumnLayout {
+                BusyIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    visible: page.loading && episodes.count === 0
+                    running: visible
+                }
+                Label {
                     Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    spacing: 4
-                    Label {
-                        Layout.fillWidth: true
-                        text: episodeDelegate.episode + ". " + episodeDelegate.title
-                        elide: Text.ElideRight
-                        color: AppTheme.textPrimary
-                        font.pixelSize: 15
-                        font.bold: true
-                    }
-                    Label {
-                        visible: text.length > 0
-                        text: [page.formatMinutes(episodeDelegate.durationSecs),
-                               episodeDelegate.watched >= 1 ? qsTr("Watched") : ""]
-                              .filter(t => t).join(" · ")
-                        color: AppTheme.textSecondary
-                        font.pixelSize: 12
-                    }
-                    Label {
-                        Layout.fillWidth: true
-                        visible: text.length > 0
-                        text: episodeDelegate.plot
-                        wrapMode: Text.Wrap
-                        maximumLineCount: page.narrow ? 2 : 3
-                        elide: Text.ElideRight
-                        color: AppTheme.textSecondary
-                        font.pixelSize: 13
+                    visible: !page.loading && episodes.count === 0
+                    wrapMode: Text.Wrap
+                    color: page.errorText ? AppTheme.error : AppTheme.textSecondary
+                    text: page.errorText ? qsTr("Couldn't load the episodes: %1").arg(page.errorText)
+                                         : qsTr("No episodes found.")
+                }
+
+                // Episode cards: a grid on wide screens, a list on phones
+                GridLayout {
+                    id: episodeGrid
+                    Layout.fillWidth: true
+                    columns: page.narrow ? 1 : Math.max(2, Math.floor(content.width / 300))
+                    columnSpacing: 20
+                    rowSpacing: page.narrow ? 12 : 26
+
+                    Repeater {
+                        model: episodes
+                        delegate: EpisodeCard {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignTop
+                            compact: page.narrow
+                            onClicked: page.episodeRequested(extId, false)
+                        }
                     }
                 }
             }
         }
+    }
 
-        }
-      }
+    IconButton {
+        x: 16
+        y: 16
+        filled: true
+        iconName: "back"
+        tip: qsTr("Back")
+        onClicked: page.backRequested()
     }
 
     Keys.onEscapePressed: page.backRequested()

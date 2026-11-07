@@ -283,6 +283,8 @@ Each phase ends with something that runs and can be tested on a real device.
 - **Phase 3:** done — TV guide: now/next in the channel list and player, guide grid
 - **Phase 4:** done — movies and series with details, seasons/episodes, resume, next episode,
   audio/subtitle tracks, "Continue watching"
-- **Phase 4b:** done — new design, app shell, dashboard, settings, guide time shift
+- **Phase 4b:** done — new design, app shell, dashboard, settings, guide time shift;
+  then a second, cinematic pass (neutral palette + warm accent, backdrop hero carousel,
+  channel tile grid, backdrop details pages, custom scroll bars and inputs)
 - **Next:** Phase 5 — polish & platform work (Android TV remote navigation, auto-reconnect,
   installers), plus whatever comes up in daily use

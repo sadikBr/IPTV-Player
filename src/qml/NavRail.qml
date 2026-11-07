@@ -8,7 +8,7 @@ import IPTVPlayer
 Rectangle {
     id: root
 
-    color: AppTheme.backgroundRaised
+    color: AppTheme.background
 
     Rectangle {
         anchors.right: parent.right
@@ -35,7 +35,7 @@ Rectangle {
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
                     GradientStop { position: 0.0; color: AppTheme.accentStrong }
-                    GradientStop { position: 1.0; color: "#2FB9DC" }
+                    GradientStop { position: 1.0; color: AppTheme.accent2 }
                 }
                 IconImage {
                     anchors.centerIn: parent
@@ -115,7 +115,7 @@ Rectangle {
 
         background: Rectangle {
             radius: AppTheme.radius
-            color: item.active ? AppTheme.selection : item.hovered ? AppTheme.hover : "transparent"
+            color: item.active ? AppTheme.surfaceHigh : item.hovered ? AppTheme.hover : "transparent"
             Behavior on color { ColorAnimation { duration: AppTheme.fast } }
             Rectangle {
                 visible: item.active
@@ -133,7 +133,7 @@ Rectangle {
                 Layout.leftMargin: 14
                 source: "icons/" + item.iconName + ".svg"
                 sourceSize: Qt.size(20, 20)
-                color: item.active ? AppTheme.accent : AppTheme.textSecondary
+                color: item.active ? AppTheme.textPrimary : AppTheme.textSecondary
             }
             Label {
                 Layout.fillWidth: true

@@ -66,6 +66,6 @@ ColumnLayout {
         leftMargin: root.sideMargin
         rightMargin: root.sideMargin
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded; height: 6 }
+        ScrollBar.horizontal: AppScrollBar {}
     }
 }
