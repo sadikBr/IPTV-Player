@@ -8,6 +8,8 @@ the app's update dialog. Keep it short and written for people using the app.
 - **Automatic updates:** the app checks for new versions and installs them for you
   (Windows installer, Linux AppImage and Android). Settings → Updates to check now or
   turn automatic checks off.
+- **Keyboard and TV remote:** the arrow keys move between everything on screen (side bar,
+  categories, rows, buttons), Enter / OK opens, Escape / Back goes back.
 - **Reconnects by itself** when a channel or movie drops, freezes or keeps buffering.
 - **New app icon**, and a dark launch screen on Android.
 - **Windows installer** and **Linux AppImage**.

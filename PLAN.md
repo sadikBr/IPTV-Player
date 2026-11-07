@@ -229,7 +229,7 @@ Each phase ends with something that runs and can be tested on a real device.
 
 ### Phase 5 — Polish & platform work (≈ 1–2 weeks)
 - [ ] Responsive layouts: phone portrait, phone landscape, tablet, desktop
-- [ ] Keyboard shortcuts (desktop) and D-pad focus navigation (Android TV)
+- [x] Keyboard shortcuts (desktop) and D-pad focus navigation (Android TV)
 - [ ] Settings: preferred stream format (TS/HLS), buffer size, user agent, theme, language
 - [x] Network robustness: automatic reconnect on stream drop/stall (timeouts and retries for lists were already in)
 - [x] App icons, splash screen (Android launch screen)
@@ -289,5 +289,7 @@ Each phase ends with something that runs and can be tested on a real device.
   channel tile grid, backdrop details pages, custom scroll bars and inputs)
 - **Phase 5 (part 1):** done — automatic reconnect, app icon and Android launch screen,
   Windows installer, Linux AppImage, Android version code per build (v0.7)
-- **Next:** rest of Phase 5 (Android TV / D-pad navigation, playback settings, phone
-  landscape and tablet layouts), plus whatever comes up in daily use
+- **Phase 5 (part 2):** done — automatic updates from GitHub Releases, keyboard / TV remote
+  navigation everywhere (v0.8)
+- **Next:** playback settings (stream format, buffering), phone landscape and tablet
+  layouts, plus whatever comes up in daily use

@@ -143,6 +143,10 @@ Keep `release.keystore` safe and out of the repository.
 
 **Channel list:** ↑ / ↓ to move, Enter to play, S to favorite, Ctrl+F to search.
 
+**Everywhere (keyboard and TV remote):** the arrow keys move between the side bar,
+categories, rows, cards and buttons (the focused one has an orange outline); Enter / OK
+opens or plays; Escape / Back goes back one screen.
+
 ## Building from source
 
 Requirements: **Qt 6.8 or newer** (CI uses 6.10) with Qt Quick, Quick Controls 2, Multimedia and SVG; CMake ≥ 3.21,
