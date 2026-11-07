@@ -70,10 +70,6 @@ set_target_properties(iptvplayer PROPERTIES
     OUTPUT_NAME "IPTVPlayer"
     # Keep the binary away from the IPTVPlayer/ QML module folder (same name).
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    MACOSX_BUNDLE_GUI_IDENTIFIER io.github.sadikbr.iptvplayer
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
     QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
     QT_ANDROID_VERSION_CODE 1
@@ -84,12 +80,11 @@ set_target_properties(iptvplayer PROPERTIES
 if(NOT ANDROID)
     include(GNUInstallDirs)
     install(TARGETS iptvplayer
-        BUNDLE DESTINATION .
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 # Smoke test: start the app off-screen, load all QML and fail on any QML warning.
-if(NOT ANDROID AND NOT IOS)
+if(NOT ANDROID)
     add_test(NAME qml_smoke COMMAND iptvplayer --smoke-test)
     set_tests_properties(qml_smoke PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"

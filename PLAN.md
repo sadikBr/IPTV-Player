@@ -1,6 +1,6 @@
 # IPTV Player — Project Plan
 
-A cross-platform app (Windows, macOS, Linux, Android) to connect to an IPTV
+A cross-platform app (Windows, Linux, Android) to connect to an IPTV
 provider and watch live TV, movies (VOD) and series, with an electronic program
 guide (EPG).
 
@@ -36,7 +36,7 @@ guide (EPG).
 
 | Area | Choice | Why |
 |---|---|---|
-| Framework | **Qt 6.10** | One codebase for desktop + mobile. (Free Qt 6.8 LTS patches ended at 6.8.3, and that version no longer links on current macOS) |
+| Framework | **Qt 6.10** | One codebase for desktop + mobile. (Free Qt 6.8 LTS patches ended at 6.8.3) |
 | UI | **Qt Quick / QML** (Qt Quick Controls 2, Material style) | Touch-friendly, GPU-accelerated, adapts to phones and desktops. Qt Widgets does not work well on mobile. |
 | Core logic | **C++17/20** | Networking, parsing, database, models exposed to QML |
 | Video playback | **Qt Multimedia** (FFmpeg backend) behind a `PlayerBackend` interface | Ships with Qt and works on every target platform. Optional **libmpv** backend on desktop later for wider codec/stream support. |
@@ -183,7 +183,7 @@ Each phase ends with something that runs and can be tested on a real device.
 
 ### Phase 0 — Project setup (≈ 2–3 days)
 - [x] CMake + Qt 6 skeleton, `Main.qml` with a window
-- [ ] Builds and runs on Linux/Windows/macOS **and** an Android device (CI builds; needs a check on your devices)
+- [ ] Builds and runs on Linux/Windows **and** an Android device (CI builds; needs a check on your devices)
 - [x] GitHub Actions: desktop builds + Android APK artifact
 - [x] clang-format, `.gitignore`, README with build instructions
 
@@ -222,7 +222,7 @@ Each phase ends with something that runs and can be tested on a real device.
 - [ ] Settings: preferred stream format (TS/HLS), buffer size, user agent, theme, language
 - [ ] Network robustness: timeouts, retries, automatic reconnect on stream stall
 - [ ] App icons, splash screen, translations
-- [ ] Packaging: Windows installer (NSIS or Qt IFW), macOS `.dmg`, Linux AppImage/Flatpak, Android signed APK/AAB
+- [ ] Packaging: Windows installer (NSIS or Qt IFW), Linux AppImage/Flatpak, Android signed APK/AAB
 
 ### Phase 6 — Optional extras
 - [ ] `MpvBackend` on desktop for better codec/stream support
@@ -259,14 +259,14 @@ Each phase ends with something that runs and can be tested on a real device.
 |---|---|---|
 | Source type | Xtream login **and** M3U | Both providers are in scope for Phase 2 |
 | Target devices | **Desktop + Android** | iOS dropped. Android builds for arm64 and 32-bit ARM so cheap TV boxes work too |
-| Distribution | Personal, shared with friends | No store publishing: GitHub Releases with a Windows zip, macOS dmg and a signed Android APK |
+| Distribution | Personal, shared with friends | No store publishing: GitHub Releases with a Windows zip and a signed Android APK |
 | Stream formats | Unknown | The player has a stream info panel (codec, resolution) to find out; testing in Phase 1 tells whether an mpv backend is needed |
 
 ---
 
 ## 10. Progress
 
-- **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/macOS/Android, release on `v*` tags
+- **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/Android, release on `v*` tags
 - **Phase 1:** done — URL player with controls, stream info, wake lock, background handling.
   **To do (you):** test real streams from your provider on PC and phone and note what fails
 - **Next:** Phase 2 — sources and live TV

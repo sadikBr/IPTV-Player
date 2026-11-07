@@ -1,6 +1,6 @@
 # IPTV Player
 
-A cross-platform IPTV player for desktop (Windows, macOS, Linux) and Android,
+A cross-platform IPTV player for desktop (Windows, Linux) and Android,
 built with Qt 6 and QML. Bring your own provider: Xtream Codes login or an
 M3U playlist.
 
@@ -27,13 +27,10 @@ run and download from **Artifacts**:
 | Artifact | Platform |
 |---|---|
 | `IPTVPlayer-windows-x64` | Windows 10/11 — unzip and run `IPTVPlayer.exe` |
-| `IPTVPlayer-macos` | macOS 12+ (Apple Silicon and Intel) |
 | `IPTVPlayer-android` | Android 9+ (arm64 and 32-bit ARM) — install the APK ("allow unknown sources") |
 
 Pushing a tag like `v0.1.0` also publishes these files as a GitHub Release,
 which is the easiest link to share with others.
-
-> **macOS:** the app is not notarized. The first time, right-click it and choose **Open**.
 
 ### Android signing key (recommended)
 
@@ -44,7 +41,7 @@ updates working, create a key once and add it as repository secrets:
 ```bash
 keytool -genkeypair -v -keystore release.keystore -alias iptvplayer \
   -keyalg RSA -keysize 2048 -validity 10000
-base64 -w0 release.keystore > release.keystore.b64   # macOS: base64 -i release.keystore
+base64 -w0 release.keystore > release.keystore.b64
 ```
 
 Then in **GitHub → Settings → Secrets and variables → Actions**, add:
@@ -111,5 +108,5 @@ src/
   player/PlayerController.*     QML-facing player (wake lock, background handling)
   platform/ScreenWakeLock.*     keep screen on (Android)
   qml/                     UI: Main, HomePage, PlayerPage, PlayerControls, ...
-.github/workflows/build.yml  CI for Linux, Windows, macOS, Android
+.github/workflows/build.yml  CI for Linux, Windows, Android
 ```

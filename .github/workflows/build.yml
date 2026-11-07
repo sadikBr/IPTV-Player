@@ -98,40 +98,6 @@ jobs:
           name: IPTVPlayer-windows-x64
           path: dist/IPTVPlayer-windows-x64.zip
 
-  macos:
-    name: macOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: mac
-          target: desktop
-          arch: clang_64
-          modules: ${{ env.QT_MODULES }}
-          dir: ${{ runner.temp }}
-          cache: true
-
-      - name: Configure
-        run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-
-      - name: Build
-        run: cmake --build build
-
-      - name: Package
-        run: |
-          macdeployqt build/bin/IPTVPlayer.app -qmldir=src/qml -dmg
-          mv build/bin/IPTVPlayer.dmg build/bin/IPTVPlayer-macos.dmg
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: IPTVPlayer-macos
-          path: build/bin/IPTVPlayer-macos.dmg
-
   android:
     name: Android
     runs-on: ubuntu-24.04
@@ -242,7 +208,7 @@ jobs:
   release:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos, android]
+    needs: [linux, windows, android]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
