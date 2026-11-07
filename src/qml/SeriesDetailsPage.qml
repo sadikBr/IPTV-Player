@@ -276,7 +276,15 @@ Page {
                     Repeater {
                         model: episodes
                         delegate: EpisodeCard {
-                            Layout.fillWidth: true
+                            // Same width for every card (the grid would otherwise
+                            // size columns by content and the stills would differ).
+                            // Based on the page content width, not the grid's own width
+                            // (which depends on the cards and would shrink with them).
+                            readonly property real cellWidth: Math.floor((content.width - episodeGrid.columnSpacing
+                                                               * (episodeGrid.columns - 1)) / episodeGrid.columns)
+                            Layout.preferredWidth: cellWidth
+                            Layout.minimumWidth: cellWidth
+                            Layout.maximumWidth: cellWidth
                             Layout.alignment: Qt.AlignTop
                             compact: page.narrow
                             onClicked: page.episodeRequested(extId, false)

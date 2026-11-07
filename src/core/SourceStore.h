@@ -95,6 +95,11 @@ public:
 
     // Hidden categories: left out of category lists, "All" and search.
     bool setCategoriesHidden(int sourceId, ContentKind kind, const QStringList &extIds, bool hidden);
+    // Episode title without the series name and SxxEyy prefix providers often
+    // repeat: "EN| Show [4K] - S01E02 - The Title" -> "The Title". Empty if
+    // nothing is left.
+    static QString cleanEpisodeTitle(const QString &title);
+
     // Language / region group from a category name: "[EN] KIDS" -> "EN",
     // "UK | News" -> "UK", "FR: Sport" -> "FR". Empty when there is none.
     static QString categoryGroup(const QString &name);

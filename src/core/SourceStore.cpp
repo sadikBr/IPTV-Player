@@ -342,6 +342,19 @@ bool SourceStore::setCategoriesHidden(int sourceId, ContentKind kind, const QStr
     return true;
 }
 
+QString SourceStore::cleanEpisodeTitle(const QString &title)
+{
+    static const QRegularExpression marker(
+            QStringLiteral(R"re(\b[Ss]\d{1,2}\s*[Ee]\d{1,4}\b)re"));
+    const auto m = marker.match(title);
+    if (!m.hasMatch())
+        return title.trimmed();
+    QString rest = title.mid(m.capturedEnd()).trimmed();
+    static const QRegularExpression leading(QStringLiteral(R"re(^[\s\-\x{2013}\x{2014}:|.]+)re"));
+    rest.remove(leading);
+    return rest.trimmed();
+}
+
 QString SourceStore::categoryGroup(const QString &name)
 {
     static const QRegularExpression bracket(QStringLiteral(R"re(^\s*[\[(]\s*([^\])]{1,12}?)\s*[\])])re"));

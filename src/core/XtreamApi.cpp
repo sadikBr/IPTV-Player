@@ -185,8 +185,14 @@ QString XtreamApi::imageUrl(const QString &value, bool backdrop)
     if (v.isEmpty())
         return {};
     if (v.startsWith(QLatin1String("http://"), Qt::CaseInsensitive)
-        || v.startsWith(QLatin1String("https://"), Qt::CaseInsensitive))
+        || v.startsWith(QLatin1String("https://"), Qt::CaseInsensitive)) {
+        // Some providers link to an IMDb web page instead of an image.
+        const QUrl url(v);
+        if (url.host().endsWith(QLatin1String("imdb.com"), Qt::CaseInsensitive)
+            && url.path().contains(QLatin1String("/title/")))
+            return {};
         return v;
+    }
     if (v.startsWith(QLatin1String("//")))
         return QStringLiteral("https:") + v;
     // A bare image file name: TMDB's image server.

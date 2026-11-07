@@ -274,6 +274,25 @@ private slots:
         QCOMPARE(SourceStore::categoryGroup(name), group);
     }
 
+    void cleanEpisodeTitle_data()
+    {
+        QTest::addColumn<QString>("title");
+        QTest::addColumn<QString>("clean");
+        QTest::newRow("provider style") << "EN| Spider-Noir [4K] [Black/White] - S01E01 - Steel Town"
+                                        << "Steel Town";
+        QTest::newRow("dots") << "Show.Name.S02E05.The.End" << "The.End";
+        QTest::newRow("only marker") << "Some Show - S01E03" << "";
+        QTest::newRow("plain") << "Pilot" << "Pilot";
+        QTest::newRow("spaced") << "Show S1 E2 Title" << "Title";
+    }
+
+    void cleanEpisodeTitle()
+    {
+        QFETCH(QString, title);
+        QFETCH(QString, clean);
+        QCOMPARE(SourceStore::cleanEpisodeTitle(title), clean);
+    }
+
     void searchKey()
     {
         QCOMPARE(SourceStore::searchKey(QStringLiteral("Café TV ÉLITE")), QStringLiteral("cafe tv elite"));

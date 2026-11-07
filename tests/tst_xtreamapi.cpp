@@ -203,6 +203,9 @@ private slots:
         QCOMPARE(XtreamApi::imageUrl(QStringLiteral("//cdn.example.com/x.png")),
                  QStringLiteral("https://cdn.example.com/x.png"));
         QCOMPARE(XtreamApi::imageUrl(QStringLiteral("not an image")), QString());
+        QCOMPARE(XtreamApi::imageUrl(QStringLiteral(
+                         "https://www.imdb.com/title/tt9760504/mediaviewer/rm3812924673/")),
+                 QString());
         QCOMPARE(XtreamApi::imageUrl(QString()), QString());
     }
 

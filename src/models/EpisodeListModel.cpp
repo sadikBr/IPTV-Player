@@ -64,8 +64,10 @@ QVariant EpisodeListModel::data(const QModelIndex &index, int role) const
     case ExtIdRole:
         return e.extId;
     case TitleRole:
-    case Qt::DisplayRole:
-        return e.title;
+    case Qt::DisplayRole: {
+        const QString clean = SourceStore::cleanEpisodeTitle(e.title);
+        return clean.isEmpty() ? tr("Episode %1").arg(e.episode) : clean;
+    }
     case SeasonRole:
         return e.season;
     case EpisodeRole:
@@ -98,7 +100,7 @@ QVariantMap EpisodeListModel::get(int row) const
         return {};
     const EpisodeData &e = m_rows.at(row).data;
     return {
-        { QStringLiteral("extId"), e.extId },     { QStringLiteral("title"), e.title },
+        { QStringLiteral("extId"), e.extId },     { QStringLiteral("title"), data(index(row), TitleRole) },
         { QStringLiteral("season"), e.season },   { QStringLiteral("episode"), e.episode },
         { QStringLiteral("plot"), e.plot },
         { QStringLiteral("image"), XtreamApi::imageUrl(e.image, true) },
