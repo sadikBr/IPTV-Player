@@ -127,6 +127,9 @@ cmake --build build
 ./build/bin/IPTVPlayer
 ```
 
+If the build stops with `qmlcachegen` crashing (a bug in some Qt versions), configure
+with `-DIPTV_QML_AOT=OFF`; QML is then compiled when the app starts instead.
+
 `qt6-multimedia-ffmpeg` is required: it is the video engine. For hardware decoding,
 install `intel-media-driver` (Intel) or `libva-mesa-driver` (AMD).
 

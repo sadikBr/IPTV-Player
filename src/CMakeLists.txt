@@ -137,11 +137,20 @@ foreach(file IN LISTS QML_SOURCES QML_RESOURCES)
 endforeach()
 set_source_files_properties(qml/AppTheme.qml qml/AppState.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
+# Ahead-of-time compilation of QML. Turn off (-DIPTV_QML_AOT=OFF) if your Qt's
+# qmlcachegen crashes; QML is then compiled when the app starts instead.
+option(IPTV_QML_AOT "Compile QML ahead of time with qmlcachegen" ON)
+set(QML_CACHEGEN_OPTION)
+if(NOT IPTV_QML_AOT)
+    set(QML_CACHEGEN_OPTION NO_CACHEGEN)
+endif()
+
 qt_add_qml_module(iptvplayer
     URI IPTVPlayer
     VERSION 1.0
     QML_FILES ${QML_SOURCES}
     RESOURCES ${QML_RESOURCES}
+    ${QML_CACHEGEN_OPTION}
 )
 
 target_include_directories(iptvplayer PRIVATE

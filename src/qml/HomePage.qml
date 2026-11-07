@@ -316,23 +316,7 @@ Page {
                 title: qsTr("Continue watching")
                 model: continueWatching
                 rowHeight: 250
-                delegate: PosterCard {
-                    required property int sourceId
-                    required property string kind
-                    required property string extId
-                    required property string seriesExtId
-                    required property string image
-                    required property int remainingMinutes
-                    required property var model // "subtitle" role (name clash)
-                    required watched
-                    required title
-
-                    width: 140
-                    poster: image
-                    subtitle: [model.subtitle, qsTr("%1 min left").arg(remainingMinutes)]
-                              .filter(t => t).join(" · ")
-                    onClicked: page.playVodRequested(sourceId, kind, extId, seriesExtId)
-                }
+                delegate: continueDelegate
             }
 
             ContentRow {
@@ -343,15 +327,7 @@ Page {
                 onSeeAllClicked: AppState.sectionRequested("live")
                 model: favoriteChannels.count > 0 ? favoriteChannels : liveChannels
                 rowHeight: 176
-                delegate: ChannelCard {
-                    required property int index
-                    required name
-                    required logo
-                    required nowTitle
-                    required nowProgress
-                    onClicked: page.playChannelIndexRequested(
-                                   favoriteChannels.count > 0 ? favoriteChannels : liveChannels, index)
-                }
+                delegate: channelDelegate
             }
 
             ContentRow {
@@ -360,7 +336,7 @@ Page {
                 title: qsTr("Favorite movies")
                 model: favoriteMovies
                 rowHeight: 285
-                delegate: posterDelegate
+                delegate: movieDelegate
             }
 
             ContentRow {
@@ -371,7 +347,7 @@ Page {
                 onSeeAllClicked: AppState.sectionRequested("movie")
                 model: newMovies
                 rowHeight: 285
-                delegate: posterDelegate
+                delegate: movieDelegate
             }
 
             ContentRow {
@@ -382,21 +358,7 @@ Page {
                 onSeeAllClicked: AppState.sectionRequested("series")
                 model: newSeries
                 rowHeight: 285
-                delegate: Component {
-                    PosterCard {
-                        required property string extId
-                        required property string name
-                        required property string logo
-                        required property string year
-                        required rating
-                        required favorite
-                        width: 150
-                        title: name
-                        poster: logo
-                        subtitle: year
-                        onClicked: page.openSeriesRequested(extId)
-                    }
-                }
+                delegate: seriesDelegate
             }
 
             // Provider content still loading
@@ -413,21 +375,107 @@ Page {
         }
     }
 
+    // Delegates wrap the cards in a plain Item with typed properties named
+    // after the model roles. (Re-declaring the cards' own properties as
+    // "required" crashed some versions of Qt's QML compiler.)
+
     Component {
-        id: posterDelegate
-        PosterCard {
+        id: continueDelegate
+        Item {
+            id: cw
+            required property int sourceId
+            required property string kind
+            required property string extId
+            required property string seriesExtId
+            required property string title
+            required property string subtitle
+            required property string image
+            required property real watched
+            required property int remainingMinutes
+            width: 140
+            height: ListView.view ? ListView.view.height : 250
+            PosterCard {
+                anchors.fill: parent
+                title: cw.title
+                poster: cw.image
+                watched: cw.watched
+                subtitle: [cw.subtitle, qsTr("%1 min left").arg(cw.remainingMinutes)]
+                          .filter(t => t).join(" · ")
+                onClicked: page.playVodRequested(cw.sourceId, cw.kind, cw.extId, cw.seriesExtId)
+            }
+        }
+    }
+
+    Component {
+        id: channelDelegate
+        Item {
+            id: ch
+            required property int index
+            required property string name
+            required property string logo
+            required property string nowTitle
+            required property real nowProgress
+            width: 210
+            height: 170
+            ChannelCard {
+                anchors.fill: parent
+                name: ch.name
+                logo: ch.logo
+                nowTitle: ch.nowTitle
+                nowProgress: ch.nowProgress
+                onClicked: page.playChannelIndexRequested(
+                               favoriteChannels.count > 0 ? favoriteChannels : liveChannels, ch.index)
+            }
+        }
+    }
+
+    Component {
+        id: movieDelegate
+        Item {
+            id: mv
             required property string extId
             required property string name
             required property string logo
             required property string year
-            required rating
-            required watched
-            required favorite
+            required property string rating
+            required property real watched
+            required property bool favorite
             width: 150
-            title: name
-            poster: logo
-            subtitle: year
-            onClicked: page.openMovieRequested(extId)
+            height: ListView.view ? ListView.view.height : 285
+            PosterCard {
+                anchors.fill: parent
+                title: mv.name
+                poster: mv.logo
+                subtitle: mv.year
+                rating: mv.rating
+                watched: mv.watched
+                favorite: mv.favorite
+                onClicked: page.openMovieRequested(mv.extId)
+            }
+        }
+    }
+
+    Component {
+        id: seriesDelegate
+        Item {
+            id: sr
+            required property string extId
+            required property string name
+            required property string logo
+            required property string year
+            required property string rating
+            required property bool favorite
+            width: 150
+            height: ListView.view ? ListView.view.height : 285
+            PosterCard {
+                anchors.fill: parent
+                title: sr.name
+                poster: sr.logo
+                subtitle: sr.year
+                rating: sr.rating
+                favorite: sr.favorite
+                onClicked: page.openSeriesRequested(sr.extId)
+            }
         }
     }
 }

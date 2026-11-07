@@ -133,7 +133,10 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationName(QStringLiteral("IPTV Player"));
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION));
 
-    if (QQuickStyle::name().isEmpty())
+    // The UI is designed for the Material style. Don't let the platform pick
+    // its native style (on Windows it is used by default and can't be
+    // customised); QT_QUICK_CONTROLS_STYLE can still override this.
+    if (!qEnvironmentVariableIsSet("QT_QUICK_CONTROLS_STYLE"))
         QQuickStyle::setStyle(QStringLiteral("Material"));
 
     // --smoke-test: load the UI, fail on any QML warning, then quit (used by CTest/CI).
