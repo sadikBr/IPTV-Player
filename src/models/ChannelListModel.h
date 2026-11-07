@@ -9,14 +9,17 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
-// Live channels of one source, filtered by category and/or search text.
-// A non-empty search looks through all channels of the source.
+// Live channels, movies or series of one source (see `kind`), filtered by
+// category and/or search text. A non-empty search looks through everything
+// of that kind.
 class ChannelListModel : public QAbstractListModel
 {
     Q_OBJECT
     QML_ELEMENT
 
     Q_PROPERTY(int sourceId READ sourceId WRITE setSourceId NOTIFY sourceIdChanged)
+    // "live" (default), "movie" or "series"
+    Q_PROPERTY(QString kind READ kind WRITE setKind NOTIFY kindChanged)
     Q_PROPERTY(int categoryId READ categoryId WRITE setCategoryId NOTIFY categoryIdChanged)
     Q_PROPERTY(QString searchText READ searchText WRITE setSearchText NOTIFY searchTextChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
@@ -33,12 +36,17 @@ public:
         NowTitleRole,    // TV guide: current program ("" if unknown)
         NowProgressRole, // 0..1
         NextTitleRole,
+        YearRole,
+        RatingRole,
+        WatchedRole, // movies: how much has been watched, 0..1
     };
 
     explicit ChannelListModel(QObject *parent = nullptr);
 
     int sourceId() const { return m_sourceId; }
     void setSourceId(int id);
+    QString kind() const { return m_kind; }
+    void setKind(const QString &kind);
     int categoryId() const { return m_categoryId; }
     void setCategoryId(int id);
     QString searchText() const { return m_searchText; }
@@ -60,6 +68,7 @@ public slots:
 
 signals:
     void sourceIdChanged();
+    void kindChanged();
     void categoryIdChanged();
     void searchTextChanged();
     void countChanged();
@@ -75,6 +84,10 @@ private:
         QString epgKey;
         int number;
         bool favorite;
+        QString extension;
+        QString year;
+        QString rating;
+        double watched;
     };
 
     struct NowNext
@@ -89,6 +102,7 @@ private:
     void refreshGuide();
 
     int m_sourceId = -1;
+    QString m_kind = QStringLiteral("live");
     int m_categoryId = -1; // CategoryListModel::AllCategories
     QString m_searchText;
     iptv::SourceRecord m_source;

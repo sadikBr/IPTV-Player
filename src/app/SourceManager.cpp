@@ -9,6 +9,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QtConcurrent/QtConcurrentRun>
+#include <utility>
 
 using namespace iptv;
 
@@ -247,6 +248,8 @@ QVariantMap SourceManager::source(int sourceId) const
         { QStringLiteral("expiresAt"), s->expiresAt },
         { QStringLiteral("maxConnections"), s->maxConnections },
         { QStringLiteral("liveCount"), s->liveCount },
+        { QStringLiteral("movieCount"), s->movieCount },
+        { QStringLiteral("seriesCount"), s->seriesCount },
         { QStringLiteral("lastSync"), s->lastSync },
     };
 }
@@ -277,7 +280,7 @@ bool SourceManager::begin(int sourceId, bool isNew)
     m_isNew = isNew;
     m_cancelled = false;
     m_activeSourceId = sourceId;
-    m_content = {};
+    m_payloads.clear();
     emit busyChanged();
     setStatus(tr("Connecting…"));
     return true;
@@ -298,7 +301,7 @@ void SourceManager::finish(bool ok, const QString &error)
     m_isNew = false;
     m_activeSourceId = -1;
     m_reply = nullptr;
-    m_content = {};
+    m_payloads.clear();
     setStatus({}, -1);
     emit busyChanged();
 
@@ -315,7 +318,8 @@ void SourceManager::setStatus(const QString &text, qreal progress)
     emit statusChanged();
 }
 
-void SourceManager::download(const QUrl &url, const QString &label, const DataHandler &onData)
+void SourceManager::download(const QUrl &url, const QString &label, const DataHandler &onData,
+                             DownloadFailure onFailure)
 {
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, NetworkFactory::userAgent());
@@ -333,7 +337,7 @@ void SourceManager::download(const QUrl &url, const QString &label, const DataHa
                           total > 0 ? qreal(received) / qreal(total) : -1);
             });
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, onData] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, onData, onFailure] {
         reply->deleteLater();
         if (m_reply == reply)
             m_reply = nullptr;
@@ -341,9 +345,15 @@ void SourceManager::download(const QUrl &url, const QString &label, const DataHa
 
         if (m_cancelled)
             return finish(false);
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const bool failed = reply->error() != QNetworkReply::NoError || status >= 400;
+        if (failed && onFailure == DownloadFailure::Skip) {
+            qWarning("Skipping optional request %s: %s", qPrintable(reply->url().path()),
+                     qPrintable(reply->errorString()));
+            return onData(QByteArray());
+        }
         if (reply->error() != QNetworkReply::NoError)
             return finish(false, friendlyNetworkError(reply));
-        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (status >= 400)
             return finish(false, tr("The server returned an error (HTTP %1).").arg(status));
         onData(reply->readAll());
@@ -352,38 +362,88 @@ void SourceManager::download(const QUrl &url, const QString &label, const DataHa
 
 void SourceManager::syncXtream()
 {
+    m_payloads.clear();
+    runXtreamStep(0);
+}
+
+namespace {
+
+struct XtreamStep
+{
+    const char *action;
+    const char *label;
+    bool required; // movies and series are optional: some providers don't offer them
+};
+
+const XtreamStep kXtreamSteps[] = {
+    { "get_live_categories", QT_TRANSLATE_NOOP("SourceManager", "Loading categories…"), true },
+    { "get_live_streams", QT_TRANSLATE_NOOP("SourceManager", "Loading channels…"), true },
+    { "get_vod_categories", QT_TRANSLATE_NOOP("SourceManager", "Loading movie categories…"), false },
+    { "get_vod_streams", QT_TRANSLATE_NOOP("SourceManager", "Loading movies…"), false },
+    { "get_series_categories", QT_TRANSLATE_NOOP("SourceManager", "Loading series categories…"), false },
+    { "get_series", QT_TRANSLATE_NOOP("SourceManager", "Loading series…"), false },
+};
+constexpr int kXtreamStepCount = int(sizeof(kXtreamSteps) / sizeof(kXtreamSteps[0]));
+
+} // namespace
+
+void SourceManager::runXtreamStep(int index)
+{
+    if (index >= kXtreamStepCount) {
+        saveXtream();
+        return;
+    }
+    const XtreamStep &step = kXtreamSteps[index];
     const XtreamCredentials creds{ QUrl(m_source.url), m_source.username, m_source.password };
+    const QString action = QString::fromLatin1(step.action);
+    download(XtreamApi::apiUrl(creds, action), tr(step.label),
+             [this, index, action](const QByteArray &data) {
+                 m_payloads.insert(action, data);
+                 runXtreamStep(index + 1);
+             },
+             step.required ? DownloadFailure::Abort : DownloadFailure::Skip);
+}
 
-    download(XtreamApi::apiUrl(creds, QStringLiteral("get_live_categories")),
-             tr("Loading categories…"), [this, creds](const QByteArray &data) {
-                 QString error;
-                 if (!XtreamApi::parseCategories(data, ContentKind::Live, &m_content.categories,
-                                                 &error))
-                     return finish(false, error);
+void SourceManager::saveXtream()
+{
+    const int id = m_source.id;
+    const QHash<QString, QByteArray> payloads = std::exchange(m_payloads, {});
+    runWorker([id, payloads] {
+        WorkResult result;
+        SourceContent content;
+        QString error;
+        const auto get = [&payloads](const char *action) {
+            return payloads.value(QString::fromLatin1(action));
+        };
 
-                 download(XtreamApi::apiUrl(creds, QStringLiteral("get_live_streams")),
-                          tr("Loading channels…"), [this](const QByteArray &streams) {
-                              const int id = m_source.id;
-                              const QList<CategoryData> categories = m_content.categories;
-                              runWorker([id, categories, streams] {
-                                  WorkResult result;
-                                  SourceContent content;
-                                  content.categories = categories;
-                                  if (!XtreamApi::parseLiveStreams(streams, &content.channels,
-                                                                   &result.error))
-                                      return result;
-                                  if (content.channels.isEmpty()) {
-                                      result.error = tr("The provider returned no live channels.");
-                                      return result;
-                                  }
-                                  SourceStore store(Database::connection());
-                                  result.ok = store.replaceContent(id, content);
-                                  result.error = store.lastError();
-                                  result.liveCount = int(content.channels.size());
-                                  return result;
-                              });
-                          });
-             });
+        if (!XtreamApi::parseCategories(get("get_live_categories"), ContentKind::Live,
+                                        &content.categories, &result.error)
+            || !XtreamApi::parseLiveStreams(get("get_live_streams"), &content.channels,
+                                            &result.error))
+            return result;
+
+        // Optional parts: ignore what is missing or malformed.
+        QList<CategoryData> categories;
+        QList<ChannelData> items;
+        if (XtreamApi::parseCategories(get("get_vod_categories"), ContentKind::Movie, &categories, &error))
+            content.categories += categories;
+        if (XtreamApi::parseMovies(get("get_vod_streams"), &items, &error))
+            content.channels += items;
+        if (XtreamApi::parseCategories(get("get_series_categories"), ContentKind::Series, &categories, &error))
+            content.categories += categories;
+        if (XtreamApi::parseSeries(get("get_series"), &items, &error))
+            content.channels += items;
+
+        if (content.channels.isEmpty()) {
+            result.error = tr("The provider returned no channels, movies or series.");
+            return result;
+        }
+        SourceStore store(Database::connection());
+        result.ok = store.replaceContent(id, content);
+        result.error = store.lastError();
+        result.liveCount = int(content.channels.size());
+        return result;
+    });
 }
 
 void SourceManager::syncM3u()

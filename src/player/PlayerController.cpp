@@ -12,6 +12,7 @@ PlayerController::PlayerController(QObject *parent)
         if (m_backend->state() == PlayerBackend::State::Playing)
             setErrorString({});
         updateWakeLock();
+        applyPendingSeek();
         emit stateChanged();
     });
     connect(m_backend, &PlayerBackend::bufferProgressChanged, this,
@@ -22,6 +23,10 @@ PlayerController::PlayerController(QObject *parent)
     connect(m_backend, &PlayerBackend::streamInfoChanged, this,
             &PlayerController::streamInfoChanged);
     connect(m_backend, &PlayerBackend::errorOccurred, this, &PlayerController::setErrorString);
+    connect(m_backend, &PlayerBackend::tracksChanged, this, &PlayerController::tracksChanged);
+    connect(m_backend, &PlayerBackend::endOfMedia, this, &PlayerController::ended);
+    connect(m_backend, &PlayerBackend::seekableChanged, this, &PlayerController::applyPendingSeek);
+    connect(m_backend, &PlayerBackend::durationChanged, this, &PlayerController::applyPendingSeek);
 
     connect(qGuiApp, &QGuiApplication::applicationStateChanged, this,
             &PlayerController::onApplicationStateChanged);
@@ -72,8 +77,28 @@ void PlayerController::setMuted(bool muted)
     emit mutedChanged();
 }
 
-void PlayerController::open(const QUrl &url)
+void PlayerController::setVod(bool vod)
 {
+    if (vod == m_vod)
+        return;
+    m_vod = vod;
+    emit vodChanged();
+    emit durationChanged(); // "live" depends on it
+}
+
+void PlayerController::applyPendingSeek()
+{
+    if (m_pendingSeek <= 0 || !m_backend->seekable() || m_backend->duration() <= 0)
+        return;
+    const qint64 target = qMin(m_pendingSeek, m_backend->duration() - 5000);
+    m_pendingSeek = 0;
+    if (target > 0)
+        m_backend->seek(target);
+}
+
+void PlayerController::open(const QUrl &url, qint64 startPositionMs)
+{
+    m_pendingSeek = startPositionMs;
     setErrorString({});
     m_backend->stop();
     if (m_source != url) {
@@ -126,8 +151,10 @@ void PlayerController::stop()
 void PlayerController::retry()
 {
     const QUrl url = m_source;
+    // Movies continue where they were.
+    const qint64 position = m_vod ? m_backend->position() : 0;
     m_backend->setSource({});
-    open(url);
+    open(url, position);
 }
 
 void PlayerController::seek(qint64 positionMs)

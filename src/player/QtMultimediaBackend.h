@@ -32,6 +32,13 @@ public:
     void seek(qint64 positionMs) override;
     QString streamInfo() const override { return m_streamInfo; }
 
+    QStringList audioTracks() const override;
+    QStringList subtitleTracks() const override;
+    int activeAudioTrack() const override;
+    int activeSubtitleTrack() const override;
+    void setActiveAudioTrack(int index) override;
+    void setActiveSubtitleTrack(int index) override;
+
 private:
     void updateState();
     void updateStreamInfo();

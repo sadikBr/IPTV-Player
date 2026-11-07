@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 
 // Abstract video player. The UI only talks to PlayerController, which owns one
@@ -41,6 +42,14 @@ public:
     // Human readable technical details (codecs, resolution, ...).
     virtual QString streamInfo() const = 0;
 
+    // Audio and subtitle tracks (display names). Subtitle -1 = off.
+    virtual QStringList audioTracks() const = 0;
+    virtual QStringList subtitleTracks() const = 0;
+    virtual int activeAudioTrack() const = 0;
+    virtual int activeSubtitleTrack() const = 0;
+    virtual void setActiveAudioTrack(int index) = 0;
+    virtual void setActiveSubtitleTrack(int index) = 0;
+
 signals:
     void stateChanged();
     void bufferProgressChanged();
@@ -48,5 +57,7 @@ signals:
     void durationChanged();
     void seekableChanged();
     void streamInfoChanged();
+    void tracksChanged();
+    void endOfMedia();
     void errorOccurred(const QString &message);
 };

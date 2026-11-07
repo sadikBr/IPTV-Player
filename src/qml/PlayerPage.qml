@@ -11,14 +11,24 @@ Page {
     // Either a single URL (streamUrl/streamTitle) ...
     property url streamUrl
     property string streamTitle
-    // ... or a channel list to zap through.
+    // ... or a channel list to zap through ...
     property ChannelListModel channelModel: null
     property int channelIndex: -1
     property int sourceId: -1
+    // ... or a movie ("movie") or an episode ("episode") of a series.
+    property string vodKind: ""
+    property string vodExtId: ""        // movie or episode id
+    property string seriesExtId: ""     // episodes
+    property bool startFromBeginning: false
 
     property ApplicationWindow appWindow
 
     readonly property bool hasChannels: channelModel !== null && channelModel.count > 0
+    readonly property bool isVod: vodKind.length > 0
+    readonly property bool isEpisode: vodKind === "episode"
+    property int episodeIndex: -1
+    property var vodInfo: ({})          // title/image/season/episode for watch progress
+    property bool nextEpisodePending: false
     readonly property bool fullScreen: appWindow ? appWindow.fullScreen : false
     property bool controlsVisible: true
     property bool infoVisible: false
@@ -81,6 +91,51 @@ Page {
         showControls()
     }
 
+    // --- Movies and episodes ---
+
+    function saveProgress() {
+        if (!isVod || player.duration <= 0 || player.position <= 0)
+            return
+        VodManager.saveProgress(sourceId, vodKind, vodExtId, player.position, player.duration, vodInfo)
+    }
+
+    function markFinished() {
+        if (isVod && player.duration > 0)
+            VodManager.saveProgress(sourceId, vodKind, vodExtId, player.duration, player.duration, vodInfo)
+    }
+
+    function playMovie() {
+        const movie = VodManager.movie(sourceId, vodExtId)
+        streamTitle = movie.name || ""
+        vodInfo = { "title": movie.name, "image": movie.poster }
+        streamUrl = VodManager.movieUrl(sourceId, vodExtId)
+        const resume = startFromBeginning ? 0 : VodManager.resumePosition(sourceId, "movie", vodExtId)
+        player.open(streamUrl, resume)
+        showControls()
+    }
+
+    function playEpisode(index) {
+        if (index < 0 || index >= episodes.count)
+            return
+        saveProgress()
+        nextEpisodePending = false
+        const ep = episodes.get(index)
+        const series = VodManager.series(sourceId, seriesExtId)
+        episodeIndex = index
+        vodExtId = ep.extId
+        streamTitle = (series.name ? series.name + "  ·  " : "")
+                + qsTr("S%1 E%2").arg(ep.season).arg(ep.episode)
+                + (ep.title ? "  ·  " + ep.title : "")
+        vodInfo = { "title": series.name || ep.title, "image": series.poster || ep.image,
+                    "seriesExtId": seriesExtId, "season": ep.season, "episode": ep.episode }
+        streamUrl = episodes.streamUrl(index)
+        const resume = startFromBeginning ? 0 : VodManager.resumePosition(sourceId, "episode", ep.extId)
+        startFromBeginning = false
+        player.open(streamUrl, resume)
+        channelOsd.show()
+        showControls()
+    }
+
     function toggleFavorite() {
         if (!hasChannels || channelIndex < 0)
             return
@@ -100,7 +155,22 @@ Page {
 
     PlayerController {
         id: player
+        vod: page.isVod
         onVolumeChanged: AppSettings.volume = volume
+        onEnded: {
+            page.markFinished()
+            if (page.isEpisode && page.episodeIndex + 1 < episodes.count)
+                page.nextEpisodePending = true
+            else if (page.isVod)
+                page.showControls()
+        }
+    }
+
+    // All episodes of the series, to continue with the next one.
+    EpisodeListModel {
+        id: episodes
+        sourceId: page.isEpisode ? page.sourceId : -1
+        seriesExtId: page.isEpisode ? page.seriesExtId : ""
     }
 
     Component.onCompleted: {
@@ -108,10 +178,38 @@ Page {
         player.volume = AppSettings.volume
         if (hasChannels && channelIndex >= 0)
             playChannel(channelIndex)
+        else if (vodKind === "movie")
+            playMovie()
+        else if (isEpisode)
+            playEpisode(episodes.indexOfExtId(vodExtId))
         else
             player.open(streamUrl)
         forceActiveFocus()
         showControls()
+    }
+
+    Component.onDestruction: saveProgress()
+
+    // Save the position regularly, so a crash or closed app loses little.
+    Timer {
+        interval: 15000
+        running: page.isVod && player.playing
+        repeat: true
+        onTriggered: page.saveProgress()
+    }
+
+    // "Next episode" countdown
+    Timer {
+        id: nextEpisodeTimer
+        interval: 1000
+        repeat: true
+        running: page.nextEpisodePending
+        property int remaining: 10
+        onRunningChanged: remaining = 10
+        onTriggered: {
+            if (--remaining <= 0)
+                page.playEpisode(page.episodeIndex + 1)
+        }
     }
 
     Timer {
@@ -222,6 +320,45 @@ Page {
         }
     }
 
+    // Next episode prompt
+    Pane {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: AppTheme.margin
+        anchors.bottomMargin: 96
+        visible: page.nextEpisodePending
+        padding: AppTheme.margin
+        background: Rectangle { color: AppTheme.surface; radius: AppTheme.radius }
+
+        ColumnLayout {
+            spacing: AppTheme.spacing
+            Label {
+                text: qsTr("Next episode in %1 s").arg(nextEpisodeTimer.remaining)
+                color: AppTheme.textPrimary
+                font.bold: true
+            }
+            Label {
+                readonly property var next: page.nextEpisodePending ? episodes.get(page.episodeIndex + 1) : ({})
+                text: next.season ? qsTr("S%1 E%2  %3").arg(next.season).arg(next.episode).arg(next.title || "") : ""
+                color: AppTheme.textSecondary
+                elide: Text.ElideRight
+                Layout.maximumWidth: 320
+            }
+            RowLayout {
+                Button {
+                    text: qsTr("Cancel")
+                    flat: true
+                    onClicked: page.nextEpisodePending = false
+                }
+                Button {
+                    text: qsTr("Play now")
+                    highlighted: true
+                    onClicked: page.playEpisode(page.episodeIndex + 1)
+                }
+            }
+        }
+    }
+
     // Technical stream details, toggled with the (i) button or the I key.
     Pane {
         anchors.top: parent.top
@@ -274,6 +411,8 @@ Page {
         fullScreen: page.fullScreen
         infoVisible: page.infoVisible
         hasChannels: page.hasChannels
+        canPrevious: page.hasChannels || (page.isEpisode && page.episodeIndex > 0)
+        canNext: page.hasChannels || (page.isEpisode && page.episodeIndex + 1 < episodes.count)
         favorite: page.currentFavorite
         program: page.program
         opacity: page.controlsVisible || !player.playing ? 1 : 0
@@ -283,8 +422,10 @@ Page {
         onBackClicked: page.goBack()
         onFullScreenClicked: page.toggleFullScreen()
         onInfoClicked: page.infoVisible = !page.infoVisible
-        onPreviousChannel: page.playChannel(page.channelIndex - 1)
-        onNextChannel: page.playChannel(page.channelIndex + 1)
+        onPreviousChannel: page.isEpisode ? page.playEpisode(page.episodeIndex - 1)
+                                          : page.playChannel(page.channelIndex - 1)
+        onNextChannel: page.isEpisode ? page.playEpisode(page.episodeIndex + 1)
+                                      : page.playChannel(page.channelIndex + 1)
         onChannelListClicked: page.channelListVisible = !page.channelListVisible
         onFavoriteClicked: page.toggleFavorite()
         onActivity: page.showControls()
@@ -373,6 +514,9 @@ Page {
             player.seekRelative(-10000); page.showControls(); break
         case Qt.Key_Right:
             player.seekRelative(10000); page.showControls(); break
+        case Qt.Key_N:
+            if (page.isEpisode) page.playEpisode(page.episodeIndex + 1)
+            break
         case Qt.Key_Escape:
         case Qt.Key_Back:
         case Qt.Key_Backspace:

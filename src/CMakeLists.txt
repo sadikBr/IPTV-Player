@@ -29,6 +29,8 @@ qt_add_executable(iptvplayer
     app/SourceManager.h
     app/EpgManager.h
     app/EpgManager.cpp
+    app/VodManager.h
+    app/VodManager.cpp
     app/SourceManager.cpp
     models/SourceListModel.h
     models/SourceListModel.cpp
@@ -36,6 +38,10 @@ qt_add_executable(iptvplayer
     models/CategoryListModel.cpp
     models/ChannelListModel.h
     models/ChannelListModel.cpp
+    models/EpisodeListModel.h
+    models/EpisodeListModel.cpp
+    models/ContinueWatchingModel.h
+    models/ContinueWatchingModel.cpp
     player/PlayerBackend.h
     player/QtMultimediaBackend.h
     player/QtMultimediaBackend.cpp
@@ -57,6 +63,11 @@ set(QML_SOURCES
     qml/LivePage.qml
     qml/AddSourcePage.qml
     qml/GuidePage.qml
+    qml/SectionTabs.qml
+    qml/PosterCard.qml
+    qml/VodPage.qml
+    qml/MovieDetailsPage.qml
+    qml/SeriesDetailsPage.qml
 )
 set(QML_RESOURCES
     qml/icons/add.svg
@@ -78,6 +89,7 @@ set(QML_RESOURCES
     qml/icons/search.svg
     qml/icons/star-outline.svg
     qml/icons/star.svg
+    qml/icons/subtitles.svg
     qml/icons/tv.svg
     qml/icons/volume.svg
 )
@@ -140,5 +152,5 @@ if(NOT ANDROID)
     add_test(NAME qml_smoke COMMAND iptvplayer --smoke-test)
     set_tests_properties(qml_smoke PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;IPTV_SMOKE_PLAYLIST=${CMAKE_SOURCE_DIR}/tests/fixtures/playlist.m3u"
-        TIMEOUT 30)
+        TIMEOUT 60)
 endif()

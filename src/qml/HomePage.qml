@@ -12,6 +12,7 @@ Page {
     signal sourceSelected(int sourceId)
     signal addSourceRequested()
     signal resumeRequested(int sourceId, string extId)
+    signal resumeVodRequested(int sourceId, string kind, string extId, string seriesExtId)
 
     readonly property bool resumeAvailable: AppSettings.lastChannelExtId.length > 0
             && sources.count > 0 && SourceManager.sourceExists(AppSettings.lastChannelSourceId)
@@ -62,6 +63,10 @@ Page {
 
     SourceListModel {
         id: sources
+    }
+
+    ContinueWatchingModel {
+        id: continueWatching
     }
 
     Dialog {
@@ -147,7 +152,7 @@ Page {
                         spacing: 0
                         Layout.fillWidth: true
                         Label {
-                            text: qsTr("Continue watching")
+                            text: qsTr("Last channel")
                             color: AppTheme.textSecondary
                             font.pixelSize: 12
                         }
@@ -160,6 +165,46 @@ Page {
                             Layout.fillWidth: true
                         }
                     }
+                }
+            }
+
+            // Unfinished movies and episodes
+            Label {
+                Layout.topMargin: AppTheme.margin
+                visible: continueWatching.count > 0
+                text: qsTr("Continue watching")
+                font.pixelSize: 18
+                font.bold: true
+                color: AppTheme.textPrimary
+            }
+            ListView {
+                id: continueList
+                Layout.fillWidth: true
+                Layout.preferredHeight: 280
+                visible: continueWatching.count > 0
+                orientation: ListView.Horizontal
+                spacing: AppTheme.spacing
+                clip: true
+                model: continueWatching
+                ScrollIndicator.horizontal: ScrollIndicator {}
+
+                delegate: PosterCard {
+                    required property int sourceId
+                    required property string kind
+                    required property string extId
+                    required property string seriesExtId
+                    required property string image
+                    required property var model // for the "subtitle" role (name clash)
+                    required property int remainingMinutes
+                    required watched
+                    required title
+
+                    width: 130
+                    height: continueList.height
+                    poster: image
+                    subtitle: [model.subtitle, qsTr("%1 min left").arg(remainingMinutes)]
+                              .filter(t => t).join(" · ")
+                    onClicked: page.resumeVodRequested(sourceId, kind, extId, seriesExtId)
                 }
             }
 

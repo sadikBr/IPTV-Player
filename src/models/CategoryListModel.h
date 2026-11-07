@@ -3,7 +3,7 @@
 #include <QAbstractListModel>
 #include <QtQml/qqmlregistration.h>
 
-// Live TV categories of one source, with two special entries first:
+// Categories of one source for one kind of content, with two special entries first:
 // "All channels" (AllCategories) and "Favorites" (FavoritesCategory).
 class CategoryListModel : public QAbstractListModel
 {
@@ -11,6 +11,8 @@ class CategoryListModel : public QAbstractListModel
     QML_ELEMENT
 
     Q_PROPERTY(int sourceId READ sourceId WRITE setSourceId NOTIFY sourceIdChanged)
+    // "live" (default), "movie" or "series"
+    Q_PROPERTY(QString kind READ kind WRITE setKind NOTIFY kindChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
 public:
@@ -23,6 +25,8 @@ public:
 
     int sourceId() const { return m_sourceId; }
     void setSourceId(int id);
+    QString kind() const { return m_kind; }
+    void setKind(const QString &kind);
 
     int rowCount(const QModelIndex &parent = {}) const override;
     QVariant data(const QModelIndex &index, int role) const override;
@@ -36,6 +40,7 @@ public slots:
 
 signals:
     void sourceIdChanged();
+    void kindChanged();
     void countChanged();
 
 private:
@@ -47,5 +52,6 @@ private:
     };
 
     int m_sourceId = -1;
+    QString m_kind = QStringLiteral("live");
     QList<Row> m_rows;
 };

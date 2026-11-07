@@ -29,8 +29,28 @@ struct SourceRecord
     QDateTime createdAt;
     QDateTime epgLastSync;
     int epgCount = 0;
+    int movieCount = 0;
+    int seriesCount = 0;
 
     bool isXtream() const { return type == QLatin1String("xtream"); }
+};
+
+// Where the user stopped watching a movie or episode.
+struct WatchProgress
+{
+    int sourceId = -1;
+    ContentKind kind = ContentKind::Movie; // Movie or Episode
+    QString extId;
+    qint64 positionMs = 0;
+    qint64 durationMs = 0;
+    QDateTime updatedAt;
+    QString title;
+    QString image;
+    QString seriesExtId; // episodes only
+    int season = 0;
+    int episode = 0;
+
+    bool finished() const { return durationMs > 0 && positionMs >= durationMs * 0.95; }
 };
 
 // Reads and writes sources and their content. Each instance uses the
@@ -51,12 +71,31 @@ public:
     // updates its live channel count. Favorites are kept (they use ext_id).
     bool replaceContent(int sourceId, const SourceContent &content);
 
+    // One channel, movie or series by its provider id.
+    std::optional<ChannelData> item(int sourceId, ContentKind kind, const QString &extId) const;
+
+    // Episodes of a series, in season/episode order.
+    QList<EpisodeData> episodes(int sourceId, const QString &seriesExtId) const;
+    // Replaces the cached episodes of one series (Xtream loads them on demand).
+    bool replaceEpisodes(int sourceId, const QString &seriesExtId, const QList<EpisodeData> &episodes);
+
+    // Cached details of a movie or series (Xtream get_vod_info / get_series_info).
+    bool saveDetails(int sourceId, ContentKind kind, const QString &extId, const VodDetails &details);
+    std::optional<VodDetails> details(int sourceId, ContentKind kind, const QString &extId,
+                                      QDateTime *fetchedAt = nullptr) const;
+
+    bool saveProgress(const WatchProgress &progress);
+    std::optional<WatchProgress> progress(int sourceId, ContentKind kind, const QString &extId) const;
+    // Unfinished movies and episodes, most recent first (all sources).
+    QList<WatchProgress> recentProgress(int limit) const;
+    bool removeProgress(int sourceId, ContentKind kind, const QString &extId);
+
     bool setFavorite(int sourceId, ContentKind kind, const QString &extId, bool favorite);
     bool isFavorite(int sourceId, ContentKind kind, const QString &extId) const;
 
     // URL to play: the stored one for M3U, built from credentials for Xtream.
     static QUrl streamUrl(const SourceRecord &source, ContentKind kind, const QString &extId,
-                          const QString &storedUrl);
+                          const QString &storedUrl, const QString &extension = {});
 
     // Lower-cased, accent-free text used for searching.
     static QString searchKey(const QString &text);

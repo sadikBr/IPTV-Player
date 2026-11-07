@@ -25,6 +25,15 @@ void CategoryListModel::setSourceId(int id)
     reload();
 }
 
+void CategoryListModel::setKind(const QString &kind)
+{
+    if (kind == m_kind)
+        return;
+    m_kind = kind;
+    emit kindChanged();
+    reload();
+}
+
 int CategoryListModel::rowCount(const QModelIndex &parent) const
 {
     return parent.isValid() ? 0 : int(m_rows.size());
@@ -76,8 +85,9 @@ void CategoryListModel::reload()
         QSqlQuery q(db);
 
         int total = 0;
-        q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels WHERE source_id = ? AND kind = 'live'"));
+        q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels WHERE source_id = ? AND kind = ?"));
         q.addBindValue(m_sourceId);
+        q.addBindValue(m_kind);
         if (q.exec() && q.next())
             total = q.value(0).toInt();
 
@@ -85,21 +95,26 @@ void CategoryListModel::reload()
         q.prepare(QStringLiteral(
                 "SELECT COUNT(*) FROM channels c JOIN favorites f ON f.source_id = c.source_id "
                 "AND f.kind = c.kind AND f.ext_id = c.ext_id "
-                "WHERE c.source_id = ? AND c.kind = 'live'"));
+                "WHERE c.source_id = ? AND c.kind = ?"));
         q.addBindValue(m_sourceId);
+        q.addBindValue(m_kind);
         if (q.exec() && q.next())
             favorites = q.value(0).toInt();
 
-        rows.append({ AllCategories, tr("All channels"), total });
+        const QString allLabel = m_kind == QLatin1String("movie") ? tr("All movies")
+                : m_kind == QLatin1String("series")                 ? tr("All series")
+                                                                    : tr("All channels");
+        rows.append({ AllCategories, allLabel, total });
         rows.append({ FavoritesCategory, tr("Favorites"), favorites });
 
         // Empty categories are hidden.
         q.prepare(QStringLiteral(
                 "SELECT cat.id, cat.name, COUNT(c.id) FROM categories cat "
                 "JOIN channels c ON c.category_id = cat.id "
-                "WHERE cat.source_id = ? AND cat.kind = 'live' "
+                "WHERE cat.source_id = ? AND cat.kind = ? "
                 "GROUP BY cat.id ORDER BY cat.position"));
         q.addBindValue(m_sourceId);
+        q.addBindValue(m_kind);
         if (q.exec()) {
             while (q.next())
                 rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toInt() });

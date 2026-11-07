@@ -30,7 +30,8 @@ QDateTime fromEpoch(qint64 secs)
 
 const QString kSourceColumns = QStringLiteral(
         "id, name, type, url, username, password, output_format, epg_url, status, expires_at, "
-        "max_connections, live_count, last_sync, created_at, epg_last_sync, epg_count");
+        "max_connections, live_count, last_sync, created_at, epg_last_sync, epg_count, "
+        "movie_count, series_count");
 
 SourceRecord readSource(const QSqlQuery &q)
 {
@@ -51,6 +52,8 @@ SourceRecord readSource(const QSqlQuery &q)
     s.createdAt = fromEpoch(q.value(13).toLongLong());
     s.epgLastSync = fromEpoch(q.value(14).toLongLong());
     s.epgCount = q.value(15).toInt();
+    s.movieCount = q.value(16).toInt();
+    s.seriesCount = q.value(17).toInt();
     return s;
 }
 
@@ -192,9 +195,12 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
 
     q.prepare(QStringLiteral(
             "INSERT INTO channels (source_id, category_id, kind, ext_id, name, search_name, logo, "
-            "epg_id, url, number, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+            "epg_id, url, number, position, extension, rating, year, plot, genre) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
     position = 0;
     int liveCount = 0;
+    int movieCount = 0;
+    int seriesCount = 0;
     for (const ChannelData &c : content.channels) {
         const QString kind = kindToString(c.kind);
         const auto category = categoryIds.constFind(kind + QLatin1Char('|') + c.categoryExtId);
@@ -209,16 +215,66 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
         q.addBindValue(text(c.url));
         q.addBindValue(c.number);
         q.addBindValue(position++);
+        q.addBindValue(text(c.extension));
+        q.addBindValue(text(c.rating));
+        q.addBindValue(text(c.year));
+        q.addBindValue(text(c.plot));
+        q.addBindValue(text(c.genre));
         if (!q.exec())
             return fail(q);
         if (c.kind == ContentKind::Live)
             ++liveCount;
+        else if (c.kind == ContentKind::Movie)
+            ++movieCount;
+        else if (c.kind == ContentKind::Series)
+            ++seriesCount;
     }
 
-    q.prepare(QStringLiteral("UPDATE sources SET live_count = ?, last_sync = ?, "
+    // Episodes: M3U playlists bring all of them. Xtream loads them per series
+    // later, so its cached episodes are kept unless their series disappeared.
+    if (!content.episodes.isEmpty()) {
+        q.prepare(QStringLiteral("DELETE FROM episodes WHERE source_id = ?"));
+        q.addBindValue(sourceId);
+        if (!q.exec())
+            return fail(q);
+        q.prepare(QStringLiteral(
+                "INSERT INTO episodes (source_id, series_ext_id, ext_id, season, episode, title, "
+                "plot, image, duration, extension, url, position) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+        position = 0;
+        for (const EpisodeData &e : content.episodes) {
+            q.addBindValue(sourceId);
+            q.addBindValue(text(e.seriesExtId));
+            q.addBindValue(text(e.extId));
+            q.addBindValue(e.season);
+            q.addBindValue(e.episode);
+            q.addBindValue(text(e.title));
+            q.addBindValue(text(e.plot));
+            q.addBindValue(text(e.image));
+            q.addBindValue(e.durationSecs);
+            q.addBindValue(text(e.extension));
+            q.addBindValue(text(e.url));
+            q.addBindValue(position++);
+            if (!q.exec())
+                return fail(q);
+        }
+    } else {
+        q.prepare(QStringLiteral(
+                "DELETE FROM episodes WHERE source_id = ? AND series_ext_id NOT IN "
+                "(SELECT ext_id FROM channels WHERE source_id = ? AND kind = 'series')"));
+        q.addBindValue(sourceId);
+        q.addBindValue(sourceId);
+        if (!q.exec())
+            return fail(q);
+    }
+
+    q.prepare(QStringLiteral("UPDATE sources SET live_count = ?, movie_count = ?, "
+                             "series_count = ?, last_sync = ?, "
                              "epg_url = CASE WHEN epg_url = '' THEN ? ELSE epg_url END "
                              "WHERE id = ?"));
     q.addBindValue(liveCount);
+    q.addBindValue(movieCount);
+    q.addBindValue(seriesCount);
     q.addBindValue(QDateTime::currentSecsSinceEpoch());
     q.addBindValue(text(content.epgUrl));
     q.addBindValue(sourceId);
@@ -275,12 +331,283 @@ bool SourceStore::isFavorite(int sourceId, ContentKind kind, const QString &extI
 }
 
 QUrl SourceStore::streamUrl(const SourceRecord &source, ContentKind kind, const QString &extId,
-                            const QString &storedUrl)
+                            const QString &storedUrl, const QString &extension)
 {
-    if (!source.isXtream() || kind != ContentKind::Live)
+    if (!source.isXtream() || !storedUrl.isEmpty())
         return QUrl(storedUrl);
     const XtreamCredentials creds{ QUrl(source.url), source.username, source.password };
-    return XtreamApi::liveStreamUrl(creds, extId, source.outputFormat);
+    switch (kind) {
+    case ContentKind::Movie:
+        return XtreamApi::movieUrl(creds, extId, extension);
+    case ContentKind::Episode:
+        return XtreamApi::episodeUrl(creds, extId, extension);
+    default:
+        return XtreamApi::liveStreamUrl(creds, extId, source.outputFormat);
+    }
+}
+
+std::optional<ChannelData> SourceStore::item(int sourceId, ContentKind kind,
+                                            const QString &extId) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+            "SELECT c.ext_id, c.name, c.logo, c.epg_id, COALESCE(cat.ext_id, ''), c.url, c.number, "
+            "c.extension, c.rating, c.year, c.plot, c.genre FROM channels c "
+            "LEFT JOIN categories cat ON cat.id = c.category_id "
+            "WHERE c.source_id = ? AND c.kind = ? AND c.ext_id = ? LIMIT 1"));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(extId);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    ChannelData c;
+    c.kind = kind;
+    c.extId = q.value(0).toString();
+    c.name = q.value(1).toString();
+    c.logo = q.value(2).toString();
+    c.epgId = q.value(3).toString();
+    c.categoryExtId = q.value(4).toString();
+    c.url = q.value(5).toString();
+    c.number = q.value(6).toInt();
+    c.extension = q.value(7).toString();
+    c.rating = q.value(8).toString();
+    c.year = q.value(9).toString();
+    c.plot = q.value(10).toString();
+    c.genre = q.value(11).toString();
+    return c;
+}
+
+QList<EpisodeData> SourceStore::episodes(int sourceId, const QString &seriesExtId) const
+{
+    QList<EpisodeData> result;
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+            "SELECT series_ext_id, ext_id, season, episode, title, plot, image, duration, "
+            "extension, url FROM episodes WHERE source_id = ? AND series_ext_id = ? "
+            "ORDER BY season, episode, position"));
+    q.addBindValue(sourceId);
+    q.addBindValue(seriesExtId);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return result;
+    }
+    while (q.next()) {
+        EpisodeData e;
+        e.seriesExtId = q.value(0).toString();
+        e.extId = q.value(1).toString();
+        e.season = q.value(2).toInt();
+        e.episode = q.value(3).toInt();
+        e.title = q.value(4).toString();
+        e.plot = q.value(5).toString();
+        e.image = q.value(6).toString();
+        e.durationSecs = q.value(7).toInt();
+        e.extension = q.value(8).toString();
+        e.url = q.value(9).toString();
+        result.append(e);
+    }
+    return result;
+}
+
+bool SourceStore::replaceEpisodes(int sourceId, const QString &seriesExtId,
+                                  const QList<EpisodeData> &episodes)
+{
+    if (!m_db.transaction()) {
+        m_lastError = m_db.lastError().text();
+        return false;
+    }
+    QSqlQuery q(m_db);
+    auto fail = [&] {
+        m_lastError = q.lastError().text();
+        m_db.rollback();
+        return false;
+    };
+    q.prepare(QStringLiteral("DELETE FROM episodes WHERE source_id = ? AND series_ext_id = ?"));
+    q.addBindValue(sourceId);
+    q.addBindValue(seriesExtId);
+    if (!q.exec())
+        return fail();
+    q.prepare(QStringLiteral(
+            "INSERT INTO episodes (source_id, series_ext_id, ext_id, season, episode, title, "
+            "plot, image, duration, extension, url, position) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+    int position = 0;
+    for (const EpisodeData &e : episodes) {
+        q.addBindValue(sourceId);
+        q.addBindValue(seriesExtId);
+        q.addBindValue(text(e.extId));
+        q.addBindValue(e.season);
+        q.addBindValue(e.episode);
+        q.addBindValue(text(e.title));
+        q.addBindValue(text(e.plot));
+        q.addBindValue(text(e.image));
+        q.addBindValue(e.durationSecs);
+        q.addBindValue(text(e.extension));
+        q.addBindValue(text(e.url));
+        q.addBindValue(position++);
+        if (!q.exec())
+            return fail();
+    }
+    if (!m_db.commit()) {
+        m_lastError = m_db.lastError().text();
+        m_db.rollback();
+        return false;
+    }
+    return true;
+}
+
+bool SourceStore::saveDetails(int sourceId, ContentKind kind, const QString &extId,
+                              const VodDetails &d)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+            "INSERT OR REPLACE INTO vod_details (source_id, kind, ext_id, plot, cast_names, "
+            "director, genre, release_date, rating, poster, backdrop, duration, extension, "
+            "fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(text(extId));
+    q.addBindValue(text(d.plot));
+    q.addBindValue(text(d.cast));
+    q.addBindValue(text(d.director));
+    q.addBindValue(text(d.genre));
+    q.addBindValue(text(d.releaseDate));
+    q.addBindValue(text(d.rating));
+    q.addBindValue(text(d.poster));
+    q.addBindValue(text(d.backdrop));
+    q.addBindValue(d.durationSecs);
+    q.addBindValue(text(d.extension));
+    q.addBindValue(QDateTime::currentSecsSinceEpoch());
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+std::optional<VodDetails> SourceStore::details(int sourceId, ContentKind kind,
+                                               const QString &extId, QDateTime *fetchedAt) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral(
+            "SELECT plot, cast_names, director, genre, release_date, rating, poster, backdrop, "
+            "duration, extension, fetched_at FROM vod_details "
+            "WHERE source_id = ? AND kind = ? AND ext_id = ?"));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(extId);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    VodDetails d;
+    d.plot = q.value(0).toString();
+    d.cast = q.value(1).toString();
+    d.director = q.value(2).toString();
+    d.genre = q.value(3).toString();
+    d.releaseDate = q.value(4).toString();
+    d.rating = q.value(5).toString();
+    d.poster = q.value(6).toString();
+    d.backdrop = q.value(7).toString();
+    d.durationSecs = q.value(8).toInt();
+    d.extension = q.value(9).toString();
+    if (fetchedAt)
+        *fetchedAt = fromEpoch(q.value(10).toLongLong());
+    return d;
+}
+
+namespace {
+
+const QString kProgressColumns = QStringLiteral(
+        "source_id, kind, ext_id, position_ms, duration_ms, updated_at, title, image, "
+        "series_ext_id, season, episode");
+
+WatchProgress readProgress(const QSqlQuery &q)
+{
+    WatchProgress p;
+    p.sourceId = q.value(0).toInt();
+    p.kind = kindFromString(q.value(1).toString());
+    p.extId = q.value(2).toString();
+    p.positionMs = q.value(3).toLongLong();
+    p.durationMs = q.value(4).toLongLong();
+    p.updatedAt = fromEpoch(q.value(5).toLongLong());
+    p.title = q.value(6).toString();
+    p.image = q.value(7).toString();
+    p.seriesExtId = q.value(8).toString();
+    p.season = q.value(9).toInt();
+    p.episode = q.value(10).toInt();
+    return p;
+}
+
+} // namespace
+
+bool SourceStore::saveProgress(const WatchProgress &p)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("INSERT OR REPLACE INTO watch_progress (%1) "
+                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").arg(kProgressColumns));
+    q.addBindValue(p.sourceId);
+    q.addBindValue(kindToString(p.kind));
+    q.addBindValue(text(p.extId));
+    q.addBindValue(p.positionMs);
+    q.addBindValue(p.durationMs);
+    q.addBindValue(toEpoch(p.updatedAt.isValid() ? p.updatedAt : QDateTime::currentDateTimeUtc()));
+    q.addBindValue(text(p.title));
+    q.addBindValue(text(p.image));
+    q.addBindValue(text(p.seriesExtId));
+    q.addBindValue(p.season);
+    q.addBindValue(p.episode);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+std::optional<WatchProgress> SourceStore::progress(int sourceId, ContentKind kind,
+                                                   const QString &extId) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("SELECT %1 FROM watch_progress WHERE source_id = ? AND kind = ? "
+                             "AND ext_id = ?").arg(kProgressColumns));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(extId);
+    if (!q.exec() || !q.next())
+        return std::nullopt;
+    return readProgress(q);
+}
+
+QList<WatchProgress> SourceStore::recentProgress(int limit) const
+{
+    QList<WatchProgress> result;
+    QSqlQuery q(m_db);
+    // Unfinished only; for a series only its most recent episode.
+    q.prepare(QStringLiteral(
+            "SELECT %1 FROM watch_progress p WHERE duration_ms > 0 "
+            "AND position_ms < duration_ms * 0.95 AND position_ms > 0 "
+            "AND (kind = 'movie' OR updated_at = (SELECT MAX(updated_at) FROM watch_progress p2 "
+            "     WHERE p2.source_id = p.source_id AND p2.series_ext_id = p.series_ext_id)) "
+            "ORDER BY updated_at DESC LIMIT ?").arg(kProgressColumns));
+    q.addBindValue(limit);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return result;
+    }
+    while (q.next())
+        result.append(readProgress(q));
+    return result;
+}
+
+bool SourceStore::removeProgress(int sourceId, ContentKind kind, const QString &extId)
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("DELETE FROM watch_progress WHERE source_id = ? AND kind = ? AND ext_id = ?"));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(extId);
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
 }
 
 QString SourceStore::searchKey(const QString &text)

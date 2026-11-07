@@ -9,6 +9,8 @@ QString kindToString(ContentKind kind)
         return QStringLiteral("movie");
     case ContentKind::Series:
         return QStringLiteral("series");
+    case ContentKind::Episode:
+        return QStringLiteral("episode");
     case ContentKind::Live:
         break;
     }
@@ -21,6 +23,8 @@ ContentKind kindFromString(const QString &kind)
         return ContentKind::Movie;
     if (kind == QLatin1String("series"))
         return ContentKind::Series;
+    if (kind == QLatin1String("episode"))
+        return ContentKind::Episode;
     return ContentKind::Live;
 }
 

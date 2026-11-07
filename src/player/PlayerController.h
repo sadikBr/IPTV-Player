@@ -29,6 +29,12 @@ class PlayerController : public QObject
     Q_PROPERTY(bool seekable READ isSeekable NOTIFY seekableChanged)
     Q_PROPERTY(bool live READ isLive NOTIFY durationChanged)
     Q_PROPERTY(QString streamInfo READ streamInfo NOTIFY streamInfoChanged)
+    // Movies/episodes: pausing really pauses, and the stream is never treated as live.
+    Q_PROPERTY(bool vod READ isVod WRITE setVod NOTIFY vodChanged)
+    Q_PROPERTY(QStringList audioTracks READ audioTracks NOTIFY tracksChanged)
+    Q_PROPERTY(QStringList subtitleTracks READ subtitleTracks NOTIFY tracksChanged)
+    Q_PROPERTY(int activeAudioTrack READ activeAudioTrack WRITE setActiveAudioTrack NOTIFY tracksChanged)
+    Q_PROPERTY(int activeSubtitleTrack READ activeSubtitleTrack WRITE setActiveSubtitleTrack NOTIFY tracksChanged)
 
 public:
     explicit PlayerController(QObject *parent = nullptr);
@@ -53,11 +59,21 @@ public:
     qint64 position() const { return m_backend->position(); }
     qint64 duration() const { return m_backend->duration(); }
     bool isSeekable() const { return m_backend->seekable(); }
-    bool isLive() const { return m_backend->duration() <= 0; }
+    bool isLive() const { return !m_vod && m_backend->duration() <= 0; }
     QString streamInfo() const { return m_backend->streamInfo(); }
 
+    bool isVod() const { return m_vod; }
+    void setVod(bool vod);
+    QStringList audioTracks() const { return m_backend->audioTracks(); }
+    QStringList subtitleTracks() const { return m_backend->subtitleTracks(); }
+    int activeAudioTrack() const { return m_backend->activeAudioTrack(); }
+    void setActiveAudioTrack(int index) { m_backend->setActiveAudioTrack(index); }
+    int activeSubtitleTrack() const { return m_backend->activeSubtitleTrack(); }
+    void setActiveSubtitleTrack(int index) { m_backend->setActiveSubtitleTrack(index); }
+
 public slots:
-    void open(const QUrl &url);
+    // startPositionMs > 0 resumes there once the media can seek.
+    void open(const QUrl &url, qint64 startPositionMs = 0);
     void play();
     void pause();
     void togglePause();
@@ -78,11 +94,15 @@ signals:
     void durationChanged();
     void seekableChanged();
     void streamInfoChanged();
+    void vodChanged();
+    void tracksChanged();
+    void ended();
 
 private:
     void setErrorString(const QString &error);
     void onApplicationStateChanged(Qt::ApplicationState state);
     void updateWakeLock();
+    void applyPendingSeek();
 
     PlayerBackend *m_backend = nullptr;
     QPointer<QObject> m_videoOutput;
@@ -91,4 +111,6 @@ private:
     qreal m_volume = 1.0;
     bool m_muted = false;
     bool m_resumeOnActivate = false;
+    bool m_vod = false;
+    qint64 m_pendingSeek = 0;
 };

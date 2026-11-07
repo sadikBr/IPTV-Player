@@ -1,6 +1,7 @@
 #include "player/QtMultimediaBackend.h"
 
 #include <QAudioOutput>
+#include <QLocale>
 #include <QMediaFormat>
 #include <QMediaMetaData>
 #include <QMediaPlayer>
@@ -14,6 +15,30 @@ QMediaMetaData activeTrack(const QList<QMediaMetaData> &tracks, int index)
     if (index >= 0 && index < tracks.size())
         return tracks.at(index);
     return tracks.isEmpty() ? QMediaMetaData() : tracks.first();
+}
+
+QStringList trackNames(const QList<QMediaMetaData> &tracks)
+{
+    QStringList names;
+    for (int i = 0; i < tracks.size(); ++i) {
+        const QMediaMetaData &t = tracks.at(i);
+        QString name = t.stringValue(QMediaMetaData::Title);
+        const QVariant lang = t.value(QMediaMetaData::Language);
+        QString language;
+        if (lang.isValid()) {
+            const auto l = lang.value<QLocale::Language>();
+            if (l != QLocale::AnyLanguage && l != QLocale::C)
+                language = QLocale::languageToString(l);
+        }
+        if (name.isEmpty())
+            name = language;
+        else if (!language.isEmpty() && !name.contains(language, Qt::CaseInsensitive))
+            name = QStringLiteral("%1 (%2)").arg(name, language);
+        if (name.isEmpty())
+            name = QtMultimediaBackend::tr("Track %1").arg(i + 1);
+        names << name;
+    }
+    return names;
 }
 
 QString formatBitRate(const QVariant &value)
@@ -40,6 +65,12 @@ QtMultimediaBackend::QtMultimediaBackend(QObject *parent)
     connect(m_player, &QMediaPlayer::seekableChanged, this, &PlayerBackend::seekableChanged);
     connect(m_player, &QMediaPlayer::metaDataChanged, this, &QtMultimediaBackend::updateStreamInfo);
     connect(m_player, &QMediaPlayer::tracksChanged, this, &QtMultimediaBackend::updateStreamInfo);
+    connect(m_player, &QMediaPlayer::tracksChanged, this, &PlayerBackend::tracksChanged);
+    connect(m_player, &QMediaPlayer::activeTracksChanged, this, &PlayerBackend::tracksChanged);
+    connect(m_player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
+        if (status == QMediaPlayer::EndOfMedia)
+            emit endOfMedia();
+    });
 
     connect(m_player, &QMediaPlayer::errorOccurred, this,
             [this](QMediaPlayer::Error error, const QString &message) {
@@ -120,6 +151,36 @@ bool QtMultimediaBackend::seekable() const
 void QtMultimediaBackend::seek(qint64 positionMs)
 {
     m_player->setPosition(positionMs);
+}
+
+QStringList QtMultimediaBackend::audioTracks() const
+{
+    return trackNames(m_player->audioTracks());
+}
+
+QStringList QtMultimediaBackend::subtitleTracks() const
+{
+    return trackNames(m_player->subtitleTracks());
+}
+
+int QtMultimediaBackend::activeAudioTrack() const
+{
+    return m_player->activeAudioTrack();
+}
+
+int QtMultimediaBackend::activeSubtitleTrack() const
+{
+    return m_player->activeSubtitleTrack();
+}
+
+void QtMultimediaBackend::setActiveAudioTrack(int index)
+{
+    m_player->setActiveAudioTrack(index);
+}
+
+void QtMultimediaBackend::setActiveSubtitleTrack(int index)
+{
+    m_player->setActiveSubtitleTrack(index);
 }
 
 void QtMultimediaBackend::updateState()

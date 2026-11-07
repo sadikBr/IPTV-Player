@@ -23,6 +23,7 @@ Page {
     signal backRequested()
     signal channelActivated(int index)
     signal guideRequested()
+    signal sectionRequested(string kind)
 
     function playIndex(index) {
         if (index >= 0 && index < channels.count)
@@ -164,6 +165,13 @@ Page {
         anchors.fill: parent
         spacing: 0
 
+        SectionTabs {
+            Layout.fillWidth: true
+            sourceInfo: page.sourceInfo
+            current: "live"
+            onSectionSelected: (kind) => page.sectionRequested(kind)
+        }
+
         // Sync progress
         Pane {
             Layout.fillWidth: true
@@ -250,9 +258,10 @@ Page {
             model: categories
             textRole: "name"
             valueRole: "categoryId"
-            currentIndex: categories.indexOf(page.selectedCategory)
-            displayText: currentIndex >= 0
-                         ? categories.nameOf(page.selectedCategory) : qsTr("All channels")
+            // categories.count makes these update once the list is loaded
+            currentIndex: categories.count > 0 ? categories.indexOf(page.selectedCategory) : -1
+            displayText: categories.count > 0 ? categories.nameOf(page.selectedCategory)
+                                              : qsTr("All channels")
             onActivated: page.selectCategory(currentValue)
 
             delegate: ItemDelegate {

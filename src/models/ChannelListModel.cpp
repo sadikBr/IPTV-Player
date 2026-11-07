@@ -23,6 +23,10 @@ ChannelListModel::ChannelListModel(QObject *parent) : QAbstractListModel(parent)
         if (sourceId == m_sourceId && m_categoryId == CategoryListModel::FavoritesCategory)
             reload();
     });
+    connect(DataNotifier::instance(), &DataNotifier::progressChanged, this, [this](int sourceId) {
+        if (sourceId == m_sourceId && m_kind == QLatin1String("movie"))
+            reload();
+    });
     connect(DataNotifier::instance(), &DataNotifier::sourcesChanged, this,
             &ChannelListModel::reloadSource);
     connect(DataNotifier::instance(), &DataNotifier::epgChanged, this, [this](int sourceId) {
@@ -45,7 +49,7 @@ const ChannelListModel::NowNext &ChannelListModel::nowNext(int row) const
 
     NowNext info;
     const Row &r = m_rows.at(row);
-    if (!r.epgKey.isEmpty()) {
+    if (!r.epgKey.isEmpty() && m_kind == QLatin1String("live")) {
         const qint64 now = QDateTime::currentSecsSinceEpoch();
         const auto programs = EpgStore(Database::connection()).nowNext(m_sourceId, r.epgKey, now);
         int i = 0;
@@ -75,6 +79,15 @@ void ChannelListModel::setSourceId(int id)
     m_sourceId = id;
     emit sourceIdChanged();
     reloadSource();
+    reload();
+}
+
+void ChannelListModel::setKind(const QString &kind)
+{
+    if (kind == m_kind)
+        return;
+    m_kind = kind;
+    emit kindChanged();
     reload();
 }
 
@@ -128,6 +141,12 @@ QVariant ChannelListModel::data(const QModelIndex &index, int role) const
         return nowNext(index.row()).nowProgress;
     case NextTitleRole:
         return nowNext(index.row()).nextTitle;
+    case YearRole:
+        return row.year;
+    case RatingRole:
+        return row.rating;
+    case WatchedRole:
+        return row.watched;
     default:
         return {};
     }
@@ -140,6 +159,8 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
         { LogoRole, "logo" },           { NumberRole, "number" }, { FavoriteRole, "favorite" },
         { EpgKeyRole, "epgKey" },       { NowTitleRole, "nowTitle" },
         { NowProgressRole, "nowProgress" }, { NextTitleRole, "nextTitle" },
+        { YearRole, "year" },           { RatingRole, "rating" },
+        { WatchedRole, "watched" },
     };
 }
 
@@ -153,6 +174,8 @@ QVariantMap ChannelListModel::get(int row) const
         { QStringLiteral("name"), r.name },    { QStringLiteral("logo"), r.logo },
         { QStringLiteral("number"), r.number }, { QStringLiteral("favorite"), r.favorite },
         { QStringLiteral("epgKey"), r.epgKey },
+        { QStringLiteral("year"), r.year },     { QStringLiteral("rating"), r.rating },
+        { QStringLiteral("watched"), r.watched },
     };
 }
 
@@ -161,7 +184,7 @@ QUrl ChannelListModel::streamUrl(int row) const
     if (row < 0 || row >= m_rows.size() || m_source.id < 0)
         return {};
     const Row &r = m_rows.at(row);
-    return SourceStore::streamUrl(m_source, ContentKind::Live, r.extId, r.url);
+    return SourceStore::streamUrl(m_source, kindFromString(m_kind), r.extId, r.url, r.extension);
 }
 
 int ChannelListModel::indexOfExtId(const QString &extId) const
@@ -188,7 +211,7 @@ void ChannelListModel::toggleFavorite(int row)
         return;
     Row &r = m_rows[row];
     SourceStore store(Database::connection());
-    if (!store.setFavorite(m_sourceId, ContentKind::Live, r.extId, !r.favorite))
+    if (!store.setFavorite(m_sourceId, kindFromString(m_kind), r.extId, !r.favorite))
         return;
     r.favorite = !r.favorite;
     const QModelIndex idx = index(row);
@@ -209,10 +232,14 @@ void ChannelListModel::reload()
     if (m_sourceId > 0) {
         QString sql = QStringLiteral(
                 "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
-                "(f.ext_id IS NOT NULL) FROM channels c "
+                "(f.ext_id IS NOT NULL), c.extension, c.year, c.rating, "
+                "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0) "
+                "FROM channels c "
                 "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
                 "AND f.ext_id = c.ext_id "
-                "WHERE c.source_id = :source AND c.kind = 'live'");
+                "LEFT JOIN watch_progress wp ON wp.source_id = c.source_id AND wp.kind = c.kind "
+                "AND wp.ext_id = c.ext_id "
+                "WHERE c.source_id = :source AND c.kind = :kind");
 
         const QString search = SourceStore::searchKey(m_searchText.trimmed());
         if (!search.isEmpty()) {
@@ -228,6 +255,7 @@ void ChannelListModel::reload()
         q.setForwardOnly(true);
         q.prepare(sql);
         q.bindValue(QStringLiteral(":source"), m_sourceId);
+        q.bindValue(QStringLiteral(":kind"), m_kind);
         if (!search.isEmpty()) {
             QString escaped = search;
             escaped.replace(QLatin1Char('\\'), QLatin1String("\\\\"))
@@ -242,7 +270,9 @@ void ChannelListModel::reload()
             while (q.next()) {
                 rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(),
                               q.value(3).toString(), q.value(4).toString(), q.value(6).toString(),
-                              q.value(5).toInt(), q.value(7).toBool() });
+                              q.value(5).toInt(), q.value(7).toBool(), q.value(8).toString(),
+                              q.value(9).toString(), q.value(10).toString(),
+                              qBound(0.0, q.value(11).toDouble(), 1.0) });
             }
         } else {
             qWarning("Channel query failed: %s", qPrintable(q.lastError().text()));

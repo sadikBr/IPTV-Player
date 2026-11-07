@@ -32,7 +32,7 @@ private slots:
         const SourceContent content = M3uParser::parse(fixture("playlist.m3u"));
 
         QCOMPARE(content.epgUrl, QStringLiteral("http://epg.example.com/guide.xml.gz"));
-        QCOMPARE(content.channels.size(), 8);
+        QCOMPARE(content.channels.size(), 9); // 6 live, 1 movie, 2 series
 
         const ChannelData &bbc = content.channels.at(0);
         QCOMPARE(bbc.name, QStringLiteral("BBC One HD"));
@@ -58,19 +58,40 @@ private slots:
         // Empty title falls back to tvg-name
         QCOMPARE(content.channels.at(3).name, QStringLiteral("Name From Attr"));
 
-        // Kind from URL path
+        // Kind from URL path; movie year from the name
         QCOMPARE(content.channels.at(4).kind, ContentKind::Movie);
         QCOMPARE(content.channels.at(4).number, 1);
-        QCOMPARE(content.channels.at(5).kind, ContentKind::Series);
+        QCOMPARE(content.channels.at(4).year, QStringLiteral("2024"));
+
+        // Series episodes are grouped into one item per show
+        const ChannelData &show = content.channels.at(5);
+        QCOMPARE(show.kind, ContentKind::Series);
+        QCOMPARE(show.name, QStringLiteral("Some Show"));
+        QCOMPARE(show.categoryExtId, QStringLiteral("Series | Drama"));
+        QCOMPARE(content.channels.at(6).kind, ContentKind::Series);
+        QCOMPARE(content.channels.at(6).name, QStringLiteral("Another Show Episode Without Numbers"));
+
+        QCOMPARE(content.episodes.size(), 4);
+        QCOMPARE(content.episodes.at(0).seriesExtId, show.extId);
+        QCOMPARE(content.episodes.at(0).season, 1);
+        QCOMPARE(content.episodes.at(0).episode, 1);
+        QCOMPARE(content.episodes.at(1).episode, 2);
+        QCOMPARE(content.episodes.at(1).title, QStringLiteral("The Second One"));
+        QCOMPARE(content.episodes.at(1).image, QStringLiteral("http://logos.example.com/show.jpg"));
+        QCOMPARE(content.episodes.at(2).seriesExtId, show.extId); // "Some.Show.S02E01"
+        QCOMPARE(content.episodes.at(2).season, 2);
+        QCOMPARE(content.episodes.at(3).season, 1);
+        QCOMPARE(content.episodes.at(3).episode, 1);
+        QCOMPARE(content.episodes.at(3).url, QStringLiteral("http://example.com:8080/series/user/pass/7101.mp4"));
 
         // URL without #EXTINF
-        const ChannelData &bare = content.channels.at(6);
+        const ChannelData &bare = content.channels.at(7);
         QCOMPARE(bare.name, QStringLiteral("bare-url-without-extinf.ts"));
         QVERIFY(bare.categoryExtId.isEmpty());
         QCOMPARE(bare.kind, ContentKind::Live);
 
         // UTF-8 names
-        QCOMPARE(content.channels.at(7).name, QStringLiteral("Café TV Élite"));
+        QCOMPARE(content.channels.at(8).name, QStringLiteral("Café TV Élite"));
 
         // Categories in order of first appearance, per kind
         QCOMPARE(content.categories.size(), 5);

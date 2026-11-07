@@ -57,6 +57,33 @@ ApplicationWindow {
                                           "sourceId": sourceId })
     }
 
+    // Switches between Live TV, Movies and Series of the source on screen.
+    function openSection(sourceId, kind) {
+        if (kind === "live")
+            stack.replace(livePageComponent, { "sourceId": sourceId })
+        else
+            stack.replace(vodPageComponent, { "sourceId": sourceId, "kind": kind })
+    }
+
+    function openMovie(sourceId, extId) {
+        stack.push(movieDetailsComponent, { "sourceId": sourceId, "extId": extId })
+    }
+
+    function openSeries(sourceId, extId) {
+        stack.push(seriesDetailsComponent, { "sourceId": sourceId, "extId": extId })
+    }
+
+    function playMovie(sourceId, extId, fromStart) {
+        stack.push(playerPageComponent, { "sourceId": sourceId, "vodKind": "movie",
+                                          "vodExtId": extId, "startFromBeginning": !!fromStart })
+    }
+
+    function playEpisode(sourceId, seriesExtId, episodeExtId, fromStart) {
+        stack.push(playerPageComponent, { "sourceId": sourceId, "vodKind": "episode",
+                                          "seriesExtId": seriesExtId, "vodExtId": episodeExtId,
+                                          "startFromBeginning": !!fromStart })
+    }
+
     function openGuide(livePage) {
         stack.push(guidePageComponent, { "channelModel": livePage.channelModel,
                                          "sourceId": livePage.sourceId })
@@ -79,11 +106,45 @@ ApplicationWindow {
         if (stack.currentItem && stack.currentItem.guideRequested)
             stack.currentItem.guideRequested()
     }
+    function smokeOpenSection(kind) {
+        const current = stack.currentItem
+        if (current && current.sourceId > 0)
+            openSection(current.sourceId, kind)
+    }
+    function smokeOpenFirst() {
+        if (stack.currentItem && stack.currentItem.openFirst)
+            stack.currentItem.openFirst()
+    }
+    function smokePlay() {
+        const current = stack.currentItem
+        if (!current)
+            return
+        if (current.playRequested)
+            current.playRequested(false)
+        else if (current.episodeRequested && current.resumeEpisode)
+            current.episodeRequested(current.resumeEpisode.extId, false)
+    }
+    function smokeBack() {
+        if (stack.depth > 1)
+            stack.pop()
+    }
     function smokePlayFirst() {
         if (stack.currentItem && stack.currentItem.backRequested && !stack.currentItem.playIndex)
             stack.pop() // leave the guide
         if (stack.currentItem && stack.currentItem.playIndex)
             stack.currentItem.playIndex(0)
+    }
+
+    // Android's back button closes the window when nothing handles it:
+    // go back one screen instead (the player first closes its own panels).
+    onClosing: (close) => {
+        if (Qt.platform.os !== "android" || stack.depth <= 1)
+            return
+        close.accepted = false
+        if (stack.currentItem.goBack)
+            stack.currentItem.goBack()
+        else
+            stack.pop()
     }
 
     Connections {
@@ -105,6 +166,9 @@ ApplicationWindow {
             onSourceSelected: (sourceId) => window.openSource(sourceId)
             onAddSourceRequested: stack.push(addSourcePageComponent)
             onResumeRequested: (sourceId, extId) => window.openSource(sourceId, extId)
+            onResumeVodRequested: (sourceId, kind, extId, seriesExtId) => kind === "movie"
+                                  ? window.playMovie(sourceId, extId, false)
+                                  : window.playEpisode(sourceId, seriesExtId, extId, false)
         }
 
         Component.onCompleted: {
@@ -121,6 +185,38 @@ ApplicationWindow {
             onChannelActivated: (index) => window.playChannel(livePage.channelModel,
                                                               livePage.sourceId, index)
             onGuideRequested: window.openGuide(livePage)
+            onSectionRequested: (kind) => window.openSection(livePage.sourceId, kind)
+        }
+    }
+
+    Component {
+        id: vodPageComponent
+        VodPage {
+            id: vodPage
+            onBackRequested: stack.pop()
+            onSectionRequested: (kind) => window.openSection(vodPage.sourceId, kind)
+            onItemActivated: (extId) => vodPage.kind === "movie"
+                             ? window.openMovie(vodPage.sourceId, extId)
+                             : window.openSeries(vodPage.sourceId, extId)
+        }
+    }
+
+    Component {
+        id: movieDetailsComponent
+        MovieDetailsPage {
+            id: moviePage
+            onBackRequested: stack.pop()
+            onPlayRequested: (fromStart) => window.playMovie(moviePage.sourceId, moviePage.extId, fromStart)
+        }
+    }
+
+    Component {
+        id: seriesDetailsComponent
+        SeriesDetailsPage {
+            id: seriesPage
+            onBackRequested: stack.pop()
+            onEpisodeRequested: (episodeExtId, fromStart) =>
+                window.playEpisode(seriesPage.sourceId, seriesPage.extId, episodeExtId, fromStart)
         }
     }
 

@@ -211,10 +211,11 @@ Each phase ends with something that runs and can be tested on a real device.
 - [ ] Xtream `get_short_epg` fallback when there is no XMLTV (only if `xmltv.php` turns out to be missing for some providers)
 
 ### Phase 4 — VOD & series (≈ 1 week)
-- [ ] Movies: categories → poster grid → detail page → play
-- [ ] Series: series → seasons → episodes → play, plus "next episode"
-- [ ] Seek bar, audio/subtitle track selection
-- [ ] Resume position / "Continue watching" row
+- [x] Movies: categories → poster grid → detail page → play
+- [x] Series: series → seasons → episodes → play, plus "next episode" (10 s countdown)
+- [x] Seek bar, audio/subtitle track selection
+- [x] Resume position / "Continue watching" row
+- [x] M3U playlists: movies, and series grouped from "Show S01 E02" names
 
 ### Phase 4b — Design pass (≈ 1 week)
 Once all main screens exist, redesign them together so they feel like one product:
@@ -278,5 +279,6 @@ Once all main screens exist, redesign them together so they feel like one produc
 - **Phase 1:** done — URL player with controls, stream info, wake lock, background handling
 - **Phase 2:** done — Xtream + M3U providers, live TV browser, favorites, zapping
 - **Phase 3:** done — TV guide: now/next in the channel list and player, guide grid
-- **Next:** Phase 4 — movies and series (your provider has them; M3U entries are already stored)
-- **Then:** Phase 4b — UI design pass (requested: the current look is functional but plain)
+- **Phase 4:** done — movies and series with details, seasons/episodes, resume, next episode,
+  audio/subtitle tracks, "Continue watching"
+- **Next:** Phase 4b — UI design pass (requested: the current look is functional but plain)

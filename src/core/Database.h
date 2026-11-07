@@ -41,6 +41,9 @@ signals:
     void contentChanged(int sourceId);
     void favoritesChanged(int sourceId);
     void epgChanged(int sourceId);
+    void progressChanged(int sourceId);
+    void episodesChanged(int sourceId, const QString &seriesExtId);
+    void detailsChanged(int sourceId, const QString &extId);
 
 private:
     using QObject::QObject;

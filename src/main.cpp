@@ -12,13 +12,14 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <cstdio>
+#include <functional>
 #include <memory>
 
 namespace {
 
 // Walks through the main screens and exits with 0 if no QML warnings were
 // printed. With IPTV_SMOKE_PLAYLIST (or IPTV_SMOKE_XTREAM) set, it adds a source,
-// shows the channel list and plays the first channel. Otherwise it opens the
+// then visits the channel list, guide, player, movies and series. Otherwise it opens the
 // player on an unreachable stream. With IPTV_SCREENSHOT_DIR set, screenshots
 // of each step are saved there.
 void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
@@ -42,36 +43,65 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
     const QString smokeUrl = qEnvironmentVariable("IPTV_SMOKE_URL",
                                                   QStringLiteral("http://127.0.0.1:9/test.ts"));
 
-    QTimer::singleShot(500, window, [=] {
-        screenshot(QStringLiteral("home"));
-        QMetaObject::invokeMethod(window, "smokeShowAddPage");
-    });
-    QTimer::singleShot(1200, window, [=] {
-        screenshot(QStringLiteral("add"));
-        QMetaObject::invokeMethod(window, "smokeCloseAddPage");
-        if (useXtream) {
-            QMetaObject::invokeMethod(window, "smokeAddXtream", Q_ARG(QVariant, xtream.at(0)),
-                                      Q_ARG(QVariant, xtream.at(1)), Q_ARG(QVariant, xtream.at(2)));
-        } else if (playlist.isEmpty()) {
-            QMetaObject::invokeMethod(window, "openStream", Q_ARG(QVariant, QUrl(smokeUrl)),
-                                      Q_ARG(QVariant, QStringLiteral("Smoke test channel")));
-        } else {
-            QMetaObject::invokeMethod(window, "smokeAddPlaylist",
-                                      Q_ARG(QVariant, QUrl::fromLocalFile(playlist)));
-        }
-    });
+    struct Step
+    {
+        int delayMs;   // wait before this step
+        QString shot;  // screenshot name, or empty
+        std::function<void()> action;
+    };
+    auto invoke = [window](const char *method, const QVariant &arg = {}) {
+        if (arg.isValid())
+            QMetaObject::invokeMethod(window, method, Q_ARG(QVariant, arg));
+        else
+            QMetaObject::invokeMethod(window, method);
+    };
+
+    QList<Step> steps;
+    steps.append({ 500, QStringLiteral("home"), [=] { invoke("smokeShowAddPage"); } });
+    steps.append({ 700, QStringLiteral("add"), [=] {
+                      invoke("smokeCloseAddPage");
+                      if (useXtream) {
+                          QMetaObject::invokeMethod(window, "smokeAddXtream",
+                                                    Q_ARG(QVariant, xtream.at(0)),
+                                                    Q_ARG(QVariant, xtream.at(1)),
+                                                    Q_ARG(QVariant, xtream.at(2)));
+                      } else if (playlist.isEmpty()) {
+                          QMetaObject::invokeMethod(window, "openStream", Q_ARG(QVariant, QUrl(smokeUrl)),
+                                                    Q_ARG(QVariant, QStringLiteral("Smoke test channel")));
+                      } else {
+                          invoke("smokeAddPlaylist", QUrl::fromLocalFile(playlist));
+                      }
+                  } });
     if (addSource) {
-        QTimer::singleShot(4000, window, [=] {
-            screenshot(QStringLiteral("channels"));
-            QMetaObject::invokeMethod(window, "smokeOpenGuide");
-        });
-        QTimer::singleShot(5500, window, [=] {
-            screenshot(QStringLiteral("guide"));
-            QMetaObject::invokeMethod(window, "smokePlayFirst");
+        steps.append({ 2800, QStringLiteral("channels"), [=] { invoke("smokeOpenGuide"); } });
+        steps.append({ 1500, QStringLiteral("guide"), [=] { invoke("smokePlayFirst"); } });
+        steps.append({ 2500, QStringLiteral("player"), [=] { invoke("smokeBack"); } });
+        steps.append({ 500, QString(), [=] { invoke("smokeOpenSection", QStringLiteral("movie")); } });
+        steps.append({ 1500, QStringLiteral("movies"), [=] { invoke("smokeOpenFirst"); } });
+        steps.append({ 1500, QStringLiteral("movie"), [=] { invoke("smokePlay"); } });
+        steps.append({ 2500, QStringLiteral("movie-player"), [=] {
+                          invoke("smokeBack");
+                          invoke("smokeBack");
+                          invoke("smokeOpenSection", QStringLiteral("series"));
+                      } });
+        steps.append({ 1500, QStringLiteral("series-list"), [=] { invoke("smokeOpenFirst"); } });
+        steps.append({ 2000, QStringLiteral("series"), [=] { invoke("smokePlay"); } });
+        steps.append({ 2500, QStringLiteral("episode-player"), {} });
+    } else {
+        steps.append({ 2000, QStringLiteral("player"), {} });
+    }
+
+    int at = 0;
+    for (const Step &step : std::as_const(steps)) {
+        at += step.delayMs;
+        QTimer::singleShot(at, window, [=] {
+            if (!step.shot.isEmpty())
+                screenshot(step.shot);
+            if (step.action)
+                step.action();
         });
     }
-    QTimer::singleShot(addSource ? 8000 : 3500, window, [=, &qmlWarnings] {
-        screenshot(QStringLiteral("player"));
+    QTimer::singleShot(at + 100, window, [&qmlWarnings] {
         QCoreApplication::exit(qmlWarnings == 0 ? 0 : 2);
     });
 }

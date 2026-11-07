@@ -145,6 +145,90 @@ private slots:
 
         QCOMPARE(channels.at(3).name, QStringLiteral("Channel 1004"));
     }
+
+    void vodUrls()
+    {
+        const XtreamCredentials creds{ QUrl(QStringLiteral("http://example.com:8080")),
+                                       QStringLiteral("john"), QStringLiteral("secret") };
+        QCOMPARE(XtreamApi::movieUrl(creds, QStringLiteral("5001"), QStringLiteral("mkv")).toString(),
+                 QStringLiteral("http://example.com:8080/movie/john/secret/5001.mkv"));
+        QCOMPARE(XtreamApi::episodeUrl(creds, QStringLiteral("9011"), QString()).toString(),
+                 QStringLiteral("http://example.com:8080/series/john/secret/9011.mp4"));
+        QCOMPARE(XtreamApi::epgUrl(creds).toString(),
+                 QStringLiteral("http://example.com:8080/xmltv.php?username=john&password=secret"));
+    }
+
+    void parseMovies()
+    {
+        QList<ChannelData> movies;
+        QString error;
+        QVERIFY(XtreamApi::parseMovies(fixture("xtream_vod_streams.json"), &movies, &error));
+        QCOMPARE(movies.size(), 2);
+        QCOMPARE(movies.at(0).kind, ContentKind::Movie);
+        QCOMPARE(movies.at(0).extId, QStringLiteral("5001"));
+        QCOMPARE(movies.at(0).extension, QStringLiteral("mkv"));
+        QCOMPARE(movies.at(0).rating, QStringLiteral("7.4"));
+        QCOMPARE(movies.at(0).year, QStringLiteral("2023")); // from the name
+        QCOMPARE(movies.at(0).categoryExtId, QStringLiteral("10"));
+        QCOMPARE(movies.at(1).rating, QString());             // 0 = unrated
+        QCOMPARE(movies.at(1).year, QStringLiteral("2021"));
+
+        QVERIFY(XtreamApi::parseMovies("{}", &movies, &error)); // empty on some servers
+        QVERIFY(movies.isEmpty());
+    }
+
+    void parseSeries()
+    {
+        QList<ChannelData> series;
+        QString error;
+        QVERIFY(XtreamApi::parseSeries(fixture("xtream_series.json"), &series, &error));
+        QCOMPARE(series.size(), 2);
+        QCOMPARE(series.at(0).kind, ContentKind::Series);
+        QCOMPARE(series.at(0).extId, QStringLiteral("701"));
+        QCOMPARE(series.at(0).logo, QStringLiteral("http://img.example.com/s1.jpg"));
+        QCOMPARE(series.at(0).year, QStringLiteral("2019"));
+        QCOMPARE(series.at(0).genre, QStringLiteral("Crime"));
+        QCOMPARE(series.at(0).plot, QStringLiteral("Two detectives."));
+        QCOMPARE(series.at(1).year, QStringLiteral("2015")); // release_date
+    }
+
+    void parseMovieInfo()
+    {
+        VodDetails d;
+        QString error;
+        QVERIFY(XtreamApi::parseMovieInfo(fixture("xtream_vod_info.json"), &d, &error));
+        QCOMPARE(d.plot, QStringLiteral("A storm hits the town."));
+        QCOMPARE(d.director, QStringLiteral("Sam Lee"));
+        QCOMPARE(d.durationSecs, 6300);
+        QCOMPARE(d.backdrop, QStringLiteral("http://img.example.com/b1.jpg"));
+        QCOMPARE(d.extension, QStringLiteral("mkv"));
+        QCOMPARE(d.releaseDate, QStringLiteral("2023-10-01"));
+    }
+
+    void parseSeriesInfo()
+    {
+        VodDetails d;
+        QList<EpisodeData> episodes;
+        QString error;
+        QVERIFY(XtreamApi::parseSeriesInfo(fixture("xtream_series_info.json"), QStringLiteral("701"),
+                                           &d, &episodes, &error));
+        QCOMPARE(d.backdrop, QStringLiteral("http://img.example.com/b1.jpg")); // string form
+        QCOMPARE(episodes.size(), 3);
+        // Sorted by season, then episode
+        QCOMPARE(episodes.at(0).title, QStringLiteral("Pilot"));
+        QCOMPARE(episodes.at(0).extId, QStringLiteral("9011"));
+        QCOMPARE(episodes.at(0).seriesExtId, QStringLiteral("701"));
+        QCOMPARE(episodes.at(1).episode, 2);
+        QCOMPARE(episodes.at(1).durationSecs, 44 * 60 + 10);
+        QCOMPARE(episodes.at(2).season, 2);
+        QCOMPARE(episodes.at(2).image, QStringLiteral("http://img.example.com/e21.jpg"));
+
+        // Array-of-arrays variant
+        QVERIFY(XtreamApi::parseSeriesInfo(fixture("xtream_series_info_array.json"),
+                                           QStringLiteral("702"), &d, &episodes, &error));
+        QCOMPARE(episodes.size(), 2);
+        QCOMPARE(episodes.at(1).title, QStringLiteral("Two"));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestXtreamApi)

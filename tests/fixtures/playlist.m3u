@@ -14,6 +14,12 @@ http://example.com:8080/live/user/pass/1003.ts
 http://example.com:8080/movie/user/pass/5001.mkv
 #EXTINF:-1 group-title="Series | Drama",Some Show S01 E01
 http://example.com:8080/series/user/pass/7001.mp4
+#EXTINF:-1 group-title="Series | Drama" tvg-logo="http://logos.example.com/show.jpg",Some Show S01 E02 The Second One
+http://example.com:8080/series/user/pass/7002.mp4
+#EXTINF:-1 group-title="Series | Drama",Some.Show.S02E01
+http://example.com:8080/series/user/pass/7003.mp4
+#EXTINF:-1 group-title="Series | Drama",Another Show Episode Without Numbers
+http://example.com:8080/series/user/pass/7101.mp4
 http://example.com/bare-url-without-extinf.ts
 #EXTINF:-1 tvg-id="" group-title="UK | General",Café TV Élite
 http://example.com:8080/live/user/pass/1004.ts

@@ -46,11 +46,25 @@ public:
     static QUrl epgUrl(const XtreamCredentials &creds);
     static QUrl liveStreamUrl(const XtreamCredentials &creds, const QString &streamId,
                               const QString &format);
+    static QUrl movieUrl(const XtreamCredentials &creds, const QString &streamId,
+                         const QString &extension);
+    static QUrl episodeUrl(const XtreamCredentials &creds, const QString &episodeId,
+                           const QString &extension);
 
     static bool parseAccount(const QByteArray &json, XtreamAccount *out, QString *error);
     static bool parseCategories(const QByteArray &json, ContentKind kind,
                                 QList<CategoryData> *out, QString *error);
     static bool parseLiveStreams(const QByteArray &json, QList<ChannelData> *out, QString *error);
+    // get_vod_streams
+    static bool parseMovies(const QByteArray &json, QList<ChannelData> *out, QString *error);
+    // get_series
+    static bool parseSeries(const QByteArray &json, QList<ChannelData> *out, QString *error);
+    // get_vod_info
+    static bool parseMovieInfo(const QByteArray &json, VodDetails *out, QString *error);
+    // get_series_info
+    static bool parseSeriesInfo(const QByteArray &json, const QString &seriesId,
+                                VodDetails *details, QList<EpisodeData> *episodes,
+                                QString *error);
 };
 
 } // namespace iptv

@@ -12,7 +12,9 @@ Item {
     property string title
     property bool fullScreen: false
     property bool infoVisible: false
-    property bool hasChannels: false
+    property bool hasChannels: false   // channel list and favorite buttons
+    property bool canPrevious: hasChannels
+    property bool canNext: hasChannels
     property bool favorite: false
     // TV guide: {now: {...}, next: {...}} from EpgManager.nowNext()
     property var program: ({})
@@ -145,7 +147,7 @@ Item {
             // Seek bar for movies/episodes (hidden for live TV)
             RowLayout {
                 Layout.fillWidth: true
-                visible: root.player && !root.player.live
+                visible: root.player && !root.player.live && root.player.duration > 0
                 spacing: AppTheme.spacing
 
                 Label {
@@ -181,8 +183,8 @@ Item {
 
                 IconButton {
                     iconName: "previous"
-                    tip: qsTr("Previous channel (Page Up)")
-                    visible: root.hasChannels
+                    tip: root.hasChannels ? qsTr("Previous channel (Page Up)") : qsTr("Previous episode")
+                    visible: root.canPrevious
                     onClicked: { root.previousChannel(); root.activity() }
                 }
                 IconButton {
@@ -192,8 +194,8 @@ Item {
                 }
                 IconButton {
                     iconName: "next"
-                    tip: qsTr("Next channel (Page Down)")
-                    visible: root.hasChannels
+                    tip: root.hasChannels ? qsTr("Next channel (Page Down)") : qsTr("Next episode (N)")
+                    visible: root.canNext
                     onClicked: { root.nextChannel(); root.activity() }
                 }
                 IconButton {
@@ -238,6 +240,63 @@ Item {
                         root.player.muted = false
                         root.player.volume = value
                         root.activity()
+                    }
+                }
+                IconButton {
+                    iconName: "subtitles"
+                    tip: qsTr("Audio and subtitles")
+                    visible: root.player && (root.player.audioTracks.length > 1
+                                             || root.player.subtitleTracks.length > 0)
+                    onClicked: { tracksMenu.popup(); root.activity() }
+
+                    Menu {
+                        id: tracksMenu
+                        MenuItem {
+                            enabled: false
+                            text: qsTr("Audio")
+                            visible: root.player && root.player.audioTracks.length > 1
+                            height: visible ? implicitHeight : 0
+                        }
+                        Repeater {
+                            model: root.player && root.player.audioTracks.length > 1 ? root.player.audioTracks : []
+                            delegate: MenuItem {
+                                required property int index
+                                required property string modelData
+                                text: modelData
+                                checkable: true
+                                checked: root.player.activeAudioTrack === index
+                                onTriggered: root.player.activeAudioTrack = index
+                            }
+                        }
+                        MenuSeparator {
+                            visible: root.player && root.player.audioTracks.length > 1
+                                     && root.player.subtitleTracks.length > 0
+                        }
+                        MenuItem {
+                            enabled: false
+                            text: qsTr("Subtitles")
+                            visible: root.player && root.player.subtitleTracks.length > 0
+                            height: visible ? implicitHeight : 0
+                        }
+                        MenuItem {
+                            text: qsTr("Off")
+                            visible: root.player && root.player.subtitleTracks.length > 0
+                            height: visible ? implicitHeight : 0
+                            checkable: true
+                            checked: root.player && root.player.activeSubtitleTrack < 0
+                            onTriggered: root.player.activeSubtitleTrack = -1
+                        }
+                        Repeater {
+                            model: root.player ? root.player.subtitleTracks : []
+                            delegate: MenuItem {
+                                required property int index
+                                required property string modelData
+                                text: modelData
+                                checkable: true
+                                checked: root.player.activeSubtitleTrack === index
+                                onTriggered: root.player.activeSubtitleTrack = index
+                            }
+                        }
                     }
                 }
                 IconButton {

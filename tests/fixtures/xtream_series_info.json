@@ -1,0 +1,5 @@
+{"seasons":[{"season_number":1,"name":"Season 1"}],
+ "info":{"name":"Ocean Drive","cover":"http://img.example.com/s1.jpg","plot":"Two detectives.","cast":"A, B","director":"C","genre":"Crime","releaseDate":"2019-04-02","rating":"8","backdrop_path":"http://img.example.com/b1.jpg","episode_run_time":"45"},
+ "episodes":{"2":[{"id":"9021","episode_num":1,"title":"Ocean Drive - S02E01 - Return","container_extension":"mp4","info":{"plot":"Back again.","duration_secs":2700,"movie_image":"http://img.example.com/e21.jpg"},"season":2}],
+             "1":[{"id":"9012","episode_num":"2","title":"Second","container_extension":"mkv","info":{"duration":"00:44:10"},"season":"1"},
+                  {"id":9011,"episode_num":1,"title":"Pilot","container_extension":"mkv","info":{"plot":"It begins."},"season":1}]}}

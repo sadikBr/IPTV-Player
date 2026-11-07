@@ -58,6 +58,35 @@ ContentKind classifyUrl(const QString &url)
     return ContentKind::Live;
 }
 
+struct EpisodeName
+{
+    QString show;
+    int season = 0; // 0: not found in the name
+    int episode = 0;
+    QString title;
+};
+
+// "Show Name S01 E02 Title" / "Show.Name.S1E2" -> show, season, episode
+EpisodeName parseEpisodeName(const QString &name)
+{
+    static const QRegularExpression re(
+            QStringLiteral(R"re(^(.*?)[\s._\-:|]*\b[Ss](\d{1,2})[\s._\-]*[Ee](\d{1,4})\b[\s._\-:|]*(.*)$)re"));
+    const auto m = re.match(name);
+    if (!m.hasMatch() || m.captured(1).trimmed().isEmpty())
+        return { name.trimmed(), 0, 0, QString() };
+    QString show = m.captured(1);
+    show.replace(QLatin1Char('.'), QLatin1Char(' '));
+    return { show.trimmed(), m.captured(2).toInt(), m.captured(3).toInt(), m.captured(4).trimmed() };
+}
+
+// "Movie Title (2024)" -> "2024"
+QString yearFromName(const QString &name)
+{
+    static const QRegularExpression re(QStringLiteral(R"re([\(\[]((?:19|20)\d{2})[\)\]])re"));
+    const auto m = re.match(name);
+    return m.hasMatch() ? m.captured(1) : QString();
+}
+
 QString headerEpgUrl(const QString &line)
 {
     const Attributes attrs = parseExtInf(line.mid(7)); // after "#EXTM3U"
@@ -86,6 +115,8 @@ SourceContent M3uParser::parse(const QByteArray &data)
 
     QHash<QString, int> categoryIndex; // "kind|name" -> index in content.categories
     QHash<int, int> numberByKind;      // running channel number per kind
+    QHash<QString, int> seriesIndex;   // series ext id -> index in content.channels
+    QHash<QString, int> episodeCount;  // series ext id -> episodes without SxxEyy
 
     bool havePending = false;
     Attributes pending;
@@ -147,11 +178,6 @@ SourceContent M3uParser::parse(const QByteArray &data)
             channel.name = url.fileName().isEmpty() ? line : url.fileName();
         }
 
-        int &running = numberByKind[int(channel.kind)];
-        ++running;
-        if (channel.number <= 0)
-            channel.number = running;
-
         if (!group.isEmpty()) {
             const QString key = kindToString(channel.kind) + QLatin1Char('|') + group;
             if (!categoryIndex.contains(key)) {
@@ -161,7 +187,40 @@ SourceContent M3uParser::parse(const QByteArray &data)
             channel.categoryExtId = group;
         }
 
-        content.channels.append(std::move(channel));
+        if (channel.kind == ContentKind::Series) {
+            // Each entry is an episode; group them into one series item per show.
+            const EpisodeName parsed = parseEpisodeName(channel.name);
+            const QString seriesId = QStringLiteral("m3u-series:")
+                    + parsed.show.toCaseFolded() + QLatin1Char('|') + group;
+            if (!seriesIndex.contains(seriesId)) {
+                ChannelData series;
+                series.kind = ContentKind::Series;
+                series.extId = seriesId;
+                series.name = parsed.show;
+                series.logo = channel.logo;
+                series.categoryExtId = channel.categoryExtId;
+                series.number = ++numberByKind[int(ContentKind::Series)];
+                seriesIndex.insert(seriesId, int(content.channels.size()));
+                content.channels.append(series);
+            }
+            EpisodeData episode;
+            episode.seriesExtId = seriesId;
+            episode.extId = channel.url;
+            episode.url = channel.url;
+            episode.image = channel.logo;
+            episode.season = parsed.season > 0 ? parsed.season : 1;
+            episode.episode = parsed.season > 0 ? parsed.episode : ++episodeCount[seriesId];
+            episode.title = parsed.title.isEmpty() ? channel.name : parsed.title;
+            content.episodes.append(std::move(episode));
+        } else {
+            int &running = numberByKind[int(channel.kind)];
+            ++running;
+            if (channel.number <= 0)
+                channel.number = running;
+            if (channel.kind == ContentKind::Movie)
+                channel.year = yearFromName(channel.name);
+            content.channels.append(std::move(channel));
+        }
         havePending = false;
         pending = {};
         pendingGroup.clear();

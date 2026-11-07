@@ -8,25 +8,29 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.3 (milestone 3): live TV with a TV guide.**
+**Version 0.4 (milestone 4): live TV, TV guide, movies and series.**
 
 - Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
   Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
-- Browse live channels by category, search by name (accents ignored), mark favorites
-- **TV guide:** what's on now (with progress) under every channel, now/next in the player,
-  and a full guide grid (3 days, tap a program for details or to watch the channel).
-  Xtream guides are downloaded automatically; for M3U the playlist's guide link
-  (`url-tvg`) or the one you enter is used. `.xml.gz` guides are supported.
-- Channel logos are cached on disk; channel lists refresh once a day and the guide
-  every 12 hours (or use the refresh button)
-- Player: previous/next channel, channel list panel, type a channel number to jump,
-  stream info panel, full screen, volume, reconnect
-- "Continue watching" on the home page; the last provider reopens on start-up
+- **Live TV:** categories, search (accents ignored), favorites, channel logos
+- **TV guide:** what's on now under every channel, now/next in the player, and a
+  3-day guide grid. Xtream guides download automatically; for M3U the playlist's
+  guide link or the one you enter is used (`.xml.gz` supported)
+- **Movies:** poster grid by category with search and favorites; details page with
+  plot, cast, director, duration and rating; play or resume where you stopped
+- **Series:** poster grid; series page with seasons and episodes; continue with the
+  right episode; the next episode starts automatically after a 10 s countdown.
+  For M3U playlists, episodes are grouped by name ("Show S01 E02")
+- **Continue watching** row on the home page for unfinished movies and episodes
+- Player: seek bar, audio track and subtitle selection (when the file has several),
+  previous/next channel or episode, channel list panel, channel number entry,
+  stream info, full screen
+- Lists refresh once a day and the guide every 12 hours (or use the refresh button)
 - Xtream account status and expiry date shown on the home page
-- Android: screen stays on while playing; stream stops in the background and resumes
-  when you return
+- Android: screen stays on while playing; back button goes back one screen; stream
+  stops in the background and resumes when you return
 
-Next: movies and series (milestone 4), then a design pass over the whole UI.
+Next: a design pass over the whole UI.
 
 ### Where your data is stored
 
@@ -79,6 +83,7 @@ Keep `release.keystore` safe and out of the repository.
 | Key | Action |
 |---|---|
 | ↑ / ↓, Page Up / Page Down | Previous / next channel |
+| N | Next episode |
 | 0–9 | Type a channel number to jump to it |
 | L | Channel list |
 | S | Add / remove favorite |
@@ -86,7 +91,7 @@ Keep `release.keystore` safe and out of the repository.
 | + / − or mouse wheel | Volume (↑ / ↓ when playing a single URL) |
 | M | Mute |
 | F / F11 / double-click | Full screen |
-| ← / → | Seek 10 s (movies) |
+| ← / → | Seek 10 s (movies and episodes) |
 | I | Stream info |
 | Esc / Backspace | Close panel, exit full screen, back |
 
@@ -132,12 +137,14 @@ src/
   app/AppSettings.*        persisted settings, exposed to QML
   app/SourceManager.*      add/refresh/remove providers (download, parse, save)
   app/EpgManager.*         download and import TV guides; now/next queries
+  app/VodManager.*         movie/series details and episodes, watch progress
   models/                  list models for QML: providers, categories, channels
   player/PlayerBackend.h   player interface (allows other engines later, e.g. mpv)
   player/QtMultimediaBackend.*  Qt Multimedia implementation
   player/PlayerController.*     QML-facing player (wake lock, background handling)
   platform/ScreenWakeLock.*     keep screen on (Android)
-  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, GuidePage, PlayerPage, ...
+  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, GuidePage, VodPage,
+                           MovieDetailsPage, SeriesDetailsPage, PlayerPage, ...
 tests/                     unit tests and fixtures (sample M3U, Xtream responses)
 .github/workflows/build.yml  CI for Linux, Windows, Android
 ```

@@ -122,6 +122,102 @@ private slots:
         QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM channels")), 20000);
     }
 
+    void moviesSeriesAndEpisodes()
+    {
+        SourceStore store(Database::connection());
+        const int id = store.sources().constFirst().id;
+        SourceContent c = sampleContent(3);
+        ChannelData movie;
+        movie.kind = ContentKind::Movie;
+        movie.extId = QStringLiteral("5001");
+        movie.name = QStringLiteral("The Long Night");
+        movie.extension = QStringLiteral("mkv");
+        movie.year = QStringLiteral("2023");
+        c.channels.append(movie);
+        ChannelData series;
+        series.kind = ContentKind::Series;
+        series.extId = QStringLiteral("701");
+        series.name = QStringLiteral("Ocean Drive");
+        c.channels.append(series);
+        QVERIFY2(store.replaceContent(id, c), qPrintable(store.lastError()));
+
+        const auto source = store.source(id);
+        QCOMPARE(source->liveCount, 3);
+        QCOMPARE(source->movieCount, 1);
+        QCOMPARE(source->seriesCount, 1);
+        QCOMPARE(SourceStore::streamUrl(*source, ContentKind::Movie, QStringLiteral("5001"), {},
+                                        QStringLiteral("mkv")).toString(),
+                 QStringLiteral("http://example.com:8080/movie/john/secret/5001.mkv"));
+
+        // Episodes loaded later (Xtream) survive a re-sync while the series exists
+        EpisodeData e1;
+        e1.extId = QStringLiteral("9011");
+        e1.season = 1;
+        e1.episode = 1;
+        e1.title = QStringLiteral("Pilot");
+        EpisodeData e2 = e1;
+        e2.extId = QStringLiteral("9012");
+        e2.episode = 2;
+        QVERIFY(store.replaceEpisodes(id, QStringLiteral("701"), { e2, e1 }));
+        QCOMPARE(store.episodes(id, QStringLiteral("701")).size(), 2);
+        QCOMPARE(store.episodes(id, QStringLiteral("701")).first().title, QStringLiteral("Pilot"));
+        QVERIFY(store.replaceContent(id, c));
+        QCOMPARE(store.episodes(id, QStringLiteral("701")).size(), 2);
+        c.channels.removeLast(); // series gone -> its episodes too
+        QVERIFY(store.replaceContent(id, c));
+        QCOMPARE(store.episodes(id, QStringLiteral("701")).size(), 0);
+
+        VodDetails d;
+        d.plot = QStringLiteral("A storm.");
+        d.durationSecs = 6300;
+        QVERIFY(store.saveDetails(id, ContentKind::Movie, QStringLiteral("5001"), d));
+        QDateTime fetched;
+        const auto read = store.details(id, ContentKind::Movie, QStringLiteral("5001"), &fetched);
+        QVERIFY(read.has_value());
+        QCOMPARE(read->plot, d.plot);
+        QCOMPARE(read->durationSecs, 6300);
+        QVERIFY(fetched.isValid());
+    }
+
+    void watchProgress()
+    {
+        SourceStore store(Database::connection());
+        const int id = store.sources().constFirst().id;
+        WatchProgress movie;
+        movie.sourceId = id;
+        movie.kind = ContentKind::Movie;
+        movie.extId = QStringLiteral("5001");
+        movie.positionMs = 600000;
+        movie.durationMs = 6300000;
+        movie.title = QStringLiteral("The Long Night");
+        movie.updatedAt = QDateTime::fromSecsSinceEpoch(1000);
+        QVERIFY(store.saveProgress(movie));
+
+        WatchProgress ep;
+        ep.sourceId = id;
+        ep.kind = ContentKind::Episode;
+        ep.seriesExtId = QStringLiteral("701");
+        ep.durationMs = 2700000;
+        ep.positionMs = 2690000; // finished
+        ep.extId = QStringLiteral("9011");
+        ep.updatedAt = QDateTime::fromSecsSinceEpoch(2000);
+        QVERIFY(store.saveProgress(ep));
+        ep.extId = QStringLiteral("9012");
+        ep.positionMs = 100000; // in progress, most recent
+        ep.updatedAt = QDateTime::fromSecsSinceEpoch(3000);
+        QVERIFY(store.saveProgress(ep));
+
+        const auto recent = store.recentProgress(10);
+        QCOMPARE(recent.size(), 2);
+        QCOMPARE(recent.at(0).extId, QStringLiteral("9012")); // newest first, one per series
+        QCOMPARE(recent.at(1).extId, QStringLiteral("5001"));
+        QCOMPARE(store.progress(id, ContentKind::Movie, QStringLiteral("5001"))->positionMs, 600000);
+        QVERIFY(store.progress(id, ContentKind::Episode, QStringLiteral("9011"))->finished());
+
+        QVERIFY(store.removeProgress(id, ContentKind::Movie, QStringLiteral("5001")));
+        QCOMPARE(store.recentProgress(10).size(), 1);
+    }
+
     void removeSourceCascades()
     {
         SourceStore store(Database::connection());

@@ -4,6 +4,7 @@
 #include "XtreamApi.h"
 
 #include <QFutureWatcher>
+#include <QHash>
 #include <QNetworkReply>
 #include <QObject>
 #include <QPointer>
@@ -78,9 +79,14 @@ private:
     void setStatus(const QString &text, qreal progress = -1);
 
     using DataHandler = std::function<void(const QByteArray &)>;
-    void download(const QUrl &url, const QString &label, const DataHandler &onData);
+    // Skip: on failure, call onData with empty data instead of aborting.
+    enum class DownloadFailure { Abort, Skip };
+    void download(const QUrl &url, const QString &label, const DataHandler &onData,
+                  DownloadFailure onFailure = DownloadFailure::Abort);
 
     void syncXtream();
+    void runXtreamStep(int index);
+    void saveXtream();
     void syncM3u();
     void runWorker(std::function<WorkResult()> work);
 
@@ -93,7 +99,7 @@ private:
     bool m_cancelled = false;
     int m_activeSourceId = -1;
     iptv::SourceRecord m_source;
-    iptv::SourceContent m_content; // collected Xtream data before saving
+    QHash<QString, QByteArray> m_payloads; // Xtream responses collected before saving
     QString m_statusText;
     qreal m_progress = -1;
 };
