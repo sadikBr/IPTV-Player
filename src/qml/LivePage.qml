@@ -234,6 +234,7 @@ Page {
                     model: channels
                     clip: true
                     keyNavigationEnabled: true
+                    activeFocusOnTab: true
                     highlightMoveDuration: 0
                     topMargin: 6
                     bottomMargin: 16
@@ -294,6 +295,7 @@ Page {
                     clip: true
                     spacing: 2
                     keyNavigationEnabled: true
+                    activeFocusOnTab: true
                     highlightMoveDuration: 0
                     bottomMargin: 16
                     ScrollBar.vertical: AppScrollBar {}

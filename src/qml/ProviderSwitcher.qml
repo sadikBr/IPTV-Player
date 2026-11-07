@@ -14,7 +14,7 @@ AbstractButton {
     implicitHeight: compact ? 40 : 52
     implicitWidth: compact ? 40 : 200
     hoverEnabled: true
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
     onClicked: menu.popup(control, 0, control.height + 4)
 
     background: Rectangle {
@@ -23,6 +23,7 @@ AbstractButton {
              : control.hovered ? AppTheme.surfaceHover : AppTheme.surfaceHigh
         border.width: control.compact ? 0 : 1
         border.color: AppTheme.stroke
+        FocusRing { target: control }
     }
 
     contentItem: RowLayout {

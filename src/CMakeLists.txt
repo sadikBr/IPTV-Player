@@ -34,6 +34,8 @@ qt_add_executable(iptvplayer
     app/VodManager.h
     app/VodManager.cpp
     app/SourceManager.cpp
+    app/SpatialNavigation.h
+    app/SpatialNavigation.cpp
     app/UpdateManager.h
     app/UpdateManager.cpp
     models/SourceListModel.h
@@ -78,6 +80,7 @@ set(QML_SOURCES
     qml/DetailsBackdrop.qml
     qml/EmptyState.qml
     qml/EpisodeCard.qml
+    qml/FocusRing.qml
     qml/GuidePage.qml
     qml/HomePage.qml
     qml/IconButton.qml

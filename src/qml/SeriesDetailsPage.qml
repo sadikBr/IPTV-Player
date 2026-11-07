@@ -8,6 +8,9 @@ import IPTVPlayer
 Page {
     id: page
 
+    // Keyboard / TV remote focus starts here.
+    readonly property Item initialFocusItem: playButton
+
     property int sourceId: -1
     property string extId
 
@@ -165,6 +168,7 @@ Page {
                         Layout.topMargin: 8
                         spacing: 12
                         AppButton {
+                            id: playButton
                             objectName: "playButton"
                             enabled: page.resumeEpisode !== null
                             iconName: "play"

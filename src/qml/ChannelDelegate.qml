@@ -24,6 +24,7 @@ ItemDelegate {
     leftPadding: 12
     rightPadding: 6
     hoverEnabled: true
+    focusPolicy: Qt.TabFocus
 
     background: Rectangle {
         radius: AppTheme.radius

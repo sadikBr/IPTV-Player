@@ -126,6 +126,7 @@ Rectangle {
                 radius: 1.5
                 color: AppTheme.accent
             }
+            FocusRing { target: item; gap: 1 }
         }
         contentItem: RowLayout {
             spacing: 14

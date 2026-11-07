@@ -179,6 +179,7 @@ Page {
                                 Layout.fillWidth: true
                                 padding: 6
                                 hoverEnabled: true
+                                focusPolicy: Qt.TabFocus
                                 onClicked: {
                                     AppSettings.addRecentUrl(modelData)
                                     AppState.playStreamRequested(modelData, "")
@@ -186,6 +187,7 @@ Page {
                                 background: Rectangle {
                                     radius: AppTheme.radiusSmall
                                     color: recent.hovered ? AppTheme.hover : "transparent"
+                                    FocusRing { target: recent; gap: 0 }
                                 }
                                 contentItem: RowLayout {
                                     IconImage {

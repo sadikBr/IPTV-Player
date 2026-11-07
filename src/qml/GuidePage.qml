@@ -166,9 +166,14 @@ Page {
             width: channelColumn.width
             height: page.rowHeight
             padding: 6
+            focusPolicy: Qt.TabFocus
             onClicked: page.channelActivated(index)
+            // Keyboard / remote: scroll the guide so the focused channel shows
+            // (the channel column follows the program grid).
+            onActiveFocusChanged: if (activeFocus) grid.positionViewAtIndex(index, ListView.Contain)
             background: Rectangle {
                 color: channelCell.hovered ? AppTheme.surfaceHover : AppTheme.backgroundRaised
+                FocusRing { target: channelCell; gap: 0; radius: 0 }
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width

@@ -16,7 +16,7 @@ AbstractButton {
 
     implicitWidth: size
     implicitHeight: size
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
     hoverEnabled: true
     opacity: enabled ? 1 : 0.4
 
@@ -32,6 +32,7 @@ AbstractButton {
              : control.hovered ? "#1AFFFFFF"
              : control.filled ? "#99000000" : "transparent"
         Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+        FocusRing { target: control }
     }
 
     contentItem: Item {

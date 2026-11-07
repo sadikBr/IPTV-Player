@@ -4,6 +4,10 @@
 #include <QDir>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QKeyEvent>
+#include <QKeySequence>
+#include <QQuickItem>
+#include "app/SpatialNavigation.h"
 #include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
@@ -118,6 +122,35 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         }
     }
 
+    // IPTV_SMOKE_KEYS="Down,Right,Return:shot-name,...": press keys at the end
+    // (arrow-key / TV remote navigation) and log which item has focus.
+    const QStringList keys = qEnvironmentVariable("IPTV_SMOKE_KEYS").split(QLatin1Char(','),
+                                                                            Qt::SkipEmptyParts);
+    for (const QString &entry : keys) {
+        const QString keyName = entry.section(QLatin1Char(':'), 0, 0);
+        const QString shot = entry.section(QLatin1Char(':'), 1, 1);
+        const QKeySequence seq = QKeySequence::fromString(keyName);
+        const int key = seq.isEmpty() ? 0 : seq[0].key();
+        steps.append({ 450, QString(), [=] {
+                          QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+                          QCoreApplication::sendEvent(window, &press);
+                          QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
+                          QCoreApplication::sendEvent(window, &release);
+                      } });
+        steps.append({ 250, shot, [=] {
+                          QQuickItem *f = window->activeFocusItem();
+                          const QString text = f ? f->property("text").toString() : QString();
+                          QStringList chain;
+                          for (QQuickItem *i = f; i && chain.size() < 6; i = i->parentItem())
+                              chain << QString::fromLatin1(i->metaObject()->className())
+                                               .section(QLatin1Char('_'), 0, 0)
+                                               + (i->objectName().isEmpty() ? QString()
+                                                  : QLatin1Char('#') + i->objectName());
+                          std::fprintf(stderr, "key %s -> \"%s\" %s\n", qPrintable(keyName),
+                                       qPrintable(text.left(40)), qPrintable(chain.join(QLatin1String(" < "))));
+                      } });
+    }
+
     int at = 0;
     for (const Step &step : std::as_const(steps)) {
         at += step.delayMs;
@@ -212,6 +245,10 @@ int main(int argc, char *argv[])
 
     if (engine.rootObjects().isEmpty())
         return 1;
+
+    // Arrow keys / TV remote move between buttons, cards and lists.
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst()))
+        new SpatialNavigation(window);
 
     if (smokeTest)
         runSmokeTest(engine, qmlWarnings);

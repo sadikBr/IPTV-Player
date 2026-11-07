@@ -20,6 +20,7 @@ ItemDelegate {
 
     padding: 0
     hoverEnabled: true
+    focusPolicy: Qt.TabFocus
 
     background: Item {
         Shadow {

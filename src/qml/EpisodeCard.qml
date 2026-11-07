@@ -22,6 +22,7 @@ ItemDelegate {
 
     padding: 0
     hoverEnabled: true
+    focusPolicy: Qt.TabFocus
     background: Item {}
 
     contentItem: GridLayout {
@@ -36,6 +37,7 @@ ItemDelegate {
             Layout.alignment: Qt.AlignTop
 
             Shadow { target: still; opacity: root.emphasized ? 1 : 0.5 }
+            FocusRing { target: root; gap: root.compact ? 3 : 7; radius: AppTheme.radius + gap }
             Rectangle {
                 id: still
                 anchors.fill: parent

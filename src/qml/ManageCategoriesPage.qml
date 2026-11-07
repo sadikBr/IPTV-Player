@@ -149,6 +149,7 @@ Page {
             model: manager
             clip: true
             spacing: 2
+            keyNavigationEnabled: false // arrow keys move focus between rows
             bottomMargin: 16
             ScrollBar.vertical: AppScrollBar {}
 
@@ -163,6 +164,7 @@ Page {
                 width: list.width
                 height: 52
                 hoverEnabled: true
+                focusPolicy: Qt.TabFocus
                 leftPadding: 14
                 rightPadding: 6
                 onClicked: manager.setHidden(index, !hidden)
@@ -170,6 +172,7 @@ Page {
                 background: Rectangle {
                     radius: AppTheme.radius
                     color: row.hovered ? AppTheme.surface : "transparent"
+                    FocusRing { target: row; gap: 0 }
                 }
                 contentItem: RowLayout {
                     spacing: 12
@@ -213,7 +216,7 @@ Page {
         implicitHeight: 36
         implicitWidth: chipRow.implicitWidth + 28
         hoverEnabled: true
-        focusPolicy: Qt.NoFocus
+        focusPolicy: Qt.TabFocus
 
         background: Rectangle {
             radius: height / 2
@@ -223,6 +226,7 @@ Page {
             border.width: chip.allShown ? 0 : 1
             border.color: chip.allHidden ? AppTheme.stroke : AppTheme.accent
             Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+            FocusRing { target: chip }
         }
         contentItem: Item {
             Row {

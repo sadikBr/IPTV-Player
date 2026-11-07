@@ -38,6 +38,7 @@ ColumnLayout {
             visible: root.showSeeAll
             hoverEnabled: true
             onClicked: root.seeAllClicked()
+            focusPolicy: Qt.TabFocus
             contentItem: RowLayout {
                 spacing: 2
                 Label {
@@ -52,7 +53,9 @@ ColumnLayout {
                     color: AppTheme.accent
                 }
             }
-            background: Item {}
+            background: Item {
+                FocusRing { target: parent.parent; gap: 4; radius: AppTheme.radiusSmall }
+            }
         }
     }
 
@@ -61,6 +64,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: root.rowHeight
         orientation: ListView.Horizontal
+        keyNavigationEnabled: false // arrow keys move focus between cards
         spacing: 14
         clip: true
         leftMargin: root.sideMargin

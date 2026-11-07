@@ -10,7 +10,7 @@ T.Switch {
     implicitHeight: 26
     padding: 0
     hoverEnabled: true
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
 
     indicator: Rectangle {
         implicitWidth: 44
@@ -22,6 +22,7 @@ T.Switch {
         border.width: control.checked ? 0 : 1
         border.color: AppTheme.strokeStrong
         Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+        FocusRing { target: control }
 
         Rectangle {
             x: control.checked ? parent.width - width - 3 : 3

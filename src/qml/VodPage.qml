@@ -173,6 +173,7 @@ Page {
                     model: items
                     clip: true
                     keyNavigationEnabled: true
+                    activeFocusOnTab: true
                     highlightMoveDuration: 0
                     cacheBuffer: cellHeight * 2
                     bottomMargin: 16

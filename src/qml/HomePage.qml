@@ -8,6 +8,9 @@ import IPTVPlayer
 Page {
     id: page
 
+    // Keyboard / TV remote focus starts here.
+    readonly property Item initialFocusItem: heroPlayButton.visible ? heroPlayButton : null
+
     signal playChannelRequested(int sourceId, string extId)
     signal playChannelIndexRequested(var model, int index)
     signal playVodRequested(int sourceId, string kind, string extId, string seriesExtId)
@@ -353,6 +356,7 @@ Page {
                         Layout.topMargin: 8
                         spacing: 12
                         AppButton {
+                            id: heroPlayButton
                             text: page.hero ? page.hero.action : ""
                             iconName: "play"
                             onClicked: page.heroPlay(page.hero)

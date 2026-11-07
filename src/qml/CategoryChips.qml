@@ -13,6 +13,7 @@ ListView {
 
     implicitHeight: 34
     orientation: ListView.Horizontal
+    keyNavigationEnabled: false // arrow keys move focus between chips
     spacing: 8
     clip: true
     leftMargin: AppTheme.margin

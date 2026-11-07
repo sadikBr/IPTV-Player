@@ -53,7 +53,7 @@ Rectangle {
 
         Layout.fillWidth: true
         Layout.fillHeight: true
-        focusPolicy: Qt.NoFocus
+        focusPolicy: Qt.TabFocus
         onClicked: AppState.sectionRequested(section)
 
         background: Item {}
@@ -67,6 +67,7 @@ Rectangle {
                     height: 28
                     radius: 14
                     color: tab.active ? AppTheme.surfaceHigh : "transparent"
+                    FocusRing { target: tab }
                     IconImage {
                         anchors.centerIn: parent
                         source: "icons/" + tab.iconName + ".svg"

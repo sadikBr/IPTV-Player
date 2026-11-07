@@ -12,7 +12,7 @@ AbstractButton {
     implicitHeight: 34
     implicitWidth: row.implicitWidth + 28
     hoverEnabled: true
-    focusPolicy: Qt.NoFocus
+    focusPolicy: Qt.TabFocus
 
     background: Rectangle {
         radius: height / 2
@@ -21,6 +21,7 @@ AbstractButton {
         border.width: control.selected ? 0 : 1
         border.color: AppTheme.stroke
         Behavior on color { ColorAnimation { duration: AppTheme.fast } }
+        FocusRing { target: control }
     }
 
     contentItem: Item {
