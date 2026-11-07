@@ -61,12 +61,16 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         }
     });
     if (addSource) {
-        QTimer::singleShot(3500, window, [=] {
+        QTimer::singleShot(4000, window, [=] {
             screenshot(QStringLiteral("channels"));
+            QMetaObject::invokeMethod(window, "smokeOpenGuide");
+        });
+        QTimer::singleShot(5500, window, [=] {
+            screenshot(QStringLiteral("guide"));
             QMetaObject::invokeMethod(window, "smokePlayFirst");
         });
     }
-    QTimer::singleShot(addSource ? 6000 : 3500, window, [=, &qmlWarnings] {
+    QTimer::singleShot(addSource ? 8000 : 3500, window, [=, &qmlWarnings] {
         screenshot(QStringLiteral("player"));
         QCoreApplication::exit(qmlWarnings == 0 ? 0 : 2);
     });

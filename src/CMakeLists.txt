@@ -10,9 +10,15 @@ add_library(iptvcore STATIC
     core/Database.cpp
     core/SourceStore.h
     core/SourceStore.cpp
+    core/GzipDevice.h
+    core/GzipDevice.cpp
+    core/XmltvParser.h
+    core/XmltvParser.cpp
+    core/EpgStore.h
+    core/EpgStore.cpp
 )
 target_include_directories(iptvcore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core)
-target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Sql)
+target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Sql ZLIB::ZLIB)
 
 qt_add_executable(iptvplayer
     main.cpp
@@ -21,6 +27,8 @@ qt_add_executable(iptvplayer
     app/NetworkFactory.h
     app/NetworkFactory.cpp
     app/SourceManager.h
+    app/EpgManager.h
+    app/EpgManager.cpp
     app/SourceManager.cpp
     models/SourceListModel.h
     models/SourceListModel.cpp
@@ -48,6 +56,7 @@ set(QML_SOURCES
     qml/ChannelDelegate.qml
     qml/LivePage.qml
     qml/AddSourcePage.qml
+    qml/GuidePage.qml
 )
 set(QML_RESOURCES
     qml/icons/add.svg
@@ -56,6 +65,7 @@ set(QML_RESOURCES
     qml/icons/folder.svg
     qml/icons/fullscreen-exit.svg
     qml/icons/fullscreen.svg
+    qml/icons/guide.svg
     qml/icons/info.svg
     qml/icons/list.svg
     qml/icons/more.svg

@@ -1,5 +1,6 @@
 #include "SourceStore.h"
 
+#include "EpgStore.h"
 #include "XtreamApi.h"
 
 #include <QHash>
@@ -29,7 +30,7 @@ QDateTime fromEpoch(qint64 secs)
 
 const QString kSourceColumns = QStringLiteral(
         "id, name, type, url, username, password, output_format, epg_url, status, expires_at, "
-        "max_connections, live_count, last_sync, created_at");
+        "max_connections, live_count, last_sync, created_at, epg_last_sync, epg_count");
 
 SourceRecord readSource(const QSqlQuery &q)
 {
@@ -48,6 +49,8 @@ SourceRecord readSource(const QSqlQuery &q)
     s.liveCount = q.value(11).toInt();
     s.lastSync = fromEpoch(q.value(12).toLongLong());
     s.createdAt = fromEpoch(q.value(13).toLongLong());
+    s.epgLastSync = fromEpoch(q.value(14).toLongLong());
+    s.epgCount = q.value(15).toInt();
     return s;
 }
 
@@ -221,6 +224,14 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
     q.addBindValue(sourceId);
     if (!q.exec())
         return fail(q);
+
+    // Re-attach the existing TV guide to the new channel rows.
+    EpgStore epg(m_db);
+    if (!epg.linkChannels(sourceId)) {
+        m_lastError = epg.lastError();
+        m_db.rollback();
+        return false;
+    }
 
     if (!m_db.commit()) {
         m_lastError = m_db.lastError().text();

@@ -22,6 +22,7 @@ Page {
 
     signal backRequested()
     signal channelActivated(int index)
+    signal guideRequested()
 
     function playIndex(index) {
         if (index >= 0 && index < channels.count)
@@ -80,6 +81,7 @@ Page {
             }
         }
         SourceManager.refreshIfStale(sourceId, 24)
+        EpgManager.refreshIfStale(sourceId, 12)
         channelList.forceActiveFocus()
     }
 
@@ -141,12 +143,18 @@ Page {
                 }
             }
             IconButton {
+                iconName: "guide"
+                tip: qsTr("TV guide")
+                onClicked: page.guideRequested()
+            }
+            IconButton {
                 iconName: "retry"
-                tip: qsTr("Update channel list")
+                tip: qsTr("Update channel list and TV guide")
                 enabled: !SourceManager.busy
                 onClicked: {
                     page.errorText = ""
                     SourceManager.refresh(page.sourceId)
+                    EpgManager.refresh(page.sourceId)
                 }
             }
         }
@@ -188,6 +196,24 @@ Page {
                     visible: SourceManager.canCancel
                     onClicked: SourceManager.cancel()
                 }
+            }
+        }
+
+        // TV guide download (slim, it runs in the background)
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: AppTheme.spacing
+            Layout.rightMargin: AppTheme.spacing
+            visible: EpgManager.busy && EpgManager.activeSourceId === page.sourceId && !page.syncing
+            Label {
+                text: EpgManager.statusText
+                color: AppTheme.textSecondary
+                font.pixelSize: 12
+            }
+            ProgressBar {
+                Layout.fillWidth: true
+                indeterminate: EpgManager.progress < 0
+                value: Math.max(0, EpgManager.progress)
             }
         }
 

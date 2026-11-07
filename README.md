@@ -8,13 +8,17 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.2 (milestone 2): watch live TV from your provider.**
+**Version 0.3 (milestone 3): live TV with a TV guide.**
 
 - Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
   Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
 - Browse live channels by category, search by name (accents ignored), mark favorites
-- Channel logos are cached on disk; channel lists are stored locally and refreshed
-  automatically once a day (or with the refresh button)
+- **TV guide:** what's on now (with progress) under every channel, now/next in the player,
+  and a full guide grid (3 days, tap a program for details or to watch the channel).
+  Xtream guides are downloaded automatically; for M3U the playlist's guide link
+  (`url-tvg`) or the one you enter is used. `.xml.gz` guides are supported.
+- Channel logos are cached on disk; channel lists refresh once a day and the guide
+  every 12 hours (or use the refresh button)
 - Player: previous/next channel, channel list panel, type a channel number to jump,
   stream info panel, full screen, volume, reconnect
 - "Continue watching" on the home page; the last provider reopens on start-up
@@ -22,7 +26,7 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 - Android: screen stays on while playing; stream stops in the background and resumes
   when you return
 
-Next: TV guide (milestone 3), then movies and series (milestone 4).
+Next: movies and series (milestone 4), then a design pass over the whole UI.
 
 ### Where your data is stored
 
@@ -91,7 +95,7 @@ Keep `release.keystore` safe and out of the repository.
 ## Building from source
 
 Requirements: **Qt 6.8 or newer** (CI uses 6.10) with Qt Quick, Quick Controls 2, Multimedia and SVG; CMake ≥ 3.21,
-Ninja and a C++17 compiler. Qt 6.4+ also builds, but older Qt Multimedia versions are much
+Ninja, a C++17 compiler and zlib (downloaded automatically if missing, e.g. on Windows). Qt 6.4+ also builds, but older Qt Multimedia versions are much
 less reliable for streaming.
 
 ### Arch Linux
@@ -124,15 +128,16 @@ Qt Creator (it needs JDK 17, the Android SDK and NDK r27c).
 ```
 src/
   main.cpp                 app entry point (+ --smoke-test mode)
-  core/                    no UI: M3U parser, Xtream API, SQLite storage (unit tested)
+  core/                    no UI: M3U/XMLTV parsers, Xtream API, SQLite storage (unit tested)
   app/AppSettings.*        persisted settings, exposed to QML
   app/SourceManager.*      add/refresh/remove providers (download, parse, save)
+  app/EpgManager.*         download and import TV guides; now/next queries
   models/                  list models for QML: providers, categories, channels
   player/PlayerBackend.h   player interface (allows other engines later, e.g. mpv)
   player/QtMultimediaBackend.*  Qt Multimedia implementation
   player/PlayerController.*     QML-facing player (wake lock, background handling)
   platform/ScreenWakeLock.*     keep screen on (Android)
-  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, PlayerPage, ...
+  qml/                     UI: Main, HomePage, AddSourcePage, LivePage, GuidePage, PlayerPage, ...
 tests/                     unit tests and fixtures (sample M3U, Xtream responses)
 .github/workflows/build.yml  CI for Linux, Windows, Android
 ```

@@ -114,6 +114,13 @@ QUrl XtreamApi::apiUrl(const XtreamCredentials &creds, const QString &action)
     return url;
 }
 
+QUrl XtreamApi::epgUrl(const XtreamCredentials &creds)
+{
+    QUrl url = apiUrl(creds);
+    url.setPath(creds.server.path() + QStringLiteral("/xmltv.php"));
+    return url;
+}
+
 QUrl XtreamApi::liveStreamUrl(const XtreamCredentials &creds, const QString &streamId,
                               const QString &format)
 {

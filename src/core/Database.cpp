@@ -36,7 +36,7 @@ void configure(QSqlDatabase &db)
 {
     QSqlQuery q(db);
     q.exec(QStringLiteral("PRAGMA foreign_keys = ON"));
-    q.exec(QStringLiteral("PRAGMA busy_timeout = 10000"));
+    q.exec(QStringLiteral("PRAGMA busy_timeout = 30000"));
     q.exec(QStringLiteral("PRAGMA synchronous = NORMAL"));
 }
 
@@ -91,6 +91,27 @@ const QList<QStringList> &migrations()
                 ext_id TEXT NOT NULL,
                 added_at INTEGER NOT NULL,
                 PRIMARY KEY (source_id, kind, ext_id)))"),
+        },
+        // Version 2: TV guide
+        {
+            QStringLiteral("ALTER TABLE sources ADD COLUMN epg_last_sync INTEGER NOT NULL DEFAULT 0"),
+            QStringLiteral("ALTER TABLE sources ADD COLUMN epg_count INTEGER NOT NULL DEFAULT 0"),
+            QStringLiteral("ALTER TABLE channels ADD COLUMN epg_key TEXT NOT NULL DEFAULT ''"),
+            QStringLiteral(R"(CREATE TABLE epg_channels (
+                source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                channel_key TEXT NOT NULL,
+                name_key TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (source_id, channel_key, name_key)))"),
+            QStringLiteral("CREATE INDEX idx_epg_channels_name ON epg_channels(source_id, name_key)"),
+            QStringLiteral(R"(CREATE TABLE epg_programs (
+                source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                channel_key TEXT NOT NULL,
+                start INTEGER NOT NULL,
+                stop INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                sub_title TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT ''))"),
+            QStringLiteral("CREATE INDEX idx_epg_programs ON epg_programs(source_id, channel_key, start)"),
         },
     };
     return list;
@@ -199,6 +220,11 @@ int Database::schemaVersion()
     if (q.exec(QStringLiteral("PRAGMA user_version")) && q.next())
         return q.value(0).toInt();
     return 0;
+}
+
+int Database::latestSchemaVersion()
+{
+    return int(migrations().size());
 }
 
 DataNotifier *DataNotifier::instance()

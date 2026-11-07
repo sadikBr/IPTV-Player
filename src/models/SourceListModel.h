@@ -25,6 +25,8 @@ public:
         ExpiresAtRole,
         StatusRole,
         MaxConnectionsRole,
+        EpgLastSyncRole,
+        EpgCountRole,
     };
 
     explicit SourceListModel(QObject *parent = nullptr);

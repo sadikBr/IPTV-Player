@@ -51,10 +51,15 @@ ApplicationWindow {
                                         "autoPlayExtId": autoPlayExtId || "" })
     }
 
-    function playChannel(livePage, index) {
-        stack.push(playerPageComponent, { "channelModel": livePage.channelModel,
+    function playChannel(channelModel, sourceId, index) {
+        stack.push(playerPageComponent, { "channelModel": channelModel,
                                           "channelIndex": index,
-                                          "sourceId": livePage.sourceId })
+                                          "sourceId": sourceId })
+    }
+
+    function openGuide(livePage) {
+        stack.push(guidePageComponent, { "channelModel": livePage.channelModel,
+                                         "sourceId": livePage.sourceId })
     }
 
     // Used by the --smoke-test mode (see main.cpp).
@@ -70,7 +75,13 @@ ApplicationWindow {
     function smokeAddXtream(server, username, password) {
         SourceManager.addXtreamSource("Smoke test", server, username, password, "ts")
     }
+    function smokeOpenGuide() {
+        if (stack.currentItem && stack.currentItem.guideRequested)
+            stack.currentItem.guideRequested()
+    }
     function smokePlayFirst() {
+        if (stack.currentItem && stack.currentItem.backRequested && !stack.currentItem.playIndex)
+            stack.pop() // leave the guide
         if (stack.currentItem && stack.currentItem.playIndex)
             stack.currentItem.playIndex(0)
     }
@@ -81,6 +92,8 @@ ApplicationWindow {
         function onFinished(id, ok, error, isNew) {
             if (ok && isNew)
                 window.openSource(id)
+            if (ok)
+                EpgManager.refreshIfStale(id, 12)
         }
     }
 
@@ -105,7 +118,19 @@ ApplicationWindow {
         LivePage {
             id: livePage
             onBackRequested: stack.pop()
-            onChannelActivated: (index) => window.playChannel(livePage, index)
+            onChannelActivated: (index) => window.playChannel(livePage.channelModel,
+                                                              livePage.sourceId, index)
+            onGuideRequested: window.openGuide(livePage)
+        }
+    }
+
+    Component {
+        id: guidePageComponent
+        GuidePage {
+            id: guidePage
+            onBackRequested: stack.pop()
+            onChannelActivated: (index) => window.playChannel(guidePage.channelModel,
+                                                              guidePage.sourceId, index)
         }
     }
 

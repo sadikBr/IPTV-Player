@@ -205,16 +205,24 @@ Each phase ends with something that runs and can be tested on a real device.
 **→ First usable version: you can watch live TV.**
 
 ### Phase 3 — EPG (≈ 1 week)
-- [ ] Streaming XMLTV loader on a background thread, with a time window
-- [ ] Now/next under each channel and in the player overlay
-- [ ] EPG grid (channels × time) with virtualization so it stays smooth
-- [ ] Xtream `get_short_epg` fallback when there is no XMLTV
+- [x] Streaming XMLTV loader on a background thread, with a time window (gzip supported)
+- [x] Now/next under each channel and in the player overlay
+- [x] EPG grid (channels × time) with virtualization so it stays smooth
+- [ ] Xtream `get_short_epg` fallback when there is no XMLTV (only if `xmltv.php` turns out to be missing for some providers)
 
 ### Phase 4 — VOD & series (≈ 1 week)
 - [ ] Movies: categories → poster grid → detail page → play
 - [ ] Series: series → seasons → episodes → play, plus "next episode"
 - [ ] Seek bar, audio/subtitle track selection
 - [ ] Resume position / "Continue watching" row
+
+### Phase 4b — Design pass (≈ 1 week)
+Once all main screens exist, redesign them together so they feel like one product:
+- [ ] Visual direction: typography, spacing, colour, icons, motion; light touches of brand
+- [ ] Home as a dashboard: continue watching, favorites row, recently added movies/series
+- [ ] Poster/backdrop-led screens for movies and series; better empty and loading states
+- [ ] Player overlay redesign (bigger touch targets on phones, cleaner info layout)
+- [ ] Review on phone, tablet, desktop and TV distance
 
 ### Phase 5 — Polish & platform work (≈ 1–2 weeks)
 - [ ] Responsive layouts: phone portrait, phone landscape, tablet, desktop
@@ -268,6 +276,7 @@ Each phase ends with something that runs and can be tested on a real device.
 
 - **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/Android, release on `v*` tags
 - **Phase 1:** done — URL player with controls, stream info, wake lock, background handling
-- **Phase 2:** done — Xtream + M3U providers, live TV browser, favorites, zapping.
-  **To do (you):** add your provider on PC and phone and report what doesn't work
-- **Next:** Phase 3 — TV guide (EPG)
+- **Phase 2:** done — Xtream + M3U providers, live TV browser, favorites, zapping
+- **Phase 3:** done — TV guide: now/next in the channel list and player, guide grid
+- **Next:** Phase 4 — movies and series (your provider has them; M3U entries are already stored)
+- **Then:** Phase 4b — UI design pass (requested: the current look is functional but plain)

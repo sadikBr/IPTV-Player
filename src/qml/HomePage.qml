@@ -224,6 +224,8 @@ Page {
                     required property var lastSync
                     required property var expiresAt
                     required property string status
+                    required property int epgCount
+                    required property var epgLastSync
                     readonly property bool syncing: SourceManager.busy
                                                     && SourceManager.activeSourceId === sourceId
 
@@ -274,6 +276,9 @@ Page {
                                       ? SourceManager.statusText
                                       : page.channelCount(sourceCard.liveCount) + " · "
                                         + qsTr("updated %1").arg(page.timeAgo(sourceCard.lastSync))
+                                        + (sourceCard.epgCount > 0
+                                           ? " · " + qsTr("TV guide %1").arg(page.timeAgo(sourceCard.epgLastSync))
+                                           : "")
                                 color: AppTheme.textSecondary
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -314,6 +319,11 @@ Page {
                                     text: qsTr("Update channel list")
                                     enabled: !SourceManager.busy
                                     onTriggered: SourceManager.refresh(sourceCard.sourceId)
+                                }
+                                MenuItem {
+                                    text: qsTr("Update TV guide")
+                                    enabled: EpgManager.canHaveGuide(sourceCard.sourceId)
+                                    onTriggered: EpgManager.refresh(sourceCard.sourceId)
                                 }
                                 MenuItem {
                                     text: qsTr("Remove")

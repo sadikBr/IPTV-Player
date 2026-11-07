@@ -19,4 +19,9 @@ QtObject {
 
     // Phones in portrait are narrower than this.
     readonly property int compactWidth: 600
+
+    // "18:30" (24-hour, no seconds)
+    function time(date) {
+        return date ? date.toLocaleTimeString(Qt.locale(), "HH:mm") : ""
+    }
 }

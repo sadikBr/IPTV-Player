@@ -25,6 +25,7 @@ public:
     static void closeThreadConnection();
 
     static int schemaVersion();
+    static int latestSchemaVersion();
 };
 
 // Broadcasts data changes so every model can refresh.
@@ -39,6 +40,7 @@ signals:
     void sourcesChanged();
     void contentChanged(int sourceId);
     void favoritesChanged(int sourceId);
+    void epgChanged(int sourceId);
 
 private:
     using QObject::QObject;

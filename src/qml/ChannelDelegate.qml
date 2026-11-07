@@ -12,12 +12,14 @@ ItemDelegate {
     required property string logo
     required property int number
     required property bool favorite
+    required property string nowTitle
+    required property real nowProgress
 
     property bool current: false
 
     signal favoriteClicked()
 
-    height: 56
+    height: 60
     padding: 0
     leftPadding: AppTheme.spacing
     rightPadding: 4
@@ -69,12 +71,43 @@ ItemDelegate {
             }
         }
 
-        Label {
-            text: root.name
-            elide: Text.ElideRight
-            color: root.current ? AppTheme.accent : AppTheme.textPrimary
+        ColumnLayout {
             Layout.fillWidth: true
-            font.pixelSize: 15
+            spacing: 2
+
+            Label {
+                text: root.name
+                elide: Text.ElideRight
+                color: root.current ? AppTheme.accent : AppTheme.textPrimary
+                Layout.fillWidth: true
+                font.pixelSize: 15
+            }
+
+            // What's on now (TV guide)
+            RowLayout {
+                visible: root.nowTitle.length > 0
+                Layout.fillWidth: true
+                spacing: 8
+                Label {
+                    text: root.nowTitle
+                    elide: Text.ElideRight
+                    color: AppTheme.textSecondary
+                    font.pixelSize: 12
+                    Layout.fillWidth: true
+                }
+                Rectangle {
+                    Layout.preferredWidth: 48
+                    Layout.preferredHeight: 3
+                    radius: 1.5
+                    color: "#33FFFFFF"
+                    Rectangle {
+                        width: parent.width * root.nowProgress
+                        height: parent.height
+                        radius: 1.5
+                        color: AppTheme.accent
+                    }
+                }
+            }
         }
 
         IconButton {

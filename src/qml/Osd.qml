@@ -34,5 +34,6 @@ Rectangle {
         color: "white"
         font.pixelSize: 20
         font.bold: true
+        horizontalAlignment: Text.AlignHCenter
     }
 }

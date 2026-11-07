@@ -2,6 +2,9 @@
 
 #include "CategoryListModel.h"
 #include "Database.h"
+#include "EpgStore.h"
+
+#include <QDateTime>
 
 #include <QSqlError>
 #include <QSqlQuery>
@@ -22,6 +25,47 @@ ChannelListModel::ChannelListModel(QObject *parent) : QAbstractListModel(parent)
     });
     connect(DataNotifier::instance(), &DataNotifier::sourcesChanged, this,
             &ChannelListModel::reloadSource);
+    connect(DataNotifier::instance(), &DataNotifier::epgChanged, this, [this](int sourceId) {
+        // Channel/guide links may have changed too.
+        if (sourceId == m_sourceId)
+            reload();
+    });
+
+    // Programs change over time: refresh "now" once a minute.
+    m_guideTimer.setInterval(60 * 1000);
+    connect(&m_guideTimer, &QTimer::timeout, this, &ChannelListModel::refreshGuide);
+    m_guideTimer.start();
+}
+
+const ChannelListModel::NowNext &ChannelListModel::nowNext(int row) const
+{
+    auto it = m_guideCache.constFind(row);
+    if (it != m_guideCache.constEnd())
+        return *it;
+
+    NowNext info;
+    const Row &r = m_rows.at(row);
+    if (!r.epgKey.isEmpty()) {
+        const qint64 now = QDateTime::currentSecsSinceEpoch();
+        const auto programs = EpgStore(Database::connection()).nowNext(m_sourceId, r.epgKey, now);
+        int i = 0;
+        if (i < programs.size() && programs.at(i).start <= now) {
+            const auto &p = programs.at(i++);
+            info.nowTitle = p.title;
+            info.nowProgress = qBound(0.0, double(now - p.start) / double(qMax<qint64>(1, p.stop - p.start)), 1.0);
+        }
+        if (i < programs.size())
+            info.nextTitle = programs.at(i).title;
+    }
+    return *m_guideCache.insert(row, info);
+}
+
+void ChannelListModel::refreshGuide()
+{
+    m_guideCache.clear();
+    if (!m_rows.isEmpty())
+        emit dataChanged(index(0), index(int(m_rows.size()) - 1),
+                         { NowTitleRole, NowProgressRole, NextTitleRole });
 }
 
 void ChannelListModel::setSourceId(int id)
@@ -76,6 +120,14 @@ QVariant ChannelListModel::data(const QModelIndex &index, int role) const
         return row.number;
     case FavoriteRole:
         return row.favorite;
+    case EpgKeyRole:
+        return row.epgKey;
+    case NowTitleRole:
+        return nowNext(index.row()).nowTitle;
+    case NowProgressRole:
+        return nowNext(index.row()).nowProgress;
+    case NextTitleRole:
+        return nowNext(index.row()).nextTitle;
     default:
         return {};
     }
@@ -86,6 +138,8 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
     return {
         { ChannelIdRole, "channelId" }, { ExtIdRole, "extId" },   { NameRole, "name" },
         { LogoRole, "logo" },           { NumberRole, "number" }, { FavoriteRole, "favorite" },
+        { EpgKeyRole, "epgKey" },       { NowTitleRole, "nowTitle" },
+        { NowProgressRole, "nowProgress" }, { NextTitleRole, "nextTitle" },
     };
 }
 
@@ -98,6 +152,7 @@ QVariantMap ChannelListModel::get(int row) const
         { QStringLiteral("channelId"), r.id }, { QStringLiteral("extId"), r.extId },
         { QStringLiteral("name"), r.name },    { QStringLiteral("logo"), r.logo },
         { QStringLiteral("number"), r.number }, { QStringLiteral("favorite"), r.favorite },
+        { QStringLiteral("epgKey"), r.epgKey },
     };
 }
 
@@ -153,7 +208,7 @@ void ChannelListModel::reload()
     QList<Row> rows;
     if (m_sourceId > 0) {
         QString sql = QStringLiteral(
-                "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, "
+                "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
                 "(f.ext_id IS NOT NULL) FROM channels c "
                 "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
                 "AND f.ext_id = c.ext_id "
@@ -186,8 +241,8 @@ void ChannelListModel::reload()
         if (q.exec()) {
             while (q.next()) {
                 rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(),
-                              q.value(3).toString(), q.value(4).toString(), q.value(5).toInt(),
-                              q.value(6).toBool() });
+                              q.value(3).toString(), q.value(4).toString(), q.value(6).toString(),
+                              q.value(5).toInt(), q.value(7).toBool() });
             }
         } else {
             qWarning("Channel query failed: %s", qPrintable(q.lastError().text()));
@@ -197,6 +252,7 @@ void ChannelListModel::reload()
     const bool countChange = rows.size() != m_rows.size();
     beginResetModel();
     m_rows = std::move(rows);
+    m_guideCache.clear();
     endResetModel();
     if (countChange)
         emit countChanged();

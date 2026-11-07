@@ -25,6 +25,13 @@ Page {
     property bool channelListVisible: false
     property bool currentFavorite: false
     property string typedNumber: ""
+    property string currentEpgKey: ""
+    property var program: ({})
+
+    function updateProgram() {
+        program = sourceId > 0 && currentEpgKey.length > 0
+                ? EpgManager.nowNext(sourceId, currentEpgKey) : ({})
+    }
 
     signal closeRequested()
 
@@ -63,6 +70,8 @@ Page {
         channelIndex = index
         streamTitle = channel.number + "  " + channel.name
         currentFavorite = channel.favorite
+        currentEpgKey = channel.epgKey
+        updateProgram()
         streamUrl = channelModel.streamUrl(index)
         player.open(streamUrl)
         AppSettings.setLastChannel(sourceId, channel.extId, channel.name)
@@ -112,6 +121,13 @@ Page {
             if (player.playing && !controls.interacting)
                 page.controlsVisible = false
         }
+    }
+
+    Timer {
+        interval: 30000
+        running: page.currentEpgKey.length > 0
+        repeat: true
+        onTriggered: page.updateProgram()
     }
 
     // Typing a channel number jumps to it after a short pause.
@@ -231,8 +247,8 @@ Page {
         id: channelOsd
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: 80
-        text: page.streamTitle
+        anchors.topMargin: 90
+        text: page.program.now ? page.streamTitle + "\n" + page.program.now.title : page.streamTitle
     }
 
     Osd {
@@ -259,6 +275,7 @@ Page {
         infoVisible: page.infoVisible
         hasChannels: page.hasChannels
         favorite: page.currentFavorite
+        program: page.program
         opacity: page.controlsVisible || !player.playing ? 1 : 0
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 200 } }

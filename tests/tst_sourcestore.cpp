@@ -45,7 +45,7 @@ private slots:
         QString error;
         QVERIFY2(Database::initialize(m_dir.filePath(QStringLiteral("test.sqlite")), &error),
                  qPrintable(error));
-        QCOMPARE(Database::schemaVersion(), 1);
+        QCOMPARE(Database::schemaVersion(), Database::latestSchemaVersion());
     }
 
     void migrationIsIdempotent()
@@ -53,7 +53,7 @@ private slots:
         QString error;
         QVERIFY2(Database::initialize(m_dir.filePath(QStringLiteral("test.sqlite")), &error),
                  qPrintable(error));
-        QCOMPARE(Database::schemaVersion(), 1);
+        QCOMPARE(Database::schemaVersion(), Database::latestSchemaVersion());
     }
 
     void addAndReadSource()

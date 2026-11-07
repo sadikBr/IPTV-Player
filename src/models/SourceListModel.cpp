@@ -42,6 +42,10 @@ QVariant SourceListModel::data(const QModelIndex &index, int role) const
         return s.status;
     case MaxConnectionsRole:
         return s.maxConnections;
+    case EpgLastSyncRole:
+        return s.epgLastSync;
+    case EpgCountRole:
+        return s.epgCount;
     default:
         return {};
     }
@@ -60,6 +64,8 @@ QHash<int, QByteArray> SourceListModel::roleNames() const
         { ExpiresAtRole, "expiresAt" },
         { StatusRole, "status" },
         { MaxConnectionsRole, "maxConnections" },
+        { EpgLastSyncRole, "epgLastSync" },
+        { EpgCountRole, "epgCount" },
     };
 }
 

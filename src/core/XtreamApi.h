@@ -42,6 +42,8 @@ public:
     static bool parseCredentialsUrl(const QString &url, XtreamCredentials *out);
 
     static QUrl apiUrl(const XtreamCredentials &creds, const QString &action = {});
+    // Full XMLTV guide of the account.
+    static QUrl epgUrl(const XtreamCredentials &creds);
     static QUrl liveStreamUrl(const XtreamCredentials &creds, const QString &streamId,
                               const QString &format);
 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<tv generator-info-name="test">
+  <channel id="BBC1.uk">
+    <display-name lang="en">BBC One</display-name>
+    <display-name>BBC One HD</display-name>
+    <icon src="http://logos.example.com/bbc1.png"/>
+  </channel>
+  <channel id="cnn.us"><display-name>CNN International</display-name></channel>
+  <channel id="named.only"><display-name>Café TV Élite</display-name></channel>
+  <programme start="20261107170000 +0000" stop="20261107180000 +0000" channel="BBC1.uk">
+    <title lang="en">Antiques Roadshow</title>
+    <sub-title>Series 48, Episode 3</sub-title>
+    <desc lang="en">Valuable &amp; surprising finds.</desc>
+    <category>Factual</category>
+  </programme>
+  <programme start="20261107180000 +0000" stop="20261107183000 +0000" channel="BBC1.uk">
+    <title>BBC News at Six</title>
+    <desc>The latest national and international news.</desc>
+  </programme>
+  <programme start="20261107193000 +0100" stop="20261107200000 +0100" channel="BBC1.uk">
+    <title>Weather</title>
+  </programme>
+  <programme start="20261107180000" stop="20261107190000" channel="cnn.us">
+    <title>World News</title>
+  </programme>
+  <programme start="20261107180000 +0000" channel="named.only">
+    <title>No Stop Time</title>
+  </programme>
+  <programme start="20250101000000 +0000" stop="20250101010000 +0000" channel="cnn.us">
+    <title>Ancient History</title>
+  </programme>
+  <programme start="20261107180000 +0000" stop="20261107190000 +0000" channel="orphan.id">
+    <title>Program Without Channel Element</title>
+  </programme>
+  <programme start="garbage" stop="20261107190000 +0000" channel="cnn.us">
+    <title>Bad Time</title>
+  </programme>
+</tv>

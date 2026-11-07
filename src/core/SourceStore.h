@@ -27,6 +27,8 @@ struct SourceRecord
     int liveCount = 0;
     QDateTime lastSync;
     QDateTime createdAt;
+    QDateTime epgLastSync;
+    int epgCount = 0;
 
     bool isXtream() const { return type == QLatin1String("xtream"); }
 };

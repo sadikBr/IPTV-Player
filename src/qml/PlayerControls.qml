@@ -14,6 +14,8 @@ Item {
     property bool infoVisible: false
     property bool hasChannels: false
     property bool favorite: false
+    // TV guide: {now: {...}, next: {...}} from EpgManager.nowNext()
+    property var program: ({})
     readonly property bool compact: width < AppTheme.compactWidth
     readonly property bool interacting: seekSlider.pressed || volumeSlider.pressed
 
@@ -58,12 +60,51 @@ Item {
                 tip: qsTr("Back")
                 onClicked: root.backClicked()
             }
-            Label {
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: root.title
-                elide: Text.ElideMiddle
-                color: "white"
-                font.pixelSize: 16
+                spacing: 2
+                Label {
+                    Layout.fillWidth: true
+                    text: root.title
+                    elide: Text.ElideMiddle
+                    color: "white"
+                    font.pixelSize: 16
+                }
+                // Now / next from the TV guide
+                RowLayout {
+                    visible: root.program.now !== undefined
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Label {
+                        text: root.program.now
+                              ? root.program.now.title + "  " + AppTheme.time(root.program.now.start)
+                                + "–" + AppTheme.time(root.program.now.stop)
+                              : ""
+                        color: "#DDFFFFFF"
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: root.width * 0.5
+                    }
+                    Rectangle {
+                        Layout.preferredWidth: 60
+                        Layout.preferredHeight: 3
+                        color: "#44FFFFFF"
+                        Rectangle {
+                            width: parent.width * (root.program.now ? root.program.now.progress : 0)
+                            height: parent.height
+                            color: AppTheme.accent
+                        }
+                    }
+                    Label {
+                        visible: root.program.next !== undefined && !root.compact
+                        text: root.program.next ? qsTr("Next: %1").arg(root.program.next.title) : ""
+                        color: "#99FFFFFF"
+                        font.pixelSize: 13
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                    Item { Layout.fillWidth: !root.program.next || root.compact }
+                }
             }
             IconButton {
                 iconName: root.favorite ? "star" : "star-outline"
