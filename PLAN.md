@@ -1,6 +1,6 @@
 # IPTV Player — Project Plan
 
-A cross-platform app (Windows, macOS, Linux, Android, iOS) to connect to an IPTV
+A cross-platform app (Windows, macOS, Linux, Android) to connect to an IPTV
 provider and watch live TV, movies (VOD) and series, with an electronic program
 guide (EPG).
 
@@ -45,7 +45,7 @@ guide (EPG).
 | XML (EPG) | `QXmlStreamReader` (streaming) | XMLTV files can be 50–200 MB, so they must not be loaded into memory all at once |
 | Storage | **SQLite** via Qt SQL | Channels, EPG, favorites, watch history |
 | Secrets | **QtKeychain** | Keep provider passwords in the OS keychain, not in plain text |
-| Build | **CMake** + `qt_add_qml_module` | The standard for Qt 6, needed for Android/iOS packaging |
+| Build | **CMake** + `qt_add_qml_module` | The standard for Qt 6, needed for Android packaging |
 | CI | **GitHub Actions** + `jurplel/install-qt-action` | Build all platforms on each push |
 | Tests | **Qt Test** | Parsers and API client tested with recorded fixtures |
 
@@ -56,11 +56,9 @@ Putting it behind an interface lets us add an mpv backend later where
 compatibility matters most, without touching the UI.
 
 ### Licensing note
-Qt is available under LGPLv3. Dynamic linking (the default on desktop and
-Android) is fine for personal and open-source use. **iOS needs static linking**,
-which has LGPL obligations (you must let users relink). For personal sideloaded
-use this is fine; publishing on the App Store needs either a commercial Qt
-license or careful compliance. Decide this before working on iOS.
+Qt is used under LGPLv3 with dynamic linking (the default on desktop and
+Android), which is fine for personal use and sharing with friends. iOS is out
+of scope; it would need static linking, which has extra LGPL obligations.
 
 ---
 
@@ -109,7 +107,7 @@ IPTV-Player/
 │   ├── data/          # Database, Repository, migrations
 │   ├── models/        # QAbstractListModel subclasses for QML
 │   ├── player/        # PlayerController, backends
-│   └── platform/      # keychain, screen wake-lock, Android/iOS bits
+│   └── platform/      # keychain, screen wake-lock, Android bits
 ├── qml/
 │   ├── Main.qml
 │   ├── pages/
@@ -184,16 +182,16 @@ history(item_kind, item_id, position_ms, duration_ms, watched_at)
 Each phase ends with something that runs and can be tested on a real device.
 
 ### Phase 0 — Project setup (≈ 2–3 days)
-- [ ] CMake + Qt 6.8 skeleton, `Main.qml` with a window
-- [ ] Builds and runs on Linux/Windows/macOS **and** an Android device
-- [ ] GitHub Actions: desktop builds + Android APK artifact
-- [ ] clang-format, `.gitignore`, README with build instructions
+- [x] CMake + Qt 6.8 skeleton, `Main.qml` with a window
+- [ ] Builds and runs on Linux/Windows/macOS **and** an Android device (CI builds; needs a check on your devices)
+- [x] GitHub Actions: desktop builds + Android APK artifact
+- [x] clang-format, `.gitignore`, README with build instructions
 
 ### Phase 1 — Play a stream (≈ 3–4 days)
-- [ ] `PlayerBackend` interface + `QtMultimediaBackend`
-- [ ] Player page: paste a URL, play/pause, volume, fullscreen, buffering indicator, error message
+- [x] `PlayerBackend` interface + `QtMultimediaBackend`
+- [x] Player page: paste a URL, play/pause, volume, fullscreen, buffering indicator, error message
 - [ ] Test with real HLS and TS streams from your provider on desktop and phone
-- [ ] Keep the screen awake while playing (mobile), handle app pause/resume
+- [x] Keep the screen awake while playing (mobile), handle app pause/resume
 
 ### Phase 2 — Sources & live TV (≈ 1–2 weeks)
 - [ ] `M3uProvider` (parser + tests with fixtures)
@@ -229,8 +227,7 @@ Each phase ends with something that runs and can be tested on a real device.
 ### Phase 6 — Optional extras
 - [ ] `MpvBackend` on desktop for better codec/stream support
 - [ ] Catch-up/timeshift (Xtream `tv_archive` channels)
-- [ ] iOS build (after the licensing decision)
-- [ ] Picture-in-picture (Android/iOS), Chromecast
+- [ ] Picture-in-picture (Android), Chromecast
 - [ ] Multiple profiles, parental PIN, Stalker portal
 
 **Rough total for v1.0 (Phases 0–5):** 6–9 weeks part-time.
@@ -244,9 +241,8 @@ Each phase ends with something that runs and can be tested on a real device.
 | Some streams don't play in Qt Multimedia (codec, broken TS) | Backend interface; mpv backend; try `.m3u8` vs `.ts` as a setting; custom User-Agent |
 | Huge playlists/EPG are slow or use too much memory | Streaming parsers, background threads, SQLite cache, model virtualization in QML |
 | Providers block unknown clients or limit connections | Configurable User-Agent; always stop the previous stream before starting a new one |
-| Android/iOS build setup is complicated | Set up the Android build in Phase 0, not at the end |
-| Plain-HTTP providers blocked on mobile | Enable cleartext traffic on Android (`usesCleartextTraffic`) and an ATS exception on iOS |
-| iOS LGPL/static-linking terms | Decide on license approach before Phase 6 |
+| Android build setup is complicated | Set up the Android build in Phase 0, not at the end |
+| Plain-HTTP providers blocked on mobile | Not an issue for Qt: its networking and FFmpeg use native sockets, which Android’s cleartext policy does not cover. Revisit if a Java-based component is added |
 
 ---
 
@@ -257,14 +253,20 @@ Each phase ends with something that runs and can be tested on a real device.
 
 ---
 
-## 9. Open questions for you
-1. Which source type does your provider give you: Xtream login, an M3U URL, or both?
-2. Which devices matter most first? (For example: Windows PC + Android phone.) Do you need iOS or Android TV?
-3. Is this for personal use only, or do you plan to publish it (stores)? This affects licensing and packaging.
-4. Do you know the stream formats your provider uses (HLS `.m3u8`, `.ts`, H.265)?
+## 9. Decisions
+
+| Question | Answer | Consequence |
+|---|---|---|
+| Source type | Xtream login **and** M3U | Both providers are in scope for Phase 2 |
+| Target devices | **Desktop + Android** | iOS dropped. Android builds for arm64 and 32-bit ARM so cheap TV boxes work too |
+| Distribution | Personal, shared with friends | No store publishing: GitHub Releases with a Windows zip, macOS dmg and a signed Android APK |
+| Stream formats | Unknown | The player has a stream info panel (codec, resolution) to find out; testing in Phase 1 tells whether an mpv backend is needed |
 
 ---
 
-## 10. Next step
-Once the open questions are answered, start **Phase 0**: create the CMake/QML
-skeleton and the CI pipeline, and confirm it runs on your desktop and phone.
+## 10. Progress
+
+- **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/macOS/Android, release on `v*` tags
+- **Phase 1:** done — URL player with controls, stream info, wake lock, background handling.
+  **To do (you):** test real streams from your provider on PC and phone and note what fails
+- **Next:** Phase 2 — sources and live TV

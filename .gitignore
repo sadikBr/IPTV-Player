@@ -1,0 +1,16 @@
+# Build output
+/build*/
+/out/
+CMakeLists.txt.user*
+CMakeUserPresets.json
+*.autosave
+
+# IDEs
+.vscode/
+.idea/
+.qtcreator/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

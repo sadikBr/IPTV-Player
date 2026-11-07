@@ -1,0 +1,258 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_VERSION: '6.8.3'
+  QT_MODULES: 'qtmultimedia'
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev \
+            libxkbcommon-x11-0 libxcb-cursor0 libegl1 libpulse0 libfontconfig1
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: ${{ env.QT_MODULES }}
+          dir: ${{ runner.temp }}
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+        env:
+          IPTV_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-linux
+          path: screenshots/
+          if-no-files-found: ignore
+
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          dir: ${{ runner.temp }}
+          cache: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/IPTVPlayer | Out-Null
+          Copy-Item build/bin/IPTVPlayer.exe dist/IPTVPlayer/
+          windeployqt --release --qmldir src/qml --no-translations --no-system-d3d-compiler `
+            dist/IPTVPlayer/IPTVPlayer.exe
+          Compress-Archive -Path dist/IPTVPlayer -DestinationPath dist/IPTVPlayer-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IPTVPlayer-windows-x64
+          path: dist/IPTVPlayer-windows-x64.zip
+
+  macos:
+    name: macOS
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: ${{ env.QT_MODULES }}
+          dir: ${{ runner.temp }}
+          cache: true
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: |
+          macdeployqt build/bin/IPTVPlayer.app -qmldir=src/qml -dmg
+          mv build/bin/IPTVPlayer.dmg build/bin/IPTVPlayer-macos.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IPTVPlayer-macos
+          path: build/bin/IPTVPlayer-macos.dmg
+
+  android:
+    name: Android
+    runs-on: ubuntu-24.04
+    env:
+      NDK_VERSION: '26.1.10909125'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android NDK
+        run: |
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install "ndk;${NDK_VERSION}" > /dev/null
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+          sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install Qt (host)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          dir: ${{ runner.temp }}
+          cache: true
+          cache-key-prefix: qt-android-host
+          set-env: false
+
+      - name: Install Qt (Android arm64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: android
+          arch: android_arm64_v8a
+          modules: ${{ env.QT_MODULES }}
+          dir: ${{ runner.temp }}
+          cache: true
+          cache-key-prefix: qt-android-arm64
+          set-env: false
+
+      - name: Install Qt (Android armv7)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: android
+          arch: android_armv7
+          modules: ${{ env.QT_MODULES }}
+          dir: ${{ runner.temp }}
+          cache: true
+          cache-key-prefix: qt-android-armv7
+          set-env: false
+
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          KEYSTORE="$RUNNER_TEMP/release.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using the release keystore from repository secrets."
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret set. Signing with a temporary key;"\
+                 "installing a newer build will require uninstalling the old one first."
+            KEYSTORE_PASSWORD=temporary
+            KEY_ALIAS=iptvplayer
+            keytool -genkeypair -v -keystore "$KEYSTORE" -alias "$KEY_ALIAS" -keyalg RSA \
+              -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" \
+              -keypass "$KEYSTORE_PASSWORD" -dname "CN=IPTV Player"
+          fi
+          {
+            echo "QT_ANDROID_KEYSTORE_PATH=$KEYSTORE"
+            echo "QT_ANDROID_KEYSTORE_ALIAS=$KEY_ALIAS"
+            echo "QT_ANDROID_KEYSTORE_STORE_PASS=$KEYSTORE_PASSWORD"
+            echo "QT_ANDROID_KEYSTORE_KEY_PASS=$KEYSTORE_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: |
+          QT_BASE="$RUNNER_TEMP/Qt/$QT_VERSION"
+          "$QT_BASE/android_arm64_v8a/bin/qt-cmake" -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQT_HOST_PATH="$QT_BASE/gcc_64" \
+            -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
+            -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
+            -DQT_ANDROID_ABIS="arm64-v8a;armeabi-v7a" \
+            -DQT_ANDROID_SIGN_APK=ON
+
+      - name: Build APK
+        run: |
+          cmake --build build --target apk
+          APK=$(find build -path '*outputs/apk*' -name '*.apk' | head -n 1)
+          echo "Built: $APK"
+          mkdir -p dist && cp "$APK" dist/IPTVPlayer-android.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IPTVPlayer-android
+          path: dist/IPTVPlayer-android.apk
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows, macos, android]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: IPTVPlayer-*
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
