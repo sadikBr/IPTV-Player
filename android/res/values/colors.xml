@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same as AppTheme.background / AppTheme.accent in the app -->
+    <color name="iptv_background">#0B0B0D</color>
+    <color name="iptv_accent">#FF5A36</color>
+</resources>

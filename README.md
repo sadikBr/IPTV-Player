@@ -8,7 +8,7 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.6 (cinematic redesign): live TV, TV guide, movies and series.**
+**Version 0.7: live TV, TV guide, movies and series; automatic reconnect; installers.**
 
 - **Cinematic design:** neutral near-black surfaces with one warm accent, artwork-first
   screens, soft shadows, the Inter typeface; side navigation on desktop (Home, Live TV,
@@ -34,6 +34,9 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   right-click / long-press a category
 - **Settings:** manage providers (use, update, choose categories, guide time shift, remove),
   User-Agent, play a single stream URL
+- **Automatic reconnect:** when a stream that was playing drops, freezes or stays stuck
+  buffering, the player reconnects by itself (up to 5 tries). Live channels pick up at
+  "now", movies and episodes where they were
 - Player: seek bar, audio and subtitle tracks, previous/next channel or episode, channel
   list, channel number entry, stream info, full screen
 - Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)
@@ -69,16 +72,22 @@ run and download from **Artifacts**:
 
 | Artifact | Platform |
 |---|---|
-| `IPTVPlayer-windows-x64` | Windows 10/11 — unzip and run `IPTVPlayer.exe` |
+| `IPTVPlayer-windows-x64` | Windows 10/11 — `IPTVPlayer-setup-x64.exe` installs it (Start menu, uninstaller, updates in place; no admin rights needed). Or unzip the portable `.zip` and run `IPTVPlayer.exe` |
+| `IPTVPlayer-linux-x86_64` | Any Linux distribution — `chmod +x IPTVPlayer-x86_64.AppImage` and run it |
 | `IPTVPlayer-android` | Android 9+ (arm64 and 32-bit ARM) — install the APK ("allow unknown sources") |
+
+Windows may show "Windows protected your PC" because the installer isn't signed with a
+paid certificate: click **More info → Run anyway**.
 
 Pushing a tag like `v0.1.0` also publishes these files as a GitHub Release,
 which is the easiest link to share with others.
 
 ### Android signing key (recommended)
 
-Without a fixed signing key, each Android build is signed with a new temporary
-key, so you must uninstall the old version before installing a new one. To keep
+Every build has a higher version number, so a new APK installs over the old one,
+but only when both are signed with the same key. Without a fixed signing key, each
+Android build is signed with a new temporary key, so you must uninstall the old version
+before installing a new one. To keep
 updates working, create a key once and add it as repository secrets:
 
 ```bash
@@ -134,6 +143,12 @@ cmake --build build
 ./build/bin/IPTVPlayer
 ```
 
+To add it to your app launcher (with its icon):
+
+```bash
+cmake --install build --prefix ~/.local
+```
+
 If the build stops with `qmlcachegen` crashing (a bug in some Qt versions), configure
 with `-DIPTV_QML_AOT=OFF`; QML is then compiled when the app starts instead.
 
@@ -173,5 +188,9 @@ src/
                            design tokens; AppButton, Chip, PosterCard, ... are the components
   qml/fonts/               Inter typeface (SIL Open Font License, see Inter-LICENSE.txt)
 tests/                     unit tests and fixtures (sample M3U, Xtream responses)
-.github/workflows/build.yml  CI for Linux, Windows, Android
+assets/                    app icon (all sizes), Linux .desktop file, Windows resource
+android/                   Android manifest, launcher icons, launch screen
+installer/windows/         Windows installer (Inno Setup)
+tools/make_icons.py        draws the icon and writes every size (needs Pillow)
+.github/workflows/build.yml  CI for Linux (+ AppImage), Windows (+ installer), Android
 ```

@@ -3,6 +3,7 @@
 
 #include <QDir>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
@@ -141,6 +142,9 @@ int main(int argc, char *argv[])
     QGuiApplication::setOrganizationDomain(QStringLiteral("sadikbr.github.io"));
     QGuiApplication::setApplicationName(QStringLiteral("IPTV Player"));
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/appicon/app-icon-256.png")));
+    // Wayland uses this to find the .desktop file (task bar icon and name).
+    QGuiApplication::setDesktopFileName(QStringLiteral("io.github.sadikbr.iptvplayer"));
 
     // The UI is designed for the Material style. Don't let the platform pick
     // its native style (on Windows it is used by default and can't be

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=IPTV Player
+GenericName=IPTV player
+Comment=Watch live TV, movies and series from your IPTV provider
+Exec=IPTVPlayer
+Icon=io.github.sadikbr.iptvplayer
+Terminal=false
+Categories=AudioVideo;Video;Player;TV;Qt;
+Keywords=IPTV;TV;Xtream;M3U;Live;
+StartupWMClass=IPTVPlayer

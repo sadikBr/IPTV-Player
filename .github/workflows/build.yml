@@ -59,6 +59,55 @@ jobs:
           path: screenshots/
           if-no-files-found: ignore
 
+      - name: Build AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'   # no FUSE on the runner
+          QML_SOURCES_PATHS: ${{ github.workspace }}/src/qml
+        run: |
+          VERSION=$(sed -n 's/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt | head -n 1)
+          cmake -S . -B build-appimage -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+            -DIPTV_BUILD_TESTS=OFF
+          cmake --build build-appimage
+          DESTDIR="$PWD/AppDir" cmake --install build-appimage
+          base=https://github.com/linuxdeploy
+          curl -sSLo linuxdeploy "$base/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+          curl -sSLo linuxdeploy-plugin-qt "$base/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
+          chmod +x linuxdeploy linuxdeploy-plugin-qt
+          export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          # Wayland (and X11) support inside the AppImage: whatever this Qt has
+          ls "$QT_ROOT_DIR/plugins/platforms"
+          EXTRA_PLATFORM_PLUGINS=$(cd "$QT_ROOT_DIR/plugins/platforms" && ls libqwayland*.so libqxcb.so 2>/dev/null | paste -sd ';')
+          export EXTRA_PLATFORM_PLUGINS
+          if [ -e "$QT_ROOT_DIR/lib/libQt6WaylandClient.so.6" ]; then export EXTRA_QT_MODULES=waylandclient; fi
+          echo "Platform plugins: $EXTRA_PLATFORM_PLUGINS"
+          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$LD_LIBRARY_PATH"
+          ./linuxdeploy --appdir AppDir --plugin qt \
+            --desktop-file AppDir/usr/share/applications/io.github.sadikbr.iptvplayer.desktop \
+            --icon-file assets/icon/hicolor/256x256/apps/io.github.sadikbr.iptvplayer.png
+          # The video engine (FFmpeg plugin) and the libraries it loads
+          mkdir -p AppDir/usr/plugins/multimedia
+          cp -n "$QT_ROOT_DIR"/plugins/multimedia/*.so AppDir/usr/plugins/multimedia/
+          for lib in "$QT_ROOT_DIR"/lib/libav*.so* "$QT_ROOT_DIR"/lib/libsw*.so*; do
+            [ -e "$lib" ] && cp -an "$lib" AppDir/usr/lib/
+          done
+          LDAI_OUTPUT="IPTVPlayer-x86_64.AppImage" LINUXDEPLOY_OUTPUT_VERSION="$VERSION" \
+            ./linuxdeploy --appdir AppDir --output appimage
+          mkdir -p dist && mv IPTVPlayer-x86_64.AppImage dist/
+          ls -la dist
+
+      - name: Check the AppImage starts
+        run: |
+          cd dist
+          ./IPTVPlayer-x86_64.AppImage --appimage-extract > /dev/null
+          QT_QPA_PLATFORM=offscreen IPTV_SMOKE_PLAYLIST="$GITHUB_WORKSPACE/tests/fixtures/playlist.m3u" \
+            timeout 120 squashfs-root/AppRun --smoke-test
+          rm -rf squashfs-root
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IPTVPlayer-linux-x86_64
+          path: dist/IPTVPlayer-x86_64.AppImage
+
   windows:
     name: Windows
     runs-on: windows-2022
@@ -95,10 +144,21 @@ jobs:
             dist/IPTVPlayer/IPTVPlayer.exe
           Compress-Archive -Path dist/IPTVPlayer -DestinationPath dist/IPTVPlayer-windows-x64.zip
 
+      - name: Installer
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path CMakeLists.txt -Pattern '^\s*VERSION\s+([0-9.]+)').Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DAppVersion=$version" `
+            "/DSourceDir=$PWD\dist\IPTVPlayer" "/DOutputDir=$PWD\dist" installer\windows\iptvplayer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist
+
       - uses: actions/upload-artifact@v4
         with:
           name: IPTVPlayer-windows-x64
-          path: dist/IPTVPlayer-windows-x64.zip
+          path: |
+            dist/IPTVPlayer-windows-x64.zip
+            dist/IPTVPlayer-setup-x64.exe
 
   android:
     name: Android
@@ -193,7 +253,8 @@ jobs:
             -DANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" \
             -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
             -DQT_ANDROID_ABIS="arm64-v8a;armeabi-v7a" \
-            -DQT_ANDROID_SIGN_APK=ON
+            -DQT_ANDROID_SIGN_APK=ON \
+            -DIPTV_ANDROID_VERSION_CODE=${{ github.run_number }}
 
       - name: Build APK
         run: |

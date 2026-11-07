@@ -170,6 +170,20 @@ qt_add_qml_module(iptvplayer
     ${QML_CACHEGEN_OPTION}
 )
 
+# App icon for the window (fixed resource path, the same in every Qt version).
+qt_add_resources(iptvplayer "appicon"
+    PREFIX "/appicon"
+    BASE ${CMAKE_SOURCE_DIR}/assets/icon
+    FILES ${CMAKE_SOURCE_DIR}/assets/icon/app-icon-256.png)
+
+# Windows: icon of IPTVPlayer.exe and its version details.
+if(WIN32)
+    set(ICON_PATH "${CMAKE_SOURCE_DIR}/assets/icon/app.ico")
+    configure_file(${CMAKE_SOURCE_DIR}/assets/windows/iptvplayer.rc.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/iptvplayer.rc @ONLY)
+    target_sources(iptvplayer PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/iptvplayer.rc)
+endif()
+
 target_include_directories(iptvplayer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/app
@@ -190,13 +204,19 @@ target_link_libraries(iptvplayer PRIVATE
     Qt6::Multimedia
     Qt6::Svg)
 
+# Android only installs a new APK over the old one if this number is higher.
+# CI passes the build number.
+set(IPTV_ANDROID_VERSION_CODE 1 CACHE STRING "Android versionCode (must grow with every release)")
+
 set_target_properties(iptvplayer PROPERTIES
     OUTPUT_NAME "IPTVPlayer"
     # Keep the binary away from the IPTVPlayer/ QML module folder (same name).
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     WIN32_EXECUTABLE TRUE
     QT_ANDROID_VERSION_NAME ${PROJECT_VERSION}
-    QT_ANDROID_VERSION_CODE 1
+    QT_ANDROID_VERSION_CODE ${IPTV_ANDROID_VERSION_CODE}
+    # Manifest with icon and launch screen, launcher icons (android/)
+    QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android
     QT_ANDROID_PACKAGE_NAME io.github.sadikbr.iptvplayer
     QT_ANDROID_APP_NAME "IPTV Player")
 
@@ -205,6 +225,13 @@ if(NOT ANDROID)
     include(GNUInstallDirs)
     install(TARGETS iptvplayer
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    if(UNIX AND NOT APPLE)
+        # Start menu entry and icons (Linux)
+        install(FILES ${CMAKE_SOURCE_DIR}/assets/io.github.sadikbr.iptvplayer.desktop
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/assets/icon/hicolor
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/icons)
+    endif()
 endif()
 
 # Smoke test: start the app off-screen, load all QML and fail on any QML warning.

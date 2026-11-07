@@ -231,9 +231,10 @@ Each phase ends with something that runs and can be tested on a real device.
 - [ ] Responsive layouts: phone portrait, phone landscape, tablet, desktop
 - [ ] Keyboard shortcuts (desktop) and D-pad focus navigation (Android TV)
 - [ ] Settings: preferred stream format (TS/HLS), buffer size, user agent, theme, language
-- [ ] Network robustness: timeouts, retries, automatic reconnect on stream stall
-- [ ] App icons, splash screen, translations
-- [ ] Packaging: Windows installer (NSIS or Qt IFW), Linux AppImage/Flatpak, Android signed APK/AAB
+- [x] Network robustness: automatic reconnect on stream drop/stall (timeouts and retries for lists were already in)
+- [x] App icons, splash screen (Android launch screen)
+- [ ] Translations
+- [x] Packaging: Windows installer (Inno Setup), Linux AppImage, Android APK with growing version code
 
 ### Phase 6 — Optional extras
 - [ ] `MpvBackend` on desktop for better codec/stream support
@@ -286,5 +287,7 @@ Each phase ends with something that runs and can be tested on a real device.
 - **Phase 4b:** done — new design, app shell, dashboard, settings, guide time shift;
   then a second, cinematic pass (neutral palette + warm accent, backdrop hero carousel,
   channel tile grid, backdrop details pages, custom scroll bars and inputs)
-- **Next:** Phase 5 — polish & platform work (Android TV remote navigation, auto-reconnect,
-  installers), plus whatever comes up in daily use
+- **Phase 5 (part 1):** done — automatic reconnect, app icon and Android launch screen,
+  Windows installer, Linux AppImage, Android version code per build (v0.7)
+- **Next:** rest of Phase 5 (Android TV / D-pad navigation, playback settings, phone
+  landscape and tablet layouts), plus whatever comes up in daily use

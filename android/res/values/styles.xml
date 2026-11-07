@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch screen: dark like the app, so it doesn't flash white. -->
+    <style name="IptvLaunchTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:statusBarColor">@color/iptv_background</item>
+        <item name="android:navigationBarColor">@color/iptv_background</item>
+    </style>
+</resources>
