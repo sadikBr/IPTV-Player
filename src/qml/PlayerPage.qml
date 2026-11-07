@@ -272,9 +272,33 @@ Page {
     }
 
     BusyIndicator {
+        id: busy
         anchors.centerIn: parent
         running: player.busy
         visible: running
+    }
+
+    // A stream that was playing dropped; the player reconnects by itself.
+    Rectangle {
+        objectName: "reconnectingBanner"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: busy.bottom
+        anchors.topMargin: 16
+        visible: player.reconnecting
+        width: reconnectLabel.implicitWidth + 32
+        height: 36
+        radius: height / 2
+        color: "#B3000000"
+        Label {
+            id: reconnectLabel
+            anchors.centerIn: parent
+            color: AppTheme.textPrimary
+            font.pixelSize: AppTheme.fontSmall
+            text: player.reconnectAttempt > 1
+                  ? qsTr("Connection lost, reconnecting (attempt %1 of %2)…")
+                        .arg(player.reconnectAttempt).arg(player.maxReconnectAttempts)
+                  : qsTr("Connection lost, reconnecting…")
+        }
     }
 
     // Big play button while paused (easy to hit on touch screens)

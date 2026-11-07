@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev \
-            libxkbcommon-x11-0 libxcb-cursor0 libegl1 libpulse0 libfontconfig1
+            libxkbcommon-x11-0 libxcb-cursor0 libegl1 libpulse0 libfontconfig1 ffmpeg
 
       - uses: jurplel/install-qt-action@v4
         with:
@@ -48,6 +48,8 @@ jobs:
         run: ctest --test-dir build --output-on-failure
         env:
           IPTV_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
+          # Real stream that drops: checks automatic reconnecting.
+          IPTV_STREAM_TEST: "1"
 
       - name: Upload screenshots
         if: always()

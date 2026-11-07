@@ -2,6 +2,7 @@
 
 #include "player/PlayerBackend.h"
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPointer>
 #include <QUrl>
@@ -10,6 +11,8 @@
 // QML-facing player. Owns a PlayerBackend and adds app-level behaviour:
 // keeping the screen awake, stopping/resuming when the app goes to the
 // background, and simple error handling.
+class QTimer;
+
 class PlayerController : public QObject
 {
     Q_OBJECT
@@ -35,9 +38,15 @@ class PlayerController : public QObject
     Q_PROPERTY(QStringList subtitleTracks READ subtitleTracks NOTIFY tracksChanged)
     Q_PROPERTY(int activeAudioTrack READ activeAudioTrack WRITE setActiveAudioTrack NOTIFY tracksChanged)
     Q_PROPERTY(int activeSubtitleTrack READ activeSubtitleTrack WRITE setActiveSubtitleTrack NOTIFY tracksChanged)
+    // A stream that was playing dropped or stalled and is being reconnected.
+    Q_PROPERTY(bool reconnecting READ isReconnecting NOTIFY stateChanged)
+    Q_PROPERTY(int reconnectAttempt READ reconnectAttempt NOTIFY stateChanged)
+    Q_PROPERTY(int maxReconnectAttempts READ maxReconnectAttempts CONSTANT)
 
 public:
     explicit PlayerController(QObject *parent = nullptr);
+    // Takes ownership of the backend (used by tests).
+    explicit PlayerController(PlayerBackend *backend, QObject *parent = nullptr);
     ~PlayerController() override;
 
     QObject *videoOutput() const { return m_videoOutput; }
@@ -47,7 +56,7 @@ public:
     PlayerBackend::State state() const { return m_backend->state(); }
     bool isPlaying() const;
     bool isBusy() const;
-    bool hasFailed() const { return state() == PlayerBackend::State::Error; }
+    bool hasFailed() const;
     QString errorString() const { return m_errorString; }
 
     qreal volume() const { return m_volume; }
@@ -70,6 +79,13 @@ public:
     void setActiveAudioTrack(int index) { m_backend->setActiveAudioTrack(index); }
     int activeSubtitleTrack() const { return m_backend->activeSubtitleTrack(); }
     void setActiveSubtitleTrack(int index) { m_backend->setActiveSubtitleTrack(index); }
+
+    bool isReconnecting() const { return m_reconnecting; }
+    int reconnectAttempt() const { return m_reconnectAttempts; }
+    int maxReconnectAttempts() const { return int(m_reconnectDelaysMs.size()); }
+
+    // Tuning (tests shorten these).
+    void setReconnectTiming(int stallTimeoutMs, int stableAfterMs, const QList<int> &delaysMs);
 
 public slots:
     // startPositionMs > 0 resumes there once the media can seek.
@@ -99,6 +115,16 @@ signals:
     void ended();
 
 private:
+    void init();
+    void startSource(qint64 startPositionMs);
+    void onBackendStateChanged();
+    void onBackendError(const QString &message);
+    void onEndOfMedia();
+    void checkStall();
+    // Drop or stall after the stream played: try again after a short delay.
+    void scheduleReconnect();
+    void reconnectNow();
+    void cancelReconnect();
     void setErrorString(const QString &error);
     void onApplicationStateChanged(Qt::ApplicationState state);
     void updateWakeLock();
@@ -113,4 +139,20 @@ private:
     bool m_resumeOnActivate = false;
     bool m_vod = false;
     qint64 m_pendingSeek = 0;
+
+    // Reconnect
+    QTimer *m_watchdog = nullptr;
+    QTimer *m_reconnectTimer = nullptr;
+    QElapsedTimer m_sinceProgress;   // last time playback moved on
+    QElapsedTimer m_playingSince;    // playing without trouble since
+    bool m_hasPlayed = false;        // reached Playing since open()
+    bool m_positionMoves = false;    // the backend reports a moving position
+    bool m_reconnecting = false;
+    bool m_gaveUp = false;
+    int m_reconnectAttempts = 0;
+    qint64 m_lastPosition = -1;
+    qint64 m_resumePosition = 0;     // movies: continue here after a reconnect
+    int m_stallTimeoutMs = 15000;
+    int m_stableAfterMs = 30000;
+    QList<int> m_reconnectDelaysMs { 1000, 2000, 4000, 8000, 15000 };
 };

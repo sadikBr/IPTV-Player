@@ -4,17 +4,23 @@
 #include "player/QtMultimediaBackend.h"
 
 #include <QGuiApplication>
+#include <QTimer>
 
 PlayerController::PlayerController(QObject *parent)
-    : QObject(parent), m_backend(new QtMultimediaBackend(this))
+    : PlayerController(new QtMultimediaBackend, parent)
 {
-    connect(m_backend, &PlayerBackend::stateChanged, this, [this] {
-        if (m_backend->state() == PlayerBackend::State::Playing)
-            setErrorString({});
-        updateWakeLock();
-        applyPendingSeek();
-        emit stateChanged();
-    });
+}
+
+PlayerController::PlayerController(PlayerBackend *backend, QObject *parent)
+    : QObject(parent), m_backend(backend)
+{
+    m_backend->setParent(this);
+    init();
+}
+
+void PlayerController::init()
+{
+    connect(m_backend, &PlayerBackend::stateChanged, this, &PlayerController::onBackendStateChanged);
     connect(m_backend, &PlayerBackend::bufferProgressChanged, this,
             &PlayerController::bufferProgressChanged);
     connect(m_backend, &PlayerBackend::positionChanged, this, &PlayerController::positionChanged);
@@ -22,14 +28,24 @@ PlayerController::PlayerController(QObject *parent)
     connect(m_backend, &PlayerBackend::seekableChanged, this, &PlayerController::seekableChanged);
     connect(m_backend, &PlayerBackend::streamInfoChanged, this,
             &PlayerController::streamInfoChanged);
-    connect(m_backend, &PlayerBackend::errorOccurred, this, &PlayerController::setErrorString);
+    connect(m_backend, &PlayerBackend::errorOccurred, this, &PlayerController::onBackendError);
     connect(m_backend, &PlayerBackend::tracksChanged, this, &PlayerController::tracksChanged);
-    connect(m_backend, &PlayerBackend::endOfMedia, this, &PlayerController::ended);
+    connect(m_backend, &PlayerBackend::endOfMedia, this, &PlayerController::onEndOfMedia);
     connect(m_backend, &PlayerBackend::seekableChanged, this, &PlayerController::applyPendingSeek);
     connect(m_backend, &PlayerBackend::durationChanged, this, &PlayerController::applyPendingSeek);
 
-    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this,
-            &PlayerController::onApplicationStateChanged);
+    m_watchdog = new QTimer(this);
+    m_watchdog->setInterval(1000);
+    connect(m_watchdog, &QTimer::timeout, this, &PlayerController::checkStall);
+
+    m_reconnectTimer = new QTimer(this);
+    m_reconnectTimer->setSingleShot(true);
+    connect(m_reconnectTimer, &QTimer::timeout, this, &PlayerController::reconnectNow);
+
+    if (qGuiApp) {
+        connect(qGuiApp, &QGuiApplication::applicationStateChanged, this,
+                &PlayerController::onApplicationStateChanged);
+    }
 }
 
 PlayerController::~PlayerController()
@@ -54,8 +70,25 @@ bool PlayerController::isPlaying() const
 
 bool PlayerController::isBusy() const
 {
+    if (m_reconnecting)
+        return true;
     const auto s = m_backend->state();
     return s == PlayerBackend::State::Loading || s == PlayerBackend::State::Buffering;
+}
+
+bool PlayerController::hasFailed() const
+{
+    if (m_reconnecting)
+        return false;
+    return m_gaveUp || state() == PlayerBackend::State::Error;
+}
+
+void PlayerController::setReconnectTiming(int stallTimeoutMs, int stableAfterMs,
+                                          const QList<int> &delaysMs)
+{
+    m_stallTimeoutMs = stallTimeoutMs;
+    m_stableAfterMs = stableAfterMs;
+    m_reconnectDelaysMs = delaysMs;
 }
 
 void PlayerController::setVolume(qreal volume)
@@ -98,19 +131,167 @@ void PlayerController::applyPendingSeek()
 
 void PlayerController::open(const QUrl &url, qint64 startPositionMs)
 {
-    m_pendingSeek = startPositionMs;
-    setErrorString({});
-    m_backend->stop();
+    cancelReconnect();
+    m_reconnectAttempts = 0;
+    m_gaveUp = false;
+    m_hasPlayed = false;
+    m_resumePosition = startPositionMs;
     if (m_source != url) {
         m_source = url;
         emit sourceChanged();
     }
-    if (url.isEmpty())
+    startSource(startPositionMs);
+    emit stateChanged();
+}
+
+void PlayerController::startSource(qint64 startPositionMs)
+{
+    m_pendingSeek = startPositionMs;
+    m_positionMoves = false;
+    m_lastPosition = -1;
+    m_playingSince.invalidate();
+    m_sinceProgress.restart();
+    setErrorString({});
+    m_backend->stop();
+    if (m_source.isEmpty()) {
+        m_watchdog->stop();
         return;
-    m_backend->setSource(url);
+    }
+    m_backend->setSource(m_source);
     m_backend->setVolume(m_volume);
     m_backend->setMuted(m_muted);
     m_backend->play();
+    m_watchdog->start();
+}
+
+void PlayerController::onBackendStateChanged()
+{
+    const auto s = m_backend->state();
+    if (s == PlayerBackend::State::Playing) {
+        setErrorString({});
+        m_hasPlayed = true;
+        m_gaveUp = false;
+        if (!m_playingSince.isValid())
+            m_playingSince.start();
+        m_sinceProgress.restart();
+        if (m_reconnecting) {
+            m_reconnecting = false;
+            m_reconnectTimer->stop();
+        }
+    } else if (s != PlayerBackend::State::Buffering) {
+        m_playingSince.invalidate();
+    }
+    updateWakeLock();
+    applyPendingSeek();
+    emit stateChanged();
+}
+
+void PlayerController::onBackendError(const QString &message)
+{
+    setErrorString(message);
+    // Only streams that already played are reconnected here. When a stream
+    // can't start at all, the page shows "Channel unavailable" right away.
+    if (m_hasPlayed && !m_gaveUp)
+        scheduleReconnect();
+}
+
+void PlayerController::onEndOfMedia()
+{
+    if (m_hasPlayed && !m_gaveUp) {
+        // A live stream never really ends: the connection dropped.
+        const bool live = !m_vod && m_backend->duration() <= 0;
+        // A movie that stops long before its end lost the connection too.
+        const qint64 duration = m_backend->duration();
+        const bool cutShort = m_vod && duration > 0 && m_resumePosition > 0
+                              && m_resumePosition < duration - 60000;
+        if (live || cutShort) {
+            scheduleReconnect();
+            return;
+        }
+    }
+    emit ended();
+}
+
+void PlayerController::checkStall()
+{
+    // While waiting to reconnect there is nothing to watch; a reconnect attempt
+    // that hangs is watched like any other start.
+    if (!m_hasPlayed || m_gaveUp || m_reconnectTimer->isActive())
+        return;
+
+    const auto s = m_backend->state();
+    const qint64 pos = m_backend->position();
+    if (pos != m_lastPosition) {
+        if (m_lastPosition >= 0 && pos > m_lastPosition)
+            m_positionMoves = true;
+        m_lastPosition = pos;
+        if (pos > 0 && m_vod)
+            m_resumePosition = pos;
+        m_sinceProgress.restart();
+    }
+
+    switch (s) {
+    case PlayerBackend::State::Loading:
+    case PlayerBackend::State::Buffering:
+        // Waiting for data; too long means the stream is stuck.
+        break;
+    case PlayerBackend::State::Playing:
+        if (m_playingSince.isValid() && m_playingSince.elapsed() >= m_stableAfterMs)
+            m_reconnectAttempts = 0; // playing well again
+        // A frozen picture: only detectable when the position normally moves.
+        if (!m_positionMoves)
+            return;
+        break;
+    default:
+        // Paused or stopped by the user, or an error (handled elsewhere).
+        m_sinceProgress.restart();
+        return;
+    }
+
+    if (m_sinceProgress.elapsed() >= m_stallTimeoutMs)
+        scheduleReconnect();
+}
+
+void PlayerController::scheduleReconnect()
+{
+    if (m_reconnectTimer->isActive())
+        return;
+    if (m_reconnectAttempts >= m_reconnectDelaysMs.size()) {
+        // Give up: the page shows the error and its own retry options.
+        m_reconnecting = false;
+        m_gaveUp = true;
+        m_watchdog->stop();
+        m_backend->stop();
+        if (m_errorString.isEmpty())
+            setErrorString(tr("Lost the connection to the stream."));
+        updateWakeLock();
+        emit stateChanged();
+        return;
+    }
+    const int delay = m_reconnectDelaysMs.at(m_reconnectAttempts);
+    ++m_reconnectAttempts;
+    m_reconnecting = true;
+    m_backend->stop();
+    m_reconnectTimer->start(delay);
+    updateWakeLock();
+    emit stateChanged();
+}
+
+void PlayerController::reconnectNow()
+{
+    // Movies continue where they were; live streams start at "now".
+    const qint64 position = m_vod ? m_resumePosition : 0;
+    m_backend->setSource({});
+    startSource(position);
+}
+
+void PlayerController::cancelReconnect()
+{
+    m_reconnectTimer->stop();
+    if (m_reconnecting) {
+        m_reconnecting = false;
+        emit stateChanged();
+    }
 }
 
 void PlayerController::play()
@@ -124,6 +305,7 @@ void PlayerController::play()
 
 void PlayerController::pause()
 {
+    cancelReconnect();
     // Pausing a live stream makes the server buffer pile up and the stream
     // usually drops. Stop instead; play() will reconnect.
     if (isLive())
@@ -145,6 +327,8 @@ void PlayerController::togglePause()
 
 void PlayerController::stop()
 {
+    cancelReconnect();
+    m_watchdog->stop();
     m_backend->stop();
 }
 
@@ -152,7 +336,7 @@ void PlayerController::retry()
 {
     const QUrl url = m_source;
     // Movies continue where they were.
-    const qint64 position = m_vod ? m_backend->position() : 0;
+    const qint64 position = m_vod ? qMax(m_backend->position(), m_resumePosition) : 0;
     m_backend->setSource({});
     open(url, position);
 }
