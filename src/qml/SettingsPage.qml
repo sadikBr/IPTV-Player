@@ -11,6 +11,8 @@ Page {
     readonly property bool narrow: width < AppTheme.compactWidth
     readonly property real sideMargin: narrow ? AppTheme.margin : AppTheme.pageMargin
 
+    signal updateRequested()
+
     function timeAgo(date) {
         if (!date || isNaN(date.getTime()))
             return qsTr("never")
@@ -206,6 +208,82 @@ Page {
                                         onClicked: AppSettings.removeRecentUrl(recent.modelData)
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Updates ---
+            Section {
+                title: qsTr("Updates")
+                Card {
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 14
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: AppTheme.spacing
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Label {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    font.weight: Font.DemiBold
+                                    color: UpdateManager.state === "available" ? AppTheme.accent2
+                                                                               : AppTheme.textPrimary
+                                    text: {
+                                        switch (UpdateManager.state) {
+                                        case "checking": return qsTr("Checking for updates…")
+                                        case "available":
+                                        case "downloading":
+                                        case "installing":
+                                            return qsTr("Version %1 is available").arg(UpdateManager.latestVersion)
+                                        case "upToDate": return qsTr("You have the latest version")
+                                        case "error": return qsTr("Couldn't check for updates")
+                                        default: return qsTr("Version %1").arg(UpdateManager.currentVersion)
+                                        }
+                                    }
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    color: UpdateManager.state === "error" ? AppTheme.error : AppTheme.textTertiary
+                                    font.pixelSize: AppTheme.fontCaption
+                                    text: UpdateManager.state === "error"
+                                          ? UpdateManager.errorString
+                                          : UpdateManager.lastChecked.getTime && !isNaN(UpdateManager.lastChecked.getTime())
+                                            ? qsTr("Last checked %1").arg(page.timeAgo(UpdateManager.lastChecked))
+                                            : qsTr("New versions are published on GitHub.")
+                                }
+                            }
+                            AppButton {
+                                objectName: "checkUpdatesButton"
+                                variant: UpdateManager.state === "available" ? "accent" : "secondary"
+                                enabled: UpdateManager.state !== "checking"
+                                text: UpdateManager.state === "available" || UpdateManager.state === "downloading"
+                                      ? qsTr("Update…") : qsTr("Check now")
+                                onClicked: {
+                                    if (UpdateManager.state === "available" || UpdateManager.state === "downloading")
+                                        page.updateRequested()
+                                    else
+                                        UpdateManager.check(true)
+                                }
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: AppTheme.spacing
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                                text: qsTr("Check for updates automatically")
+                                color: AppTheme.textSecondary
+                            }
+                            AppSwitch {
+                                checked: UpdateManager.autoCheck
+                                onToggled: UpdateManager.autoCheck = checked
                             }
                         }
                     }

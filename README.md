@@ -8,7 +8,7 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ## Status
 
-**Version 0.7: live TV, TV guide, movies and series; automatic reconnect; installers.**
+**Version 0.8: live TV, TV guide, movies and series; automatic updates; automatic reconnect.**
 
 - **Cinematic design:** neutral near-black surfaces with one warm accent, artwork-first
   screens, soft shadows, the Inter typeface; side navigation on desktop (Home, Live TV,
@@ -39,6 +39,11 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   "now", movies and episodes where they were
 - Player: seek bar, audio and subtitle tracks, previous/next channel or episode, channel
   list, channel number entry, stream info, full screen
+- **Automatic updates:** the app checks GitHub for a new version (at start-up and every
+  12 hours), shows what's new and installs it: the Windows installer updates in place and
+  restarts the app, the AppImage replaces itself, Android opens the system installer.
+  Downloads are checked against the release's SHA-256. Settings → Updates to check now or
+  turn it off. Copies built from source or the portable zip only get a link to the release
 - Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)
 - Android: screen stays on while playing; back button goes back one screen
 
@@ -79,13 +84,24 @@ run and download from **Artifacts**:
 Windows may show "Windows protected your PC" because the installer isn't signed with a
 paid certificate: click **More info → Run anyway**.
 
-Pushing a tag like `v0.1.0` also publishes these files as a GitHub Release,
-which is the easiest link to share with others.
+### Releases and updates
+
+Releases are what the app's automatic updates install. To publish one:
+
+1. Raise `VERSION` in `CMakeLists.txt` (e.g. `0.9.0`).
+2. Add a `## v0.9.0` section at the top of `CHANGELOG.md`: it becomes the release notes
+   and the "What's new" text in the update dialog.
+3. Commit, then `git tag v0.9.0 && git push origin main v0.9.0`.
+
+CI builds everything and publishes the GitHub Release with the Windows installer and zip,
+the AppImage and the APK. Within 12 hours every installed copy offers the update. The
+[latest release](../../releases/latest) is also the easiest link to share.
 
 ### Android signing key (recommended)
 
 Every build has a higher version number, so a new APK installs over the old one,
-but only when both are signed with the same key. Without a fixed signing key, each
+but only when both are signed with the same key. **Automatic updates on Android need this
+key:** without it, Android refuses to install the update ("App not installed"). Without a fixed signing key, each
 Android build is signed with a new temporary key, so you must uninstall the old version
 before installing a new one. To keep
 updates working, create a key once and add it as repository secrets:

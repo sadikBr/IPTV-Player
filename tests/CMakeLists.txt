@@ -12,6 +12,7 @@ iptv_add_test(tst_xtreamapi)
 iptv_add_test(tst_sourcestore)
 iptv_add_test(tst_xmltv)
 iptv_add_test(tst_epgstore)
+iptv_add_test(tst_updatecheck)
 
 # The player logic (reconnect etc.) with a fake backend.
 iptv_add_test(tst_playercontroller)

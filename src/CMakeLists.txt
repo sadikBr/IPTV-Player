@@ -16,6 +16,8 @@ add_library(iptvcore STATIC
     core/XmltvParser.cpp
     core/EpgStore.h
     core/EpgStore.cpp
+    core/UpdateCheck.h
+    core/UpdateCheck.cpp
 )
 target_include_directories(iptvcore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core)
 target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Sql ZLIB::ZLIB)
@@ -32,6 +34,8 @@ qt_add_executable(iptvplayer
     app/VodManager.h
     app/VodManager.cpp
     app/SourceManager.cpp
+    app/UpdateManager.h
+    app/UpdateManager.cpp
     models/SourceListModel.h
     models/SourceListModel.cpp
     models/CategoryListModel.h
@@ -93,6 +97,7 @@ set(QML_SOURCES
     qml/SettingsPage.qml
     qml/Shadow.qml
     qml/StatusBanner.qml
+    qml/UpdateDialog.qml
     qml/VodPage.qml
 )
 set(QML_RESOURCES

@@ -57,3 +57,5 @@ Name: "{autodesktop}\IPTV Player"; Filename: "{app}\IPTVPlayer.exe"; Tasks: desk
 
 [Run]
 Filename: "{app}\IPTVPlayer.exe"; Description: "{cm:LaunchProgram,IPTV Player}"; Flags: nowait postinstall skipifsilent
+; Updates from inside the app run silently: start the app again afterwards.
+Filename: "{app}\IPTVPlayer.exe"; Flags: nowait skipifnotsilent

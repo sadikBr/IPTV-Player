@@ -7,6 +7,8 @@
     android:versionCode="-- %%INSERT_VERSION_CODE%% --"
     android:versionName="-- %%INSERT_VERSION_NAME%% --">
     <!-- %%INSERT_PERMISSIONS -->
+    <!-- In-app updates: open the system installer for a downloaded APK -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- %%INSERT_FEATURES -->
     <supports-screens
         android:anyDensity="true"

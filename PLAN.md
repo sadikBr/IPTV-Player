@@ -112,7 +112,7 @@ IPTV-Player/
 │   ├── Main.qml
 │   ├── pages/
 │   └── components/
-├── resources/         # icons, translations
+├── resources/         # icons
 ├── android/           # AndroidManifest.xml, gradle overrides
 ├── ios/               # Info.plist
 ├── tests/
@@ -233,8 +233,8 @@ Each phase ends with something that runs and can be tested on a real device.
 - [ ] Settings: preferred stream format (TS/HLS), buffer size, user agent, theme, language
 - [x] Network robustness: automatic reconnect on stream drop/stall (timeouts and retries for lists were already in)
 - [x] App icons, splash screen (Android launch screen)
-- [ ] Translations
 - [x] Packaging: Windows installer (Inno Setup), Linux AppImage, Android APK with growing version code
+- [x] Automatic updates from GitHub Releases (install in place on Windows, AppImage, Android)
 
 ### Phase 6 — Optional extras
 - [ ] `MpvBackend` on desktop for better codec/stream support

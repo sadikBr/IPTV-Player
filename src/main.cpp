@@ -105,6 +105,19 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 2000, QStringLiteral("player"), {} });
     }
 
+    // IPTV_UPDATE_URL: check that (test) server for an update and show the
+    // dialog; IPTV_SMOKE_INSTALL_UPDATE=1 also installs it.
+    if (qEnvironmentVariableIsSet("IPTV_UPDATE_URL")) {
+        steps.append({ 300, QString(), [=] { invoke("smokeCheckUpdates"); } });
+        if (qEnvironmentVariableIntValue("IPTV_SMOKE_INSTALL_UPDATE") == 1) {
+            steps.append({ 2000, QStringLiteral("update"), [=] { invoke("smokeInstallUpdate"); } });
+            steps.append({ 600, QStringLiteral("update-downloading"), {} });
+            steps.append({ 15000, QString(), {} }); // the app quits itself once installed
+        } else {
+            steps.append({ 2000, QStringLiteral("update"), {} });
+        }
+    }
+
     int at = 0;
     for (const Step &step : std::as_const(steps)) {
         at += step.delayMs;
@@ -155,6 +168,10 @@ int main(int argc, char *argv[])
     // --smoke-test: load the UI, fail on any QML warning, then quit (used by CTest/CI).
     const bool smokeTest = app.arguments().contains(QStringLiteral("--smoke-test"));
     int qmlWarnings = 0;
+
+    // Tests never ask GitHub for updates (unless pointed at a test server).
+    if (smokeTest && !qEnvironmentVariableIsSet("IPTV_UPDATE_URL"))
+        qputenv("IPTV_NO_UPDATE_CHECK", "1");
 
     std::unique_ptr<QTemporaryDir> tempDataDir;
     const QString dataDir = dataDirectory(smokeTest, tempDataDir);

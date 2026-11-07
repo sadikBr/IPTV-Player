@@ -142,6 +142,8 @@ ApplicationWindow {
         SourceManager.addXtreamSource("Smoke test", server, username, password, "ts")
     }
     function smokeOpenGuide() { goSection("guide") }
+    function smokeCheckUpdates() { UpdateManager.check(true) }
+    function smokeInstallUpdate() { UpdateManager.install() }
     function smokePlayFirst() {
         goSection("live")
         stack.currentItem.playIndex(0)
@@ -320,7 +322,9 @@ ApplicationWindow {
 
     Component {
         id: settingsComponent
-        SettingsPage {}
+        SettingsPage {
+            onUpdateRequested: updateDialog.open()
+        }
     }
 
     Component {
@@ -366,4 +370,21 @@ ApplicationWindow {
             }
         }
     }
+
+    // --- Updates ---
+
+    UpdateDialog {
+        id: updateDialog
+    }
+
+    // A new version was found: ask once, but never on top of a playing video.
+    function maybePromptUpdate() {
+        if (UpdateManager.showPrompt && window.chromeVisible && !updateDialog.opened)
+            updateDialog.open()
+    }
+    Connections {
+        target: UpdateManager
+        function onStateChanged() { window.maybePromptUpdate() }
+    }
+    onChromeVisibleChanged: maybePromptUpdate()
 }
