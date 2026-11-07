@@ -16,6 +16,8 @@ class AppSettings : public QObject
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(QStringList recentUrls READ recentUrls NOTIFY recentUrlsChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    // Sent to providers with every request; empty = default (VLC).
+    Q_PROPERTY(QString userAgent READ userAgent WRITE setUserAgent NOTIFY userAgentChanged)
     Q_PROPERTY(int lastSourceId READ lastSourceId WRITE setLastSourceId NOTIFY lastSourceIdChanged)
     Q_PROPERTY(int lastChannelSourceId READ lastChannelSourceId NOTIFY lastChannelChanged)
     Q_PROPERTY(QString lastChannelExtId READ lastChannelExtId NOTIFY lastChannelChanged)
@@ -38,6 +40,9 @@ public:
     qreal volume() const { return m_volume; }
     void setVolume(qreal volume);
 
+    QString userAgent() const;
+    void setUserAgent(const QString &userAgent);
+
     // The source shown last, reopened on start-up.
     int lastSourceId() const;
     void setLastSourceId(int id);
@@ -51,6 +56,7 @@ public:
 signals:
     void recentUrlsChanged();
     void volumeChanged();
+    void userAgentChanged();
     void lastSourceIdChanged();
     void lastChannelChanged();
 

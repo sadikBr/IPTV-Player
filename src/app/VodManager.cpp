@@ -28,7 +28,7 @@ ContentKind progressKind(const QString &kind)
 
 } // namespace
 
-VodManager::VodManager(QObject *parent) : QObject(parent), m_nam(new QNetworkAccessManager(this)) { }
+VodManager::VodManager(QObject *parent) : QObject(parent), m_nam(NetworkFactory::createManager(this)) { }
 
 QVariantMap VodManager::describe(int sourceId, int kindValue, const QString &extId) const
 {
@@ -96,7 +96,6 @@ void VodManager::fetchMovie(int sourceId, const QString &extId)
     url.setQuery(query);
 
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, NetworkFactory::userAgent());
     request.setTransferTimeout(30000);
     QNetworkReply *reply = m_nam->get(request);
     m_loading.insert(key);
@@ -145,7 +144,6 @@ void VodManager::fetchSeries(int sourceId, const QString &extId, bool force)
     url.setQuery(query);
 
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, NetworkFactory::userAgent());
     request.setTransferTimeout(30000);
     QNetworkReply *reply = m_nam->get(request);
     m_loading.insert(key);

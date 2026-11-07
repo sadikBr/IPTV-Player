@@ -4,6 +4,7 @@ namespace {
 constexpr int MaxRecentUrls = 10;
 const auto RecentUrlsKey = QStringLiteral("player/recentUrls");
 const auto VolumeKey = QStringLiteral("player/volume");
+const auto UserAgentKey = QStringLiteral("network/userAgent"); // read by NetworkFactory
 const auto LastSourceKey = QStringLiteral("browse/lastSourceId");
 const auto LastChannelSourceKey = QStringLiteral("browse/lastChannelSourceId");
 const auto LastChannelExtIdKey = QStringLiteral("browse/lastChannelExtId");
@@ -109,4 +110,17 @@ void AppSettings::setLastChannel(int sourceId, const QString &extId, const QStri
     m_settings.setValue(LastChannelExtIdKey, extId);
     m_settings.setValue(LastChannelNameKey, name);
     emit lastChannelChanged();
+}
+
+QString AppSettings::userAgent() const
+{
+    return m_settings.value(UserAgentKey).toString();
+}
+
+void AppSettings::setUserAgent(const QString &userAgent)
+{
+    if (userAgent.trimmed() == this->userAgent())
+        return;
+    m_settings.setValue(UserAgentKey, userAgent.trimmed());
+    emit userAgentChanged();
 }

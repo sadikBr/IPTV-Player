@@ -32,6 +32,20 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 Next: a design pass over the whole UI.
 
+### Troubleshooting
+
+- **"The server closed the connection" / "Connection reset by peer":** many providers only
+  answer clients that look like a known player. The app identifies itself as VLC
+  (`VLC/3.0.20 LibVLC/3.0.20`). To use a different User-Agent, set `userAgent=...` under
+  `[network]` in the settings file (Linux: `~/.config/IPTVPlayer/IPTV Player.conf`); a
+  settings screen will follow.
+- **"Network unreachable":** the network or DNS hands out an address that can't be
+  reached (for example a `64:ff9b::` IPv6 address on a network without IPv6). Check the
+  connection, VPN and DNS settings.
+- **Test whether your provider answers:**
+  `curl -sS -A "VLC/3.0.20 LibVLC/3.0.20" -o /dev/null -w "%{http_code}\n" "http://SERVER:PORT/player_api.php"`
+  should print `200`.
+
 ### Where your data is stored
 
 Providers, channel lists and favorites are kept in a SQLite database in the app's

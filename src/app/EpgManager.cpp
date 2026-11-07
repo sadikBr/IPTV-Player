@@ -52,7 +52,7 @@ QString formatSize(qint64 bytes)
 
 } // namespace
 
-EpgManager::EpgManager(QObject *parent) : QObject(parent), m_nam(new QNetworkAccessManager(this))
+EpgManager::EpgManager(QObject *parent) : QObject(parent), m_nam(NetworkFactory::createManager(this))
 {
     connect(&m_watcher, &QFutureWatcher<ImportResult>::finished, this, [this] {
         const ImportResult result = m_watcher.result();
@@ -170,7 +170,6 @@ void EpgManager::startNext()
         }
 
         QNetworkRequest request(url);
-        request.setHeader(QNetworkRequest::UserAgentHeader, NetworkFactory::userAgent());
         request.setTransferTimeout(kTransferTimeoutMs);
         QNetworkReply *reply = m_nam->get(request);
         m_reply = reply;

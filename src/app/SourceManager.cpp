@@ -41,6 +41,16 @@ QString friendlyNetworkError(QNetworkReply *reply)
         return SourceManager::tr("Access denied by the server. Check your login.");
     case QNetworkReply::ContentNotFoundError:
         return SourceManager::tr("Not found on the server (404). Check the address.");
+    case QNetworkReply::RemoteHostClosedError:
+        return SourceManager::tr("The server closed the connection. Your provider may be "
+                                 "blocking this app or your IP address for a while (for example "
+                                 "after many requests), or your internet provider may block it.");
+    case QNetworkReply::UnknownNetworkError:
+    case QNetworkReply::NetworkSessionFailedError:
+    case QNetworkReply::TemporaryNetworkFailureError:
+        return SourceManager::tr("The server can't be reached from this network (%1). Check "
+                                 "your internet connection, VPN or DNS settings.")
+                .arg(reply->errorString());
     default:
         return reply->errorString();
     }
@@ -61,7 +71,7 @@ QString localPath(const QUrl &url)
 } // namespace
 
 SourceManager::SourceManager(QObject *parent)
-    : QObject(parent), m_nam(new QNetworkAccessManager(this))
+    : QObject(parent), m_nam(NetworkFactory::createManager(this))
 {
     connect(&m_watcher, &QFutureWatcher<WorkResult>::finished, this, [this] {
         const WorkResult result = m_watcher.result();
@@ -322,7 +332,6 @@ void SourceManager::download(const QUrl &url, const QString &label, const DataHa
                              DownloadFailure onFailure)
 {
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::UserAgentHeader, NetworkFactory::userAgent());
     request.setTransferTimeout(kTransferTimeoutMs);
 
     QNetworkReply *reply = m_nam->get(request);

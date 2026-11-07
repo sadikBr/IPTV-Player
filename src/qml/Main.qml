@@ -119,6 +119,8 @@ ApplicationWindow {
         const current = stack.currentItem
         if (!current)
             return
+        if (current.extId === undefined)
+            return // not a movie or series page
         if (current.playRequested)
             current.playRequested(false)
         else if (current.episodeRequested && current.resumeEpisode)
