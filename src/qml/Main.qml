@@ -519,7 +519,7 @@ ApplicationWindow {
 
     // Search everything: Ctrl+F (pages with their own search field handle it first)
     Shortcut {
-        sequence: StandardKey.Find
+        sequences: [StandardKey.Find]
         enabled: window.chromeVisible && !(stack.currentItem && stack.currentItem.objectName === "searchPage")
         onActivated: window.openSearch()
     }
