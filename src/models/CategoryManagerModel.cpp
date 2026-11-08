@@ -148,6 +148,8 @@ void CategoryManagerModel::apply(const QList<int> &indexes, bool hidden)
         return;
     for (int i : indexes)
         m_all[i].hidden = hidden;
+    if (!hidden && m_kind == QLatin1String("live"))
+        m_liveShownAgain = true;
 
     if (!m_rows.isEmpty())
         emit dataChanged(index(0), index(int(m_rows.size()) - 1), { HiddenRole });

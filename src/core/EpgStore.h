@@ -25,8 +25,9 @@ public:
     // Replaces the guide of a source with the XMLTV data in `device` (plain or
     // gzip). Only programs overlapping [windowStart, windowEnd] are kept.
     // Writes in small batches so other writers are never blocked for long.
+    // now: the current time (tests pass a fixed one); -1 = the clock.
     bool importGuide(int sourceId, QIODevice *device, qint64 windowStart, qint64 windowEnd,
-                     int *programCount = nullptr);
+                     int *programCount = nullptr, qint64 now = -1);
 
     // Matches channels to guide entries (by guide id, then by name) and stores
     // the result in channels.epg_key. Called after a guide or channel update.

@@ -47,7 +47,7 @@ QString EpgStore::channelKey(const QString &id)
 }
 
 bool EpgStore::importGuide(int sourceId, QIODevice *device, qint64 windowStart, qint64 windowEnd,
-                           int *programCount)
+                           int *programCount, qint64 nowOverride)
 {
     QIODevice *input = device;
     std::unique_ptr<GzipDevice> gzip;
@@ -89,6 +89,37 @@ bool EpgStore::importGuide(int sourceId, QIODevice *device, qint64 windowStart, 
     if (!m_db.commit())
         return failed(q);
 
+    // Only the guide of channels that are in the lists (and not hidden): a
+    // provider's guide often covers thousands of channels more. Each wanted
+    // channel keeps one day of past programs, or its catch-up archive.
+    // Without any channels yet (lists not loaded) everything is kept.
+    QHash<QString, int> wantedIds;   // guide id -> archive days
+    QHash<QString, int> wantedNames; // channel name (search key) -> archive days
+    {
+        QSqlQuery w(m_db);
+        w.prepare(QStringLiteral("SELECT c.epg_id, c.search_name, c.archive_days FROM channels c "
+                                 "WHERE c.source_id = ? AND c.kind = 'live' AND ")
+                  + SourceStore::notInHiddenCategory());
+        w.addBindValue(sourceId);
+        if (w.exec()) {
+            while (w.next()) {
+                const int days = w.value(2).toInt();
+                const QString id = channelKey(w.value(0).toString());
+                if (!id.isEmpty())
+                    wantedIds[id] = qMax(wantedIds.value(id), days);
+                const QString name = w.value(1).toString();
+                if (!name.isEmpty())
+                    wantedNames[name] = qMax(wantedNames.value(name), days);
+            }
+        }
+    }
+    const bool filterChannels = !wantedIds.isEmpty() || !wantedNames.isEmpty();
+    QHash<QString, int> relevant = wantedIds; // guide channel key -> archive days
+    const qint64 now = nowOverride >= 0 ? nowOverride : QDateTime::currentSecsSinceEpoch();
+    const auto pastLimit = [&](int archiveDays) {
+        return qMax(windowStart, now - qint64(qMax(1, archiveDays)) * 86400);
+    };
+
     QSqlQuery insertProgram(m_db);
     insertProgram.prepare(QStringLiteral(
             "INSERT INTO epg_programs (source_id, channel_key, start, stop, title, sub_title, "
@@ -120,6 +151,20 @@ bool EpgStore::importGuide(int sourceId, QIODevice *device, qint64 windowStart, 
         if (!dbOk)
             return;
         const QString key = channelKey(channel.id);
+        if (filterChannels) {
+            // Wanted by its id, or by one of its names.
+            int days = -1;
+            if (wantedIds.contains(key))
+                days = wantedIds.value(key);
+            for (const QString &name : channel.names) {
+                const auto it = wantedNames.constFind(SourceStore::searchKey(name));
+                if (it != wantedNames.constEnd())
+                    days = qMax(days, *it);
+            }
+            if (days < 0)
+                return;
+            relevant[key] = days;
+        }
         beginBatch();
         QStringList names = channel.names;
         names.prepend(QString()); // always register the id itself
@@ -143,6 +188,11 @@ bool EpgStore::importGuide(int sourceId, QIODevice *device, qint64 windowStart, 
         if (p.stop <= windowStart || p.start >= windowEnd)
             return true;
         const QString key = channelKey(p.channelId);
+        if (filterChannels) {
+            const auto it = relevant.constFind(key);
+            if (it == relevant.constEnd() || p.stop <= pastLimit(*it))
+                return true;
+        }
         programKeys.insert(key);
         beginBatch();
         insertProgram.addBindValue(sourceId);
@@ -203,18 +253,23 @@ bool EpgStore::importGuide(int sourceId, QIODevice *device, qint64 windowStart, 
 bool EpgStore::linkChannels(int sourceId)
 {
     // Each statement with the number of times it uses the source id.
+    // Only live channels have a guide; films and series are left alone.
     const QList<QPair<QString, int>> statements = {
-        { QStringLiteral("UPDATE channels SET epg_key = '' WHERE source_id = ?"), 1 },
+        { QStringLiteral("UPDATE channels SET epg_key = '' WHERE source_id = ? AND epg_key != ''"),
+          1 },
         // 1. By guide id (tvg-id / epg_channel_id)
         { QStringLiteral("UPDATE channels SET epg_key = lower(trim(epg_id)) WHERE source_id = ? "
-                         "AND epg_id != '' AND EXISTS (SELECT 1 FROM epg_channels ec "
-                         "WHERE ec.source_id = ? AND ec.channel_key = lower(trim(channels.epg_id)))"),
+                         "AND kind = 'live' AND epg_id != '' AND EXISTS (SELECT 1 FROM "
+                         "epg_channels ec WHERE ec.source_id = ? "
+                         "AND ec.channel_key = lower(trim(channels.epg_id)))"),
           2 },
-        // 2. By name, for channels without a usable id
+        // 2. By name, for channels without a usable id. The test for an empty name is
+        // on the channel so the lookup uses the (source_id, name_key) index.
         { QStringLiteral("UPDATE channels SET epg_key = COALESCE((SELECT ec.channel_key "
-                         "FROM epg_channels ec WHERE ec.source_id = ? AND ec.name_key != '' "
+                         "FROM epg_channels ec INDEXED BY idx_epg_channels_name WHERE ec.source_id = ? "
                          "AND ec.name_key = channels.search_name LIMIT 1), '') "
-                         "WHERE source_id = ? AND epg_key = ''"),
+                         "WHERE source_id = ? AND kind = 'live' AND epg_key = '' "
+                         "AND search_name != ''"),
           2 },
     };
     QSqlQuery q(m_db);

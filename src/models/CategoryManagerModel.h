@@ -20,6 +20,9 @@ class CategoryManagerModel : public QAbstractListModel
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
     Q_PROPERTY(int totalCount READ totalCount NOTIFY statsChanged)
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY statsChanged)
+    // Live categories were shown again: their channels need the TV guide
+    // (it is only kept for visible channels).
+    Q_PROPERTY(bool liveShownAgain MEMBER m_liveShownAgain NOTIFY statsChanged)
     // [{name, total, hidden}] sorted by size; "Other" collects the rest
     Q_PROPERTY(QVariantList groups READ groups NOTIFY statsChanged)
 
@@ -88,4 +91,5 @@ private:
     QList<int> m_rows; // indexes into m_all
     QVariantList m_groups;
     bool m_applying = false;
+    bool m_liveShownAgain = false;
 };

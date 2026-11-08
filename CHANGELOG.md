@@ -26,6 +26,10 @@ The first release: watch live TV, the TV guide, movies and series from your IPTV
   (Search in the side bar, the search button on Home, or Ctrl+F).
 - **Sleep timer:** stop TV or radio after 15–90 minutes or at the end of the program; the
   sound fades out (moon button in the player and the radio bar).
+- **Faster TV guide:** the guide updates in seconds instead of minutes on large providers;
+  only channels you have (and haven't hidden) are kept, with past programs only as far
+  back as the channel's catch-up archive.
+- **Android:** pictures and https streams now load (the app ships its own OpenSSL).
 - **Sorting:** sort channels, movies and series by name, rating, year, channel number or
   recently added (sort button at the top; remembered per section).
 - **Missing artwork:** movies and series without a picture (or whose picture doesn't load)

@@ -8,6 +8,7 @@
 #include "XtreamApi.h"
 
 #include <QDateTime>
+#include <QElapsedTimer>
 
 #include <QSqlError>
 #include <QSqlQuery>
@@ -283,6 +284,10 @@ void ChannelListModel::reloadSource()
 
 void ChannelListModel::reload()
 {
+    // IPTV_PERF=1: log how long list queries take (performance checks).
+    static const bool perf = qEnvironmentVariableIsSet("IPTV_PERF");
+    QElapsedTimer perfTimer;
+    perfTimer.start();
     QList<Row> rows;
     if (m_sourceId > 0) {
         QString sql = QStringLiteral(
@@ -341,6 +346,10 @@ void ChannelListModel::reload()
         }
     }
 
+    if (perf)
+        qInfo("perf: %s list (category %d, sort %s, limit %d, search '%s'): %d rows in %lld ms",
+              qPrintable(m_kind), m_categoryId, qPrintable(m_sortOrder), m_limit,
+              qPrintable(m_searchText), int(rows.size()), perfTimer.elapsed());
     const bool countChange = rows.size() != m_rows.size();
     beginResetModel();
     m_rows = std::move(rows);

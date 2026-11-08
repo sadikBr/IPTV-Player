@@ -221,9 +221,14 @@ void EpgManager::import(const QString &path)
         } else {
             const qint64 now = QDateTime::currentSecsSinceEpoch();
             EpgStore store(Database::connection());
+            QElapsedTimer timer;
+            timer.start();
             result.ok = store.importGuide(sourceId, &file, now - kKeepPastSecs,
                                           now + kKeepFutureSecs, &result.count);
             result.error = store.lastError();
+            if (qEnvironmentVariableIsSet("IPTV_PERF"))
+                qInfo("perf: guide import (%lld MB): %d programs in %lld ms", file.size() >> 20,
+                      result.count, timer.elapsed());
         }
         Database::closeThreadConnection();
         return result;

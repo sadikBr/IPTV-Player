@@ -23,6 +23,13 @@ Page {
 
     background: Rectangle { color: AppTheme.background }
 
+    // The guide is only kept for visible channels: fetch it again for the
+    // categories shown again.
+    Component.onDestruction: {
+        if (manager.liveShownAgain)
+            EpgManager.refresh(sourceId)
+    }
+
     CategoryManagerModel {
         id: manager
         sourceId: page.sourceId

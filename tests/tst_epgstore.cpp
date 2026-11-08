@@ -60,7 +60,7 @@ private:
             return false;
         EpgStore store(Database::connection());
         const bool ok = store.importGuide(m_sourceId, &file, utc(2026, 11, 6, 0, 0),
-                                          utc(2026, 11, 10, 0, 0), count);
+                                          utc(2026, 11, 10, 0, 0), count, utc(2026, 11, 7, 12, 0));
         if (!ok)
             qWarning() << store.lastError();
         return ok;
@@ -171,12 +171,51 @@ private slots:
         QElapsedTimer timer;
         timer.start();
         int count = 0;
+        // A provider whose lists aren't loaded yet: the whole guide is kept.
+        SourceRecord empty;
+        empty.name = QStringLiteral("No lists yet");
+        empty.type = QStringLiteral("m3u");
+        empty.url = QStringLiteral("http://example.com/empty.m3u");
+        const int emptyId = SourceStore(Database::connection()).addSource(empty);
         EpgStore store(Database::connection());
-        QVERIFY2(store.importGuide(m_sourceId, &buffer, base, base + 7 * 86400, &count),
+        QVERIFY2(store.importGuide(emptyId, &buffer, base, base + 7 * 86400, &count, base),
                  qPrintable(store.lastError()));
         QCOMPARE(count, 100000);
         qDebug() << "Imported 100k programs in" << timer.elapsed() << "ms";
-        QVERIFY(importFixture("guide.xml", &count)); // restore for the next tests
+        QVERIFY(SourceStore(Database::connection()).removeSource(emptyId));
+        QVERIFY(importFixture("guide.xml", &count)); // restore for the next tests (prune() trimmed it)
+    }
+
+    void onlyListedChannelsAndArchive()
+    {
+        // BBC keeps 3 days of catch-up; CNN has none; "unlisted" isn't in the lists.
+        SourceContent c = content();
+        c.channels[0].archiveDays = 3;
+        QVERIFY(SourceStore(Database::connection()).replaceContent(m_sourceId, c));
+
+        const qint64 now = utc(2026, 11, 7, 12, 0);
+        const auto t = [](qint64 secs) {
+            return QDateTime::fromSecsSinceEpoch(secs, QTimeZone::utc())
+                    .toString(QStringLiteral("yyyyMMddHHmmss +0000")).toLatin1();
+        };
+        QByteArray xml = "<tv><channel id=\"bbc1.uk\"/><channel id=\"cnn.us\"/><channel id=\"unlisted\"/>";
+        for (const char *id : { "bbc1.uk", "cnn.us", "unlisted" }) {
+            for (const qint64 start : { now - 2 * 86400, now - 3600, now + 3600 }) {
+                xml += "<programme start=\"" + t(start) + "\" stop=\"" + t(start + 1800)
+                        + "\" channel=\"" + id + "\"><title>x</title></programme>";
+            }
+        }
+        xml += "</tv>";
+        QBuffer buffer(&xml);
+        buffer.open(QIODevice::ReadOnly);
+        int count = 0;
+        EpgStore store(Database::connection());
+        QVERIFY(store.importGuide(m_sourceId, &buffer, now - 7 * 86400, now + 4 * 86400, &count, now));
+        // BBC: all 3 (archive reaches 2 days back); CNN: the last 2 (one day back); unlisted: none
+        QCOMPARE(count, 5);
+
+        QVERIFY(SourceStore(Database::connection()).replaceContent(m_sourceId, content()));
+        QVERIFY(importFixture("guide.xml", &count));
     }
 
     void invalidGuideKeepsOldGuide()
