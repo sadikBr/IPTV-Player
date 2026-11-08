@@ -20,16 +20,16 @@ ChannelListModel::ChannelListModel(QObject *parent) : QAbstractListModel(parent)
     connect(DataNotifier::instance(), &DataNotifier::contentChanged, this, [this](int sourceId) {
         if (sourceId == m_sourceId) {
             reloadSource();
-            reload();
+            refresh();
         }
     });
     connect(DataNotifier::instance(), &DataNotifier::favoritesChanged, this, [this](int sourceId) {
         if (sourceId == m_sourceId && m_categoryId == CategoryListModel::FavoritesCategory)
-            reload();
+            refresh();
     });
     connect(DataNotifier::instance(), &DataNotifier::progressChanged, this, [this](int sourceId) {
         if (sourceId == m_sourceId && m_kind == QLatin1String("movie"))
-            reload();
+            refresh();
     });
     connect(DataNotifier::instance(), &DataNotifier::sourcesChanged, this, [this] {
         const int shift = m_source.epgShiftMinutes;
@@ -40,7 +40,7 @@ ChannelListModel::ChannelListModel(QObject *parent) : QAbstractListModel(parent)
     connect(DataNotifier::instance(), &DataNotifier::epgChanged, this, [this](int sourceId) {
         // Channel/guide links may have changed too.
         if (sourceId == m_sourceId)
-            reload();
+            refresh();
     });
 
     // Programs change over time: refresh "now" once a minute.
@@ -211,14 +211,6 @@ QVariantMap ChannelListModel::get(int row) const
     };
 }
 
-int ChannelListModel::maxArchiveDays() const
-{
-    int days = 0;
-    for (const Row &r : m_rows)
-        days = qMax(days, r.archiveDays);
-    return days;
-}
-
 bool ChannelListModel::canCatchup(int row, const QDateTime &start) const
 {
     if (row < 0 || row >= m_rows.size())
@@ -243,20 +235,30 @@ QUrl ChannelListModel::streamUrl(int row) const
     return SourceStore::streamUrl(m_source, kindFromString(m_kind), r.extId, r.url, r.extension);
 }
 
-int ChannelListModel::indexOfExtId(const QString &extId) const
+int ChannelListModel::indexOfExtId(const QString &extId)
 {
-    for (int i = 0; i < m_rows.size(); ++i) {
-        if (m_rows.at(i).extId == extId)
-            return i;
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int i = 0; i < m_rows.size(); ++i) {
+            if (m_rows.at(i).extId == extId)
+                return i;
+        }
+        if (!m_hasMore)
+            break;
+        loadAll();
     }
     return -1;
 }
 
-int ChannelListModel::indexOfNumber(int number) const
+int ChannelListModel::indexOfNumber(int number)
 {
-    for (int i = 0; i < m_rows.size(); ++i) {
-        if (m_rows.at(i).number == number)
-            return i;
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int i = 0; i < m_rows.size(); ++i) {
+            if (m_rows.at(i).number == number)
+                return i;
+        }
+        if (!m_hasMore)
+            break;
+        loadAll();
     }
     return -1;
 }
@@ -282,79 +284,176 @@ void ChannelListModel::reloadSource()
     m_source = source.value_or(SourceRecord{});
 }
 
+namespace {
+constexpr int kFirstChunk = 300; // rows loaded when a list opens
+constexpr int kChunk = 1000;     // rows added each time a view scrolls near the end
+} // namespace
+
+void ChannelListModel::classBegin()
+{
+    m_complete = false;
+}
+
+void ChannelListModel::componentComplete()
+{
+    m_complete = true;
+    reload();
+}
+
 void ChannelListModel::reload()
 {
+    load(0);
+}
+
+void ChannelListModel::refresh()
+{
+    load(int(m_rows.size()));
+}
+
+QString ChannelListModel::whereClause() const
+{
+    QString sql = QStringLiteral("WHERE c.source_id = :source AND c.kind = :kind");
+    const QString search = SourceStore::searchKey(m_searchText.trimmed());
+    if (!search.isEmpty()) {
+        sql += QStringLiteral(" AND c.search_name LIKE :search ESCAPE '\\'");
+        sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
+    } else if (m_categoryId == CategoryListModel::AllCategories) {
+        sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
+    } else if (m_categoryId == CategoryListModel::FavoritesCategory) {
+        sql += QStringLiteral(" AND f.ext_id IS NOT NULL AND ") + SourceStore::notInLockedCategory();
+    } else if (m_categoryId > 0) {
+        sql += QStringLiteral(" AND c.category_id = :category");
+    }
+    return sql;
+}
+
+void ChannelListModel::bindFilter(QSqlQuery &q) const
+{
+    q.bindValue(QStringLiteral(":source"), m_sourceId);
+    q.bindValue(QStringLiteral(":kind"), m_kind);
+    const QString search = SourceStore::searchKey(m_searchText.trimmed());
+    if (!search.isEmpty()) {
+        QString escaped = search;
+        escaped.replace(QLatin1Char('\\'), QLatin1String("\\\\"))
+                .replace(QLatin1Char('%'), QLatin1String("\\%"))
+                .replace(QLatin1Char('_'), QLatin1String("\\_"));
+        q.bindValue(QStringLiteral(":search"), QLatin1Char('%') + escaped + QLatin1Char('%'));
+    } else if (m_categoryId > 0) {
+        q.bindValue(QStringLiteral(":category"), m_categoryId);
+    }
+}
+
+QList<ChannelListModel::Row> ChannelListModel::queryRows(int offset, int count) const
+{
+    QList<Row> rows;
+    if (m_sourceId <= 0)
+        return rows;
+    QString sql = QStringLiteral(
+            "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
+            "(f.ext_id IS NOT NULL), c.extension, c.year, c.rating, "
+            "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0), "
+            "c.archive_days, c.catchup_type, c.catchup_source "
+            "FROM channels c "
+            "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
+            "AND f.ext_id = c.ext_id "
+            "LEFT JOIN watch_progress wp ON wp.source_id = c.source_id AND wp.kind = c.kind "
+            "AND wp.ext_id = c.ext_id ");
+    sql += whereClause();
+    sql += QStringLiteral(" ORDER BY ") + SourceStore::orderBy(m_sortOrder);
+    sql += QStringLiteral(" LIMIT %1 OFFSET %2").arg(count).arg(offset);
+
+    QSqlQuery q(Database::connection());
+    q.setForwardOnly(true);
+    q.prepare(sql);
+    bindFilter(q);
+    if (!q.exec()) {
+        qWarning("Channel query failed: %s", qPrintable(q.lastError().text()));
+        return rows;
+    }
+    if (count > 0)
+        rows.reserve(count);
+    while (q.next()) {
+        rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(),
+                      q.value(3).toString(), q.value(4).toString(), q.value(6).toString(),
+                      q.value(5).toInt(), q.value(7).toBool(), q.value(8).toString(),
+                      q.value(9).toString(), q.value(10).toString(),
+                      qBound(0.0, q.value(11).toDouble(), 1.0), q.value(12).toInt(),
+                      q.value(13).toString(), q.value(14).toString() });
+    }
+    return rows;
+}
+
+void ChannelListModel::load(int minRows)
+{
+    if (!m_complete)
+        return; // componentComplete() loads once every property is set
+
     // IPTV_PERF=1: log how long list queries take (performance checks).
     static const bool perf = qEnvironmentVariableIsSet("IPTV_PERF");
     QElapsedTimer perfTimer;
     perfTimer.start();
-    QList<Row> rows;
-    if (m_sourceId > 0) {
-        QString sql = QStringLiteral(
-                "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
-                "(f.ext_id IS NOT NULL), c.extension, c.year, c.rating, "
-                "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0), "
-                "c.archive_days, c.catchup_type, c.catchup_source "
-                "FROM channels c "
-                "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
-                "AND f.ext_id = c.ext_id "
-                "LEFT JOIN watch_progress wp ON wp.source_id = c.source_id AND wp.kind = c.kind "
-                "AND wp.ext_id = c.ext_id "
-                "WHERE c.source_id = :source AND c.kind = :kind");
 
-        const QString search = SourceStore::searchKey(m_searchText.trimmed());
-        if (!search.isEmpty()) {
-            sql += QStringLiteral(" AND c.search_name LIKE :search ESCAPE '\\'");
-            sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
-        } else if (m_categoryId == CategoryListModel::AllCategories) {
-            sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
-        } else if (m_categoryId == CategoryListModel::FavoritesCategory) {
-            sql += QStringLiteral(" AND f.ext_id IS NOT NULL AND ") + SourceStore::notInLockedCategory();
-        } else if (m_categoryId > 0) {
-            sql += QStringLiteral(" AND c.category_id = :category");
-        }
-        sql += QStringLiteral(" ORDER BY ") + SourceStore::orderBy(m_sortOrder);
-        if (m_limit > 0)
-            sql += QStringLiteral(" LIMIT %1").arg(m_limit);
+    // A fixed limit (home rows) is loaded at once; other lists in chunks.
+    const int wanted = m_limit > 0 ? m_limit : qMax(kFirstChunk, minRows);
+    QList<Row> rows = queryRows(0, wanted);
+    const bool hasMore = m_limit <= 0 && rows.size() == wanted;
 
+    // The guide needs the longest archive of the whole list, not just the loaded part.
+    int maxDays = 0;
+    if (m_sourceId > 0 && m_kind == QLatin1String("live")) {
         QSqlQuery q(Database::connection());
-        q.setForwardOnly(true);
-        q.prepare(sql);
-        q.bindValue(QStringLiteral(":source"), m_sourceId);
-        q.bindValue(QStringLiteral(":kind"), m_kind);
-        if (!search.isEmpty()) {
-            QString escaped = search;
-            escaped.replace(QLatin1Char('\\'), QLatin1String("\\\\"))
-                    .replace(QLatin1Char('%'), QLatin1String("\\%"))
-                    .replace(QLatin1Char('_'), QLatin1String("\\_"));
-            q.bindValue(QStringLiteral(":search"), QLatin1Char('%') + escaped + QLatin1Char('%'));
-        } else if (m_categoryId > 0) {
-            q.bindValue(QStringLiteral(":category"), m_categoryId);
-        }
-
-        if (q.exec()) {
-            while (q.next()) {
-                rows.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(),
-                              q.value(3).toString(), q.value(4).toString(), q.value(6).toString(),
-                              q.value(5).toInt(), q.value(7).toBool(), q.value(8).toString(),
-                              q.value(9).toString(), q.value(10).toString(),
-                              qBound(0.0, q.value(11).toDouble(), 1.0), q.value(12).toInt(),
-                              q.value(13).toString(), q.value(14).toString() });
-            }
-        } else {
-            qWarning("Channel query failed: %s", qPrintable(q.lastError().text()));
-        }
+        q.prepare(QStringLiteral("SELECT MAX(c.archive_days) FROM channels c "
+                                 "LEFT JOIN favorites f ON f.source_id = c.source_id "
+                                 "AND f.kind = c.kind AND f.ext_id = c.ext_id ")
+                  + whereClause());
+        bindFilter(q);
+        if (q.exec() && q.next())
+            maxDays = q.value(0).toInt();
     }
 
     if (perf)
-        qInfo("perf: %s list (category %d, sort %s, limit %d, search '%s'): %d rows in %lld ms",
+        qInfo("perf: %s list (category %d, sort %s, limit %d, search '%s'): %d rows%s in %lld ms",
               qPrintable(m_kind), m_categoryId, qPrintable(m_sortOrder), m_limit,
-              qPrintable(m_searchText), int(rows.size()), perfTimer.elapsed());
-    const bool countChange = rows.size() != m_rows.size();
+              qPrintable(m_searchText), int(rows.size()), hasMore ? " (more later)" : "",
+              perfTimer.elapsed());
     beginResetModel();
     m_rows = std::move(rows);
+    m_hasMore = hasMore;
+    m_maxArchiveDays = maxDays;
     m_guideCache.clear();
     endResetModel();
-    Q_UNUSED(countChange)
     emit countChanged(); // also updates maxArchiveDays
+}
+
+bool ChannelListModel::canFetchMore(const QModelIndex &parent) const
+{
+    return !parent.isValid() && m_hasMore;
+}
+
+void ChannelListModel::fetchMore(const QModelIndex &parent)
+{
+    if (parent.isValid() || !m_hasMore)
+        return;
+    QList<Row> rows = queryRows(int(m_rows.size()), kChunk);
+    m_hasMore = rows.size() == kChunk;
+    if (!rows.isEmpty()) {
+        beginInsertRows({}, int(m_rows.size()), int(m_rows.size() + rows.size()) - 1);
+        m_rows.append(std::move(rows));
+        endInsertRows();
+        emit countChanged();
+    }
+}
+
+void ChannelListModel::loadAll()
+{
+    if (!m_hasMore)
+        return;
+    QList<Row> rows = queryRows(int(m_rows.size()), -1);
+    m_hasMore = false;
+    if (!rows.isEmpty()) {
+        beginInsertRows({}, int(m_rows.size()), int(m_rows.size() + rows.size()) - 1);
+        m_rows.append(std::move(rows));
+        endInsertRows();
+        emit countChanged();
+    }
 }

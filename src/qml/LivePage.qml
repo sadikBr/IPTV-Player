@@ -79,6 +79,16 @@ Page {
         }
     }
 
+    // Another provider: start again from all categories.
+    onSourceIdChanged: selectedCategory = CategoryListModel.AllCategories
+
+    // Shown again (the page is kept between visits).
+    function reactivated() {
+        SourceManager.refreshIfStale(sourceId, 24)
+        EpgManager.refreshIfStale(sourceId, 12)
+        activeView.forceActiveFocus()
+    }
+
     Component.onCompleted: {
         if (AppSettings.lastChannelSourceId === sourceId) {
             const last = channels.indexOfExtId(AppSettings.lastChannelExtId)
@@ -196,7 +206,7 @@ Page {
         CategoryChips {
             visible: !page.wide && categories.count > 0
             Layout.fillWidth: true
-            model: categories
+            model: page.wide ? null : categories // a hidden view would still build its items
             selectedCategory: page.selectedCategory
             onCategorySelected: (id) => page.selectCategory(id)
             onHideRequested: (id) => page.hideCategory(id)
@@ -213,7 +223,7 @@ Page {
                 Layout.preferredWidth: 250
                 Layout.fillHeight: true
                 Layout.leftMargin: AppTheme.pageMargin - 10
-                model: categories
+                model: page.wide ? categories : null
                 hiddenCount: categories.hiddenCount
                 selectedCategory: page.selectedCategory
                 onCategorySelected: (id) => page.selectCategory(id)
@@ -235,7 +245,7 @@ Page {
                     readonly property int columns: Math.max(2, Math.floor(width / (page.narrow ? 160 : 220)))
                     cellWidth: Math.floor(width / columns)
                     cellHeight: page.narrow ? 170 : 196
-                    model: channels
+                    model: page.gridMode ? channels : null // a hidden view would still build its tiles
                     clip: true
                     keyNavigationEnabled: true
                     activeFocusOnTab: true
@@ -295,7 +305,7 @@ Page {
                     anchors.fill: parent
                     anchors.leftMargin: page.wide ? 16 : 8
                     anchors.rightMargin: page.wide ? AppTheme.pageMargin - 6 : 8
-                    model: channels
+                    model: page.gridMode ? null : channels
                     clip: true
                     spacing: 2
                     keyNavigationEnabled: true

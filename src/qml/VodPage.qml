@@ -60,6 +60,8 @@ Page {
     }
 
     Component.onCompleted: grid.forceActiveFocus()
+    onSourceIdChanged: selectedCategory = CategoryListModel.AllCategories
+    function reactivated() { grid.forceActiveFocus() }
 
     header: PageHeader {
         title: page.kind === "movie" ? qsTr("Movies") : qsTr("Series")
@@ -136,7 +138,7 @@ Page {
         CategoryChips {
             visible: !page.wide && categories.count > 0
             Layout.fillWidth: true
-            model: categories
+            model: page.wide ? null : categories // a hidden view would still build its items
             selectedCategory: page.selectedCategory
             onCategorySelected: (id) => page.selectCategory(id)
             onHideRequested: (id) => page.hideCategory(id)
@@ -153,7 +155,7 @@ Page {
                 Layout.preferredWidth: 250
                 Layout.fillHeight: true
                 Layout.leftMargin: AppTheme.pageMargin - 10
-                model: categories
+                model: page.wide ? categories : null
                 hiddenCount: categories.hiddenCount
                 selectedCategory: page.selectedCategory
                 onCategorySelected: (id) => page.selectCategory(id)

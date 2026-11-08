@@ -199,9 +199,12 @@ foreach(file IN LISTS QML_SOURCES QML_RESOURCES)
 endforeach()
 set_source_files_properties(qml/AppTheme.qml qml/AppState.qml qml/SleepTimer.qml
                             PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
-# qmlcachegen 6.12.0 crashes on this file (Qt bug, seen on Arch Linux). It is
-# compiled when the app starts instead; all other files are still precompiled.
-set_source_files_properties(qml/HomePage.qml PROPERTIES QT_QML_SKIP_CACHEGEN TRUE)
+# qmlcachegen 6.12.0 crashes on this file (Qt bug, seen on Arch Linux). With
+# that Qt it is compiled when the app starts instead; older Qt (the release
+# builds) precompiles it like every other file.
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.12)
+    set_source_files_properties(qml/HomePage.qml PROPERTIES QT_QML_SKIP_CACHEGEN TRUE)
+endif()
 
 # Ahead-of-time compilation of QML. Turn off (-DIPTV_QML_AOT=OFF) if your Qt's
 # qmlcachegen crashes; QML is then compiled when the app starts instead.

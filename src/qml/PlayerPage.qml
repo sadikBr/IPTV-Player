@@ -81,6 +81,8 @@ Page {
     function playChannel(index) {
         if (!hasChannels)
             return
+        if (index < 0 || index >= channelModel.count)
+            channelModel.loadAll() // wrap around: the list may still be loading
         const count = channelModel.count
         index = ((index % count) + count) % count
         const channel = channelModel.get(index)

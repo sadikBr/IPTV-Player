@@ -30,6 +30,23 @@ ApplicationWindow {
     readonly property bool fullScreen: visibility === Window.FullScreen
     property int visibilityBeforeFullScreen: Window.Windowed
     // Pages like the player hide the navigation.
+    // IPTV_PERF=1: log how long each screen change takes until its first frame.
+    property bool perfLogging: false
+    property string perfLabel
+    property double perfStart: 0
+    function perfMark(label) {
+        if (!perfLogging)
+            return
+        perfLabel = label
+        perfStart = Date.now()
+    }
+    onFrameSwapped: {
+        if (perfStart > 0) {
+            console.info("perf: screen " + perfLabel + " in " + (Date.now() - perfStart) + " ms")
+            perfStart = 0
+        }
+    }
+
     readonly property bool chromeVisible: !(stack.currentItem && stack.currentItem.immersive === true)
 
     FontLoader { source: "fonts/Inter-Regular.ttf" }
@@ -70,6 +87,23 @@ ApplicationWindow {
         }
     }
 
+    // Section pages are built once and kept (they open instantly the next
+    // time, where you left them). Settings and the guide are rebuilt each time.
+    property var sectionPages: ({})
+    function sectionPage(name) {
+        if (name !== "home" && name !== "live" && name !== "movie" && name !== "series"
+                && name !== "radio")
+            return null
+        let page = sectionPages[name]
+        if (!page) {
+            page = sectionComponent(name).createObject(pageCache)
+            sectionPages[name] = page
+        } else if (page.reactivated) {
+            Qt.callLater(page.reactivated)
+        }
+        return page
+    }
+
     // Shows a section, replacing everything on the stack.
     function goSection(name) {
         if (name === "search") {
@@ -86,7 +120,10 @@ ApplicationWindow {
         if (name !== "home" && name !== "settings" && name !== "radio" && !AppState.hasSource)
             name = "home"
         AppState.section = name
-        stack.replace(null, sectionComponent(name), {}, StackView.Immediate)
+        perfMark(name)
+        stack.replace(null, sectionPage(name) || sectionComponent(name), {}, StackView.Immediate)
+        if (perfLogging)
+            console.info("perf: created " + name + " in " + (Date.now() - perfStart) + " ms")
     }
 
     // Back one screen; returns false when there is nothing to go back to.
@@ -94,8 +131,10 @@ ApplicationWindow {
         if (stack.depth > 1) {
             if (stack.currentItem.goBack)
                 stack.currentItem.goBack()
-            else
+            else {
+                perfMark("back")
                 stack.pop()
+            }
         } else if (AppState.section !== "home") {
             goSection("home")
         } else {
@@ -106,14 +145,17 @@ ApplicationWindow {
 
     // A program from the provider's archive: plays like a recording (pause, seek).
     function playCatchup(url, title) {
+        perfMark("player")
         stack.push(playerComponent, { "streamUrl": url, "streamTitle": title, "catchup": true })
     }
 
     function openStream(url, title) {
+        perfMark("player")
         stack.push(playerComponent, { "streamUrl": url, "streamTitle": title || "" })
     }
 
     function playChannel(channelModel, sourceId, index) {
+        perfMark("player")
         stack.push(playerComponent, { "channelModel": channelModel, "channelIndex": index,
                                       "sourceId": sourceId })
     }
@@ -127,33 +169,40 @@ ApplicationWindow {
     }
 
     function openSearch() {
+        perfMark("search")
         stack.push(searchComponent)
     }
 
     function openGuide(channelModel) {
+        perfMark("guide")
         stack.push(guideComponent, { "channelModel": channelModel, "showBack": true })
     }
 
     function openMovie(sourceId, extId) {
+        perfMark("movieDetails")
         stack.push(movieDetailsComponent, { "sourceId": sourceId, "extId": extId })
     }
 
     function openSeries(sourceId, extId) {
+        perfMark("seriesDetails")
         stack.push(seriesDetailsComponent, { "sourceId": sourceId, "extId": extId })
     }
 
     function playMovie(sourceId, extId, fromStart) {
+        perfMark("player")
         stack.push(playerComponent, { "sourceId": sourceId, "vodKind": "movie",
                                       "vodExtId": extId, "startFromBeginning": !!fromStart })
     }
 
     function playEpisode(sourceId, seriesExtId, episodeExtId, fromStart) {
+        perfMark("player")
         stack.push(playerComponent, { "sourceId": sourceId, "vodKind": "episode",
                                       "seriesExtId": seriesExtId, "vodExtId": episodeExtId,
                                       "startFromBeginning": !!fromStart })
     }
 
     function addProvider() {
+        perfMark("addSource")
         stack.push(addSourceComponent)
     }
 
@@ -229,6 +278,7 @@ ApplicationWindow {
         function onAddProviderRequested() { window.addProvider() }
         function onPlayStreamRequested(url, title) { window.openStream(url, title) }
         function onManageCategoriesRequested(sourceId, kind) {
+            perfMark("manageCategories")
             stack.push(manageCategoriesComponent, { "sourceId": sourceId, "kind": kind })
         }
         function onSourceIdChanged() {
@@ -279,6 +329,12 @@ ApplicationWindow {
         height: parent.height
         compact: window.landscapeCompact
         visible: (window.wide || window.landscapeCompact) && window.chromeVisible
+    }
+
+    // Parent of the kept section pages while they are not shown.
+    Item {
+        id: pageCache
+        visible: false
     }
 
     StackView {

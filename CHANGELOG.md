@@ -29,6 +29,8 @@ The first release: watch live TV, the TV guide, movies and series from your IPTV
 - **Faster TV guide:** the guide updates in seconds instead of minutes on large providers;
   only channels you have (and haven't hidden) are kept, with past programs only as far
   back as the channel's catch-up archive.
+- **Faster navigation:** Home, Live TV, Movies, Series and Radio are kept once opened, so
+  going back to them is instant and keeps your place; long lists load as you scroll.
 - **Android:** pictures and https streams now load (the app ships its own OpenSSL).
 - **Sorting:** sort channels, movies and series by name, rating, year, channel number or
   recently added (sort button at the top; remembered per section).

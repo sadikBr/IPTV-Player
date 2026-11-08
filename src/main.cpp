@@ -312,8 +312,10 @@ int main(int argc, char *argv[])
         return 1;
 
     // Arrow keys / TV remote move between buttons, cards and lists.
-    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst()))
+    if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
         new SpatialNavigation(window);
+        window->setProperty("perfLogging", qEnvironmentVariableIsSet("IPTV_PERF"));
+    }
 
     if (smokeTest)
         runSmokeTest(engine, qmlWarnings);

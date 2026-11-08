@@ -261,6 +261,20 @@ Page {
             width: flick.width
             spacing: 36
 
+            // Without a banner, the search / provider buttons get a bar of their own.
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 64
+                Layout.bottomMargin: -28
+                visible: AppState.hasSource && !heroArea.visible && page.width < AppTheme.wideWidth
+                Loader {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: parent.visible ? cornerButtons : null
+                }
+            }
+
             // ---------- Hero ----------
             Item {
                 id: heroArea
@@ -471,13 +485,11 @@ Page {
                     }
                 }
 
-                // Provider switch on phones
-                ProviderSwitcher {
-                    visible: page.narrow
-                    compact: true
+                Loader {
                     anchors.top: parent.top
                     anchors.right: parent.right
                     anchors.margins: 12
+                    sourceComponent: cornerButtons
                 }
             }
 
@@ -624,20 +636,32 @@ Page {
     }
 
     // Phones (no side bar): search everything from Home
-    IconButton {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 14
-        visible: page.width < AppTheme.wideWidth
-        filled: true
-        iconName: "search"
-        tip: qsTr("Search")
-        onClicked: AppState.sectionRequested("search")
-    }
 
     // Delegates wrap the cards in a plain Item with typed properties named
     // after the model roles. (Re-declaring the cards' own properties as
     // "required" crashed some versions of Qt's QML compiler.)
+
+    // Phones and tablets (no side bar): search, and the provider switch on phones.
+    // Part of the page content, so they scroll away instead of covering the rows.
+    Component {
+        id: cornerButtons
+        Row {
+            spacing: 8
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: page.width < AppTheme.wideWidth
+                filled: true
+                iconName: "search"
+                tip: qsTr("Search")
+                onClicked: AppState.sectionRequested("search")
+            }
+            ProviderSwitcher {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: page.narrow
+                compact: true
+            }
+        }
+    }
 
     Component {
         id: continueDelegate

@@ -7,15 +7,21 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVariantMap>
+#include <QQmlParserStatus>
 #include <QtQml/qqmlregistration.h>
 
 // Live channels, movies or series of one source (see `kind`), filtered by
 // category and/or search text. A non-empty search looks through everything
 // of that kind.
-class ChannelListModel : public QAbstractListModel
+//
+// Long lists are loaded in chunks: the first rows right away, the rest as a
+// view scrolls (canFetchMore/fetchMore), so pages open quickly. Created from
+// QML, it loads once all its properties are set.
+class ChannelListModel : public QAbstractListModel, public QQmlParserStatus
 {
     Q_OBJECT
     QML_ELEMENT
+    Q_INTERFACES(QQmlParserStatus)
 
     Q_PROPERTY(int sourceId READ sourceId WRITE setSourceId NOTIFY sourceIdChanged)
     // "live" (default), "movie" or "series"
@@ -68,17 +74,26 @@ public:
     int rowCount(const QModelIndex &parent = {}) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
+    bool canFetchMore(const QModelIndex &parent) const override;
+    void fetchMore(const QModelIndex &parent) override;
+
+    void classBegin() override;
+    void componentComplete() override;
+
+    // Loads the rows not loaded yet (lookups and wrap-around zapping need them all).
+    Q_INVOKABLE void loadAll();
 
     // {channelId, extId, name, logo, number, favorite, epgKey}; empty if out of range.
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE QUrl streamUrl(int row) const;
-    int maxArchiveDays() const;
+    int maxArchiveDays() const { return m_maxArchiveDays; }
     // Catch-up: can the program that started at start be watched from the
     // archive, and its URL.
     Q_INVOKABLE bool canCatchup(int row, const QDateTime &start) const;
     Q_INVOKABLE QUrl catchupUrl(int row, const QDateTime &start, const QDateTime &end) const;
-    Q_INVOKABLE int indexOfExtId(const QString &extId) const;
-    Q_INVOKABLE int indexOfNumber(int number) const;
+    // Load the remaining rows if needed.
+    Q_INVOKABLE int indexOfExtId(const QString &extId);
+    Q_INVOKABLE int indexOfNumber(int number);
     Q_INVOKABLE void toggleFavorite(int row);
 
 public slots:
@@ -121,6 +136,12 @@ private:
     };
 
     void reloadSource();
+    // Keeps at least as many rows loaded as before (data changed, same list).
+    void refresh();
+    void load(int minRows);
+    QList<Row> queryRows(int offset, int count) const; // count < 0: all
+    QString whereClause() const;
+    void bindFilter(class QSqlQuery &q) const;
     const NowNext &nowNext(int row) const;
     void refreshGuide();
 
@@ -132,6 +153,9 @@ private:
     int m_limit = 0;
     iptv::SourceRecord m_source;
     QList<Row> m_rows;
+    bool m_hasMore = false;
+    bool m_complete = true; // false while QML sets the initial properties
+    int m_maxArchiveDays = 0;
     mutable QHash<int, NowNext> m_guideCache; // by row, filled on demand
     QTimer m_guideTimer;
 };
