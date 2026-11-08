@@ -16,6 +16,7 @@ iptv_add_test(tst_updatecheck)
 iptv_add_test(tst_catchup)
 iptv_add_test(tst_parental)
 iptv_add_test(tst_freetv)
+iptv_add_test(tst_radiobrowser)
 
 # The player logic (reconnect etc.) with a fake backend.
 iptv_add_test(tst_playercontroller)

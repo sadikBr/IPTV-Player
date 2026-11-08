@@ -294,5 +294,6 @@ Each phase ends with something that runs and can be tested on a real device.
   navigation, playback settings, stream format per provider, landscape and tablet layouts
 - **Phase 6 (chosen extras):** done — catch-up TV, picture-in-picture (Android), parental PIN
 - **Version 1.0.0:** all of the above, first public release
+- **Beyond IPTV:** free channels (iptv-org) and internet radio (radio-browser.info)
 - **Later, if wanted:** mpv engine for streams Qt can't play, Chromecast, profiles,
   Stalker portals

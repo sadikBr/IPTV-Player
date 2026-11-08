@@ -20,6 +20,10 @@ add_library(iptvcore STATIC
     core/Catchup.cpp
     core/FreeTv.h
     core/FreeTv.cpp
+    core/RadioBrowser.h
+    core/RadioBrowser.cpp
+    core/RadioStore.h
+    core/RadioStore.cpp
     core/Parental.h
     core/Parental.cpp
     core/UpdateCheck.h
@@ -43,6 +47,8 @@ qt_add_executable(iptvplayer
     app/FreeTvCatalog.h
     app/FreeTvCatalog.cpp
     app/ParentalControl.h
+    app/RadioManager.h
+    app/RadioManager.cpp
     app/ParentalControl.cpp
     app/SpatialNavigation.h
     app/SpatialNavigation.cpp
@@ -54,6 +60,8 @@ qt_add_executable(iptvplayer
     models/CategoryListModel.cpp
     models/ChannelListModel.h
     models/ChannelListModel.cpp
+    models/RadioStationModel.h
+    models/RadioStationModel.cpp
     models/EpisodeListModel.h
     models/EpisodeListModel.cpp
     models/ContinueWatchingModel.h
@@ -100,6 +108,7 @@ set(QML_SOURCES
     qml/IconButton.qml
     qml/LivePage.qml
     qml/ManageCategoriesPage.qml
+    qml/MiniPlayer.qml
     qml/MetaPill.qml
     qml/MovieDetailsPage.qml
     qml/NavRail.qml
@@ -109,12 +118,14 @@ set(QML_SOURCES
     qml/PlayerControls.qml
     qml/PlayerPage.qml
     qml/PosterCard.qml
+    qml/RadioPage.qml
     qml/ProviderSwitcher.qml
     qml/SearchField.qml
     qml/SeriesDetailsPage.qml
     qml/SettingsPage.qml
     qml/Shadow.qml
     qml/SortButton.qml
+    qml/StationCard.qml
     qml/StatusBanner.qml
     qml/UpdateDialog.qml
     qml/VodPage.qml
@@ -153,6 +164,7 @@ set(QML_RESOURCES
     qml/icons/pip.svg
     qml/icons/play.svg
     qml/icons/previous.svg
+    qml/icons/radio.svg
     qml/icons/retry.svg
     qml/icons/search.svg
     qml/icons/series.svg

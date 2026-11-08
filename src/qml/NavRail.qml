@@ -81,6 +81,7 @@ Rectangle {
             section: "guide"; iconName: "guide"; text: qsTr("TV guide")
             visible: AppState.hasSource
         }
+        NavItem { section: "radio"; iconName: "radio"; text: qsTr("Radio") }
 
         Item { Layout.fillHeight: true }
 

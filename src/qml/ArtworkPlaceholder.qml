@@ -25,8 +25,8 @@ Rectangle {
         IconImage {
             anchors.horizontalCenter: parent.horizontalCenter
             source: "icons/" + root.iconName + ".svg"
-            sourceSize: Qt.size(Math.round(Math.min(root.width, root.height) * 0.18),
-                                Math.round(Math.min(root.width, root.height) * 0.18))
+            sourceSize: Qt.size(Math.max(18, Math.round(Math.min(root.width, root.height) * 0.18)),
+                                Math.max(18, Math.round(Math.min(root.width, root.height) * 0.18)))
             color: "#59FFFFFF"
         }
         Label {

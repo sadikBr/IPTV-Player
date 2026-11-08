@@ -91,6 +91,11 @@ QtMultimediaBackend::~QtMultimediaBackend()
     m_player->stop();
 }
 
+QString QtMultimediaBackend::mediaTitle() const
+{
+    return m_player->metaData().stringValue(QMediaMetaData::Title).trimmed();
+}
+
 void QtMultimediaBackend::setVideoOutput(QObject *output)
 {
     m_player->setVideoOutput(output);

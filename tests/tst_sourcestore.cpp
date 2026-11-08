@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "SourceStore.h"
+#include "RadioStore.h"
 
 #include <QSqlQuery>
 #include <QTemporaryDir>
@@ -332,6 +333,38 @@ private slots:
         QCOMPARE(visible(), 10);
         SourceStore::setParentalLocked(false);
         QVERIFY(store.setFavorite(id, ContentKind::Live, q.value(0).toString(), false));
+    }
+
+    void radioStations()
+    {
+        RadioStore radio(Database::connection());
+        RadioStation a;
+        a.uuid = QStringLiteral("a");
+        a.name = QStringLiteral("Jazz FM");
+        a.url = QStringLiteral("http://jazz.example/stream");
+        a.tags = { QStringLiteral("jazz"), QStringLiteral("smooth") };
+        a.bitrate = 128;
+        RadioStation b = a;
+        b.uuid = QStringLiteral("b");
+        b.name = QStringLiteral("News 24");
+
+        QVERIFY(!radio.isFavorite(QStringLiteral("a")));
+        QVERIFY(radio.setFavorite(a, true));
+        QVERIFY(radio.isFavorite(QStringLiteral("a")));
+        QCOMPARE(radio.favorites().size(), 1);
+        QCOMPARE(radio.favorites().first().tags, a.tags);
+
+        QVERIFY(radio.markPlayed(b));
+        QVERIFY(radio.markPlayed(a));
+        QCOMPARE(radio.recent(10).size(), 2);
+        // Details are refreshed, the favorite stays
+        a.name = QStringLiteral("Jazz FM HD");
+        QVERIFY(radio.markPlayed(a));
+        QVERIFY(radio.isFavorite(QStringLiteral("a")));
+        QCOMPARE(radio.favorites().first().name, QStringLiteral("Jazz FM HD"));
+
+        QVERIFY(radio.setFavorite(a, false));
+        QVERIFY(radio.favorites().isEmpty());
     }
 
     void removeSourceCascades()

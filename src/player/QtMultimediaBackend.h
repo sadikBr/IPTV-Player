@@ -32,6 +32,7 @@ public:
     qint64 duration() const override;
     bool seekable() const override;
     void seek(qint64 positionMs) override;
+    QString mediaTitle() const override;
     QString streamInfo() const override { return m_streamInfo; }
 
     QStringList audioTracks() const override;

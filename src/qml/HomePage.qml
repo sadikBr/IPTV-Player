@@ -481,17 +481,29 @@ Page {
                     Label {
                         Layout.fillWidth: true
                         text: qsTr("Add your IPTV provider with an Xtream Codes login or an M3U playlist "
-                                   + "link. Live TV, the TV guide, movies and series appear here.")
+                                   + "link, or start with thousands of free channels. Live TV, the TV "
+                                   + "guide, movies and series appear here. And there's radio from all "
+                                   + "over the world.")
                         wrapMode: Text.Wrap
                         color: AppTheme.textSecondary
                         font.pixelSize: AppTheme.fontH3
                         lineHeight: 1.3
                     }
-                    AppButton {
+                    Flow {
+                        Layout.fillWidth: true
                         Layout.topMargin: 12
-                        text: qsTr("Add your provider")
-                        iconName: "add"
-                        onClicked: AppState.addProviderRequested()
+                        spacing: 12
+                        AppButton {
+                            text: qsTr("Add your provider")
+                            iconName: "add"
+                            onClicked: AppState.addProviderRequested()
+                        }
+                        AppButton {
+                            variant: "secondary"
+                            text: qsTr("Listen to the radio")
+                            iconName: "radio"
+                            onClicked: AppState.sectionRequested("radio")
+                        }
                     }
                 }
             }

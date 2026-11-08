@@ -46,6 +46,8 @@ public:
 
     // Human readable technical details (codecs, resolution, ...).
     virtual QString streamInfo() const = 0;
+    // Title from the stream's metadata (e.g. the song on a radio station).
+    virtual QString mediaTitle() const { return {}; }
 
     // Audio and subtitle tracks (display names). Subtitle -1 = off.
     virtual QStringList audioTracks() const = 0;

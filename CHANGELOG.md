@@ -10,6 +10,10 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 The first release: watch live TV, the TV guide, movies and series from your IPTV provider
 (Xtream Codes or M3U) on Windows, Linux and Android. Highlights:
 
+- **Radio:** tens of thousands of internet radio stations from radio-browser.info: popular,
+  trending, your country, genres, search, favorites and recently played. A mini player at
+  the bottom keeps playing while you browse (and in the background on Android); starting a
+  video stops it. Works without any IPTV provider.
 - **Free channels:** no subscription needed. Add provider → Free channels gives you
   thousands of free-to-air channels from the open iptv-org project: everything (grouped by
   category), one country, or one category.

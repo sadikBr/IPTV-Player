@@ -9,6 +9,9 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 ## Features (version 1.0)
 
 **Watching**
+- **Radio:** tens of thousands of stations from [radio-browser.info](https://www.radio-browser.info):
+  popular, trending, your country, genres, search, favorites and recently played; a mini
+  player keeps playing while you browse (in the background on Android). No provider needed
 - **Free channels:** no subscription needed: thousands of free-to-air channels from the open
   [iptv-org](https://github.com/iptv-org/iptv) project, all of them or by country or category
   (Add provider → Free channels)

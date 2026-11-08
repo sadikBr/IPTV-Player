@@ -64,6 +64,17 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
     };
 
     QList<Step> steps;
+    // IPTV_SMOKE_RADIO=1: the radio (real directory), play the first station,
+    // go Home with the mini player.
+    if (qEnvironmentVariableIntValue("IPTV_SMOKE_RADIO") == 1) {
+        steps.append({ 500, QString(), [=] { invoke("smokeOpenSection", QStringLiteral("radio")); } });
+        steps.append({ 6000, QStringLiteral("radio"), [=] { invoke("smokeRadioPlay"); } });
+        steps.append({ 6000, QStringLiteral("radio-playing"), [=] {
+                          invoke("smokeOpenSection", QStringLiteral("home"));
+                      } });
+        steps.append({ 1500, QStringLiteral("radio-home"), {} });
+    }
+
     // IPTV_SMOKE_FREETV=FR: the free channels tab, then add that country's channels.
     const QString freeTv = qEnvironmentVariable("IPTV_SMOKE_FREETV");
     if (!freeTv.isEmpty()) {

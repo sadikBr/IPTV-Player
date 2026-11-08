@@ -197,6 +197,22 @@ const QList<QStringList> &migrations()
                 ext_id TEXT NOT NULL,
                 PRIMARY KEY (source_id, kind, ext_id)))"),
         },
+        // Version 8: internet radio, favorite and recently played stations
+        {
+            QStringLiteral(R"(CREATE TABLE radio_stations (
+                uuid TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                favicon TEXT NOT NULL DEFAULT '',
+                tags TEXT NOT NULL DEFAULT '',
+                country TEXT NOT NULL DEFAULT '',
+                country_code TEXT NOT NULL DEFAULT '',
+                codec TEXT NOT NULL DEFAULT '',
+                bitrate INTEGER NOT NULL DEFAULT 0,
+                favorite INTEGER NOT NULL DEFAULT 0,
+                favorited_at INTEGER NOT NULL DEFAULT 0,
+                played_at INTEGER NOT NULL DEFAULT 0))"),
+        },
     };
     return list;
 }

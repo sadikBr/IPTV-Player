@@ -384,6 +384,8 @@ void PlayerController::onApplicationStateChanged(Qt::ApplicationState state)
 {
     // Only react to the app really going to the background (mobile). On
     // desktop the window merely losing focus is ApplicationInactive.
+    if (m_playInBackground)
+        return; // radio keeps playing
     if (state == Qt::ApplicationSuspended || state == Qt::ApplicationHidden) {
         const auto s = m_backend->state();
         m_resumeOnActivate = s == PlayerBackend::State::Playing || isBusy();
@@ -400,6 +402,8 @@ void PlayerController::onApplicationStateChanged(Qt::ApplicationState state)
 
 void PlayerController::updateWakeLock()
 {
+    if (!m_keepScreenOn)
+        return;
     const auto s = m_backend->state();
     ScreenWakeLock::setActive(s == PlayerBackend::State::Playing || isBusy());
 }

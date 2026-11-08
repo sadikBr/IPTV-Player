@@ -41,6 +41,7 @@ Rectangle {
             section: "series"; iconName: "series"; text: qsTr("Series")
             visible: (AppState.sourceInfo.seriesCount || 0) > 0
         }
+        Tab { section: "radio"; iconName: "radio"; text: qsTr("Radio") }
         Tab {
             section: "settings"; text: qsTr("Settings")
             iconName: ParentalControl.locked ? "lock" : "settings"

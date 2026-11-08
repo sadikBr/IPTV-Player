@@ -46,6 +46,12 @@ class PlayerController : public QObject
     Q_PROPERTY(bool autoReconnect READ autoReconnect WRITE setAutoReconnect NOTIFY optionsChanged)
     // Less buffering on live TV, if the engine supports it.
     Q_PROPERTY(bool lowLatency READ lowLatency WRITE setLowLatency NOTIFY optionsChanged)
+    // Radio: keep playing when the app goes to the background, and let the
+    // screen turn off.
+    Q_PROPERTY(bool playInBackground MEMBER m_playInBackground NOTIFY optionsChanged)
+    Q_PROPERTY(bool keepScreenOn MEMBER m_keepScreenOn NOTIFY optionsChanged)
+    // Title from the stream's metadata (the song on a radio station), if any.
+    Q_PROPERTY(QString mediaTitle READ mediaTitle NOTIFY streamInfoChanged)
 
 public:
     explicit PlayerController(QObject *parent = nullptr);
@@ -74,6 +80,7 @@ public:
     bool isSeekable() const { return m_backend->seekable(); }
     bool isLive() const { return !m_vod && m_backend->duration() <= 0; }
     QString streamInfo() const { return m_backend->streamInfo(); }
+    QString mediaTitle() const { return m_backend->mediaTitle(); }
 
     bool isVod() const { return m_vod; }
     void setVod(bool vod);
@@ -155,6 +162,8 @@ private:
     QElapsedTimer m_sinceProgress;   // last time playback moved on
     QElapsedTimer m_playingSince;    // playing without trouble since
     bool m_autoReconnect = true;
+    bool m_playInBackground = false;
+    bool m_keepScreenOn = true;
     bool m_lowLatency = false;
     bool m_hasPlayed = false;        // reached Playing since open()
     bool m_positionMoves = false;    // the backend reports a moving position

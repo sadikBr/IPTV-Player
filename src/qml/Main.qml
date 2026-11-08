@@ -65,6 +65,7 @@ ApplicationWindow {
         case "series": return seriesComponent
         case "guide": return guideComponent
         case "settings": return settingsComponent
+        case "radio": return radioComponent
         default: return homeComponent
         }
     }
@@ -78,7 +79,7 @@ ApplicationWindow {
                              qsTr("Settings and locked categories are protected."))
             return
         }
-        if (name !== "home" && name !== "settings" && !AppState.hasSource)
+        if (name !== "home" && name !== "settings" && name !== "radio" && !AppState.hasSource)
             name = "home"
         AppState.section = name
         stack.replace(null, sectionComponent(name), {}, StackView.Immediate)
@@ -158,6 +159,7 @@ ApplicationWindow {
     }
     function smokeOpenGuide() { goSection("guide") }
     function smokeCheckUpdates() { UpdateManager.check(true) }
+    function smokeRadioPlay() { RadioManager.play(0) }
     function smokeFreeTab() { addProvider(); stack.currentItem.smokeFreeTab() }
     function smokeAddFree(code) {
         SourceManager.addM3uSource("Free TV · " + code, FreeTvCatalog.countryUrl(code).toString(), "")
@@ -267,7 +269,8 @@ ApplicationWindow {
         anchors.left: rail.visible ? rail.right : parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.bottom: bottomNav.visible ? bottomNav.top : parent.bottom
+        anchors.bottom: miniPlayer.visible ? miniPlayer.top
+                      : bottomNav.visible ? bottomNav.top : parent.bottom
 
         pushEnter: Transition {
             ParallelAnimation {
@@ -287,6 +290,41 @@ ApplicationWindow {
                 NumberAnimation { property: "y"; from: 0; to: 24; duration: AppTheme.normal; easing.type: Easing.InCubic }
             }
         }
+    }
+
+    // --- Radio ---
+
+    // Plays radio stations: keeps going in the background and while you
+    // browse; a video stops it.
+    PlayerController {
+        id: radioPlayer
+        playInBackground: true
+        keepScreenOn: false
+        autoReconnect: true
+        volume: AppSettings.volume
+    }
+    readonly property bool radioActive: radioPlayer.source.toString().length > 0
+    Connections {
+        target: RadioManager
+        function onPlayRequested(url, name) { radioPlayer.open(url) }
+    }
+    Connections {
+        target: stack
+        function onCurrentItemChanged() {
+            if (stack.currentItem && stack.currentItem.immersive === true && window.radioActive) {
+                radioPlayer.stop()
+                radioPlayer.open("")
+            }
+        }
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        player: radioPlayer
+        anchors.left: rail.visible ? rail.right : parent.left
+        anchors.right: parent.right
+        anchors.bottom: bottomNav.visible ? bottomNav.top : parent.bottom
+        visible: window.radioActive && window.chromeVisible
     }
 
     BottomNav {
@@ -351,6 +389,11 @@ ApplicationWindow {
                                                               guidePage.sourceId, index)
             onCatchupRequested: (url, title) => window.playCatchup(url, title)
         }
+    }
+
+    Component {
+        id: radioComponent
+        RadioPage {}
     }
 
     Component {
