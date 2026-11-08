@@ -98,13 +98,13 @@ paid certificate: click **More info → Run anyway**.
 
 Releases are what the app's automatic updates install. To publish one:
 
-1. Raise `VERSION` in `CMakeLists.txt` (e.g. `0.9.0`).
-2. Add a `## v0.9.0` section at the top of `CHANGELOG.md`: it becomes the release notes
+1. Set `VERSION` in `CMakeLists.txt` (e.g. `1.1.0`).
+2. In `CHANGELOG.md`, rename `## Unreleased` to `## v1.1.0`: it becomes the release notes
    and the "What's new" text in the update dialog.
-3. Commit, then `git tag v0.9.0 && git push origin main v0.9.0`.
+3. Commit and push to `main`.
 
-CI builds everything and publishes the GitHub Release with the Windows installer and zip,
-the AppImage and the APK. Within 12 hours every installed copy offers the update. The
+When CI passes, it creates the tag and publishes the GitHub Release with the Windows
+installer and zip, the AppImage and the APK (once per version; no tag to push). Within 12 hours every installed copy offers the update. The
 [latest release](../../releases/latest) is also the easiest link to share.
 
 ### Android signing key (recommended)

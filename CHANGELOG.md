@@ -2,8 +2,10 @@
 
 The section for a version is used as its GitHub release notes and is shown in
 the app's update dialog. Keep it short and written for people using the app.
+Changes not released yet go under "Unreleased"; to release, rename it to the
+new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
-## v0.9.0
+## Unreleased
 
 - **Catch-up TV:** watch programs that already aired, on channels where your provider keeps
   an archive (marked with ↺ in the TV guide). Open a past program in the guide and press
@@ -12,9 +14,6 @@ the app's update dialog. Keep it short and written for people using the app.
   describe their archive (`catchup` / `catchup-source`).
 - The TV guide now keeps a week of past programs and works with the TV remote: arrows move
   between programs, OK opens one.
-
-## v0.8.0
-
 - **Automatic updates:** the app checks for new versions and installs them for you
   (Windows installer, Linux AppImage and Android). Settings → Updates to check now or
   turn automatic checks off.
@@ -31,7 +30,3 @@ the app's update dialog. Keep it short and written for people using the app.
 - **Windows installer** and **Linux AppImage**.
 - Series: all episode cards are the same size, and episode titles leave out the
   repeated show name.
-
-## v0.7.0
-
-- Automatic reconnect, app icon, Windows installer, Linux AppImage.
