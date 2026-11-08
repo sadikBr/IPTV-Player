@@ -6,7 +6,9 @@
 #include "SourceStore.h"
 #include "XtreamApi.h"
 
+#include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
