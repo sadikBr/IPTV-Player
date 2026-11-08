@@ -57,6 +57,8 @@ qt_add_executable(iptvplayer
     player/QtMultimediaBackend.cpp
     player/PlayerController.h
     player/PlayerController.cpp
+    platform/PictureInPicture.h
+    platform/PictureInPicture.cpp
     platform/ScreenWakeLock.h
     platform/ScreenWakeLock.cpp
 )
@@ -135,6 +137,7 @@ set(QML_RESOURCES
     qml/icons/next.svg
     qml/icons/pause.svg
     qml/icons/person.svg
+    qml/icons/pip.svg
     qml/icons/play.svg
     qml/icons/previous.svg
     qml/icons/retry.svg
@@ -199,6 +202,7 @@ target_include_directories(iptvplayer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/app
     ${CMAKE_CURRENT_SOURCE_DIR}/player
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform
     ${CMAKE_CURRENT_SOURCE_DIR}/models)
 
 target_compile_definitions(iptvplayer PRIVATE

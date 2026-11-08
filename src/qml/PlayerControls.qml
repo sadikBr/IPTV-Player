@@ -306,6 +306,12 @@ Item {
                     onClicked: { root.channelListClicked(); root.activity() }
                 }
                 IconButton {
+                    iconName: "pip"
+                    tip: qsTr("Picture-in-picture")
+                    visible: PictureInPicture.supported
+                    onClicked: PictureInPicture.enter()
+                }
+                IconButton {
                     iconName: root.fullScreen ? "fullscreen-exit" : "fullscreen"
                     tip: qsTr("Full screen (F)")
                     onClicked: root.fullScreenClicked()

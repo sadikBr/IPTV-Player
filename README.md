@@ -51,7 +51,11 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   Downloads are checked against the release's SHA-256. Settings → Updates to check now or
   turn it off. Copies built from source or the portable zip only get a link to the release
 - Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)
-- Android: screen stays on while playing; back button goes back one screen
+- Android: screen stays on while playing; back button goes back one screen;
+  **picture-in-picture** (player button, or automatically on Android 12+ when you leave the
+  app while something plays)
+- **Subtitles and audio tracks** that come with a movie or episode: the subtitles button in
+  the player
 
 ### Troubleshooting
 

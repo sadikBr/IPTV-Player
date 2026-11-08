@@ -30,6 +30,8 @@ Page {
 
     readonly property bool hasChannels: channelModel !== null && channelModel.count > 0
     readonly property bool isVod: vodKind.length > 0
+    // Android picture-in-picture: only the video shows in the small window.
+    readonly property bool pip: PictureInPicture.active
     readonly property bool isEpisode: vodKind === "episode"
     property int episodeIndex: -1
     property var vodInfo: ({})          // title/image/season/episode for watch progress
@@ -159,6 +161,16 @@ Page {
     focus: true
     background: Rectangle { color: "black" }
 
+    // Picture-in-picture: Android 12+ goes there by itself when the user leaves
+    // the app while something plays; Android resizes the window on the way.
+    Binding {
+        target: PictureInPicture
+        property: "autoEnter"
+        value: player.playing || player.busy
+    }
+    onWidthChanged: PictureInPicture.refresh()
+    onHeightChanged: PictureInPicture.refresh()
+
     PlayerController {
         id: player
         vod: page.isVod || page.catchup
@@ -196,7 +208,10 @@ Page {
         showControls()
     }
 
-    Component.onDestruction: saveProgress()
+    Component.onDestruction: {
+        saveProgress()
+        PictureInPicture.autoEnter = false
+    }
 
     // Save the position regularly, so a crash or closed app loses little.
     Timer {
@@ -288,7 +303,7 @@ Page {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: busy.bottom
         anchors.topMargin: 16
-        visible: player.reconnecting
+        visible: player.reconnecting && !page.pip
         width: reconnectLabel.implicitWidth + 32
         height: 36
         radius: height / 2
@@ -313,7 +328,7 @@ Page {
         iconName: "play"
         iconColor: "white"
         tip: qsTr("Play")
-        visible: !player.playing && !player.busy && !player.failed && !page.nextEpisodePending
+        visible: !player.playing && !player.busy && !player.failed && !page.nextEpisodePending && !page.pip
         onClicked: {
             player.togglePause()
             page.showControls()
@@ -360,7 +375,7 @@ Page {
         anchors.centerIn: parent
         width: Math.min(page.width - 2 * AppTheme.margin, 480)
         height: errorColumn.implicitHeight + 48
-        visible: player.failed
+        visible: player.failed && !page.pip
         radius: AppTheme.radiusLarge
         color: "#F2141418"
         border.color: AppTheme.stroke
@@ -460,7 +475,7 @@ Page {
         anchors.bottom: parent.bottom
         anchors.margins: AppTheme.margin
         anchors.bottomMargin: 96
-        visible: page.nextEpisodePending
+        visible: page.nextEpisodePending && !page.pip
         padding: AppTheme.margin
         background: Rectangle { color: AppTheme.surface; radius: AppTheme.radius }
 
@@ -500,7 +515,7 @@ Page {
         anchors.topMargin: 72
         anchors.rightMargin: AppTheme.margin
         width: Math.min(page.width - 2 * AppTheme.margin, 380)
-        visible: page.infoVisible
+        visible: page.infoVisible && !page.pip
         padding: AppTheme.spacing
         background: Rectangle { color: AppTheme.overlay; radius: AppTheme.radius }
 
@@ -549,7 +564,7 @@ Page {
         canNext: page.hasChannels || (page.isEpisode && page.episodeIndex + 1 < episodes.count)
         favorite: page.currentFavorite
         program: page.program
-        opacity: page.controlsVisible || !player.playing ? 1 : 0
+        opacity: (page.controlsVisible || !player.playing) && !page.pip ? 1 : 0
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
 
@@ -570,7 +585,7 @@ Page {
         id: channelPanel
         width: Math.min(380, page.width * 0.85)
         height: parent.height
-        x: page.channelListVisible ? 0 : -width
+        x: page.channelListVisible && !page.pip ? 0 : -width
         visible: x > -width
         color: "#E6121418"
         Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }

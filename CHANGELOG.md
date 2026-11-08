@@ -7,6 +7,9 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+- **Picture-in-picture (Android):** keep watching in a small floating window while you use
+  other apps: the button in the player, or (Android 12+) just go to the home screen while
+  something plays.
 - **Catch-up TV:** watch programs that already aired, on channels where your provider keeps
   an archive (marked with ↺ in the TV guide). Open a past program in the guide and press
   **Watch**, or **Watch from the start** for one that is on now. It plays like a

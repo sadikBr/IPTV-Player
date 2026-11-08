@@ -31,6 +31,8 @@
             android:launchMode="singleTop"
             android:screenOrientation="unspecified"
             android:theme="@style/IptvLaunchTheme"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
