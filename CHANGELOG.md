@@ -7,6 +7,11 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+- **A more colourful, playful look:** every channel, movie and category gets a colour of
+  its own (tinted cards, glowing initials, coloured chips with little category icons);
+  what's selected glows in an orange-to-pink gradient; cards and buttons bounce when you
+  tap them. On phones: a floating bottom bar whose highlight slides to the tab you pick,
+  and a greeting on Home.
 - **Android back gesture** goes back one screen (closes a dialog, leaves the player…) and
   only closes the app on Home.
 - **Phones:** buttons no longer run off the screen. Page buttons move to a row of their

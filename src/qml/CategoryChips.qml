@@ -11,7 +11,7 @@ ListView {
     signal hideRequested(int categoryId)
     signal manageRequested()
 
-    implicitHeight: 34
+    implicitHeight: 40
     orientation: ListView.Horizontal
     keyNavigationEnabled: false // arrow keys move focus between chips
     spacing: 8
@@ -25,6 +25,10 @@ ListView {
         required property string name
         required property int count
         text: name
+        emoji: categoryId === CategoryListModel.AllCategories ? "✨"
+             : categoryId === CategoryListModel.FavoritesCategory ? "⭐"
+             : AppTheme.categoryEmoji(name)
+        tinted: categoryId > 0
         selected: categoryId === root.selectedCategory
         onClicked: root.categorySelected(categoryId)
         onPressAndHold: categoryMenu.openFor(categoryId, name)

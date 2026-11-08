@@ -71,6 +71,6 @@ T.Button {
         }
     }
 
-    scale: pressed ? 0.97 : 1
-    Behavior on scale { NumberAnimation { duration: AppTheme.fast } }
+    scale: pressed ? 0.93 : 1
+    Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutBack; easing.overshoot: 3 } }
 }

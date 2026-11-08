@@ -26,6 +26,16 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: root.sideMargin
         Layout.rightMargin: root.sideMargin
+        // Little gradient pill before the title
+        Rectangle {
+            Layout.preferredWidth: 5
+            Layout.preferredHeight: 20
+            radius: 2.5
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: AppTheme.accent }
+                GradientStop { position: 1.0; color: AppTheme.accentPink }
+            }
+        }
         Label {
             text: root.title
             font.pixelSize: AppTheme.fontH2

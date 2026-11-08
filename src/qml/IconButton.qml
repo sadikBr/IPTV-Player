@@ -44,6 +44,6 @@ AbstractButton {
         }
     }
 
-    scale: pressed ? 0.92 : 1
-    Behavior on scale { NumberAnimation { duration: AppTheme.fast } }
+    scale: pressed ? 0.85 : 1
+    Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutBack; easing.overshoot: 3 } }
 }

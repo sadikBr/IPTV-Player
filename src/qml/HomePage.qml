@@ -268,6 +268,12 @@ Page {
                 Layout.bottomMargin: -28
                 visible: AppState.hasSource && !heroArea.visible && page.width < AppTheme.wideWidth
                 Loader {
+                    anchors.left: parent.left
+                    anchors.leftMargin: AppTheme.margin
+                    anchors.verticalCenter: parent.verticalCenter
+                    sourceComponent: parent.visible && page.narrow ? greeting : null
+                }
+                Loader {
                     anchors.right: parent.right
                     anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
@@ -487,6 +493,13 @@ Page {
 
                 Loader {
                     anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.leftMargin: AppTheme.margin
+                    anchors.topMargin: 14
+                    sourceComponent: page.narrow ? greeting : null
+                }
+                Loader {
+                    anchors.top: parent.top
                     anchors.right: parent.right
                     anchors.margins: 12
                     sourceComponent: cornerButtons
@@ -643,6 +656,27 @@ Page {
 
     // Phones and tablets (no side bar): search, and the provider switch on phones.
     // Part of the page content, so they scroll away instead of covering the rows.
+    // Phones: a friendly hello in the top corner
+    Component {
+        id: greeting
+        Column {
+            spacing: 0
+            Label {
+                text: AppTheme.greeting() + " 👋"
+                font.pixelSize: 20
+                font.weight: Font.Bold
+                color: AppTheme.textPrimary
+                style: Text.Raised
+                styleColor: "#66000000"
+            }
+            Label {
+                text: qsTr("What are we watching?")
+                font.pixelSize: AppTheme.fontSmall
+                color: AppTheme.textSecondary
+            }
+        }
+    }
+
     Component {
         id: cornerButtons
         Row {

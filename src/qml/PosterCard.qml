@@ -34,6 +34,18 @@ ItemDelegate {
                 opacity: root.emphasized ? 1 : 0.6
                 Behavior on opacity { NumberAnimation { duration: AppTheme.normal } }
             }
+            // Glow in the title's own colour when touched or focused
+            Rectangle {
+                anchors.fill: frame
+                anchors.margins: -5
+                radius: AppTheme.radius + 5
+                scale: frame.scale
+                color: "transparent"
+                border.width: 3
+                border.color: AppTheme.vivid(root.title, 0.75)
+                opacity: root.pressed || root.visualFocus ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: AppTheme.fast } }
+            }
 
             Rectangle {
                 id: frame
@@ -41,8 +53,8 @@ ItemDelegate {
                 radius: AppTheme.radius
                 color: AppTheme.surfaceHigh
                 clip: true
-                scale: root.emphasized ? 1.04 : 1
-                Behavior on scale { NumberAnimation { duration: AppTheme.normal; easing.type: Easing.OutCubic } }
+                scale: root.pressed ? 0.94 : root.emphasized ? 1.04 : 1
+                Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack; easing.overshoot: 2.5 } }
 
                 // While loading, or when there is no (working) poster
                 ArtworkPlaceholder {

@@ -4,8 +4,9 @@ import QtQuick
 // Design tokens: colours, type scale, spacing and motion. Every screen uses
 // these instead of hard-coded values so the app looks like one product.
 //
-// Direction: cinematic. Neutral near-black surfaces let posters and
-// backdrops bring the colour; one warm accent marks what's active.
+// Direction: vibrant and playful on a dark base. Content brings its own
+// colour (every channel / title gets a hue of its own), active things glow
+// in an orange-to-pink gradient, and presses bounce.
 QtObject {
     // --- Colour ---
     // Surfaces, darkest to lightest (neutral, no tint)
@@ -32,6 +33,7 @@ QtObject {
     readonly property color accentStrong: "#E8462A"
     readonly property color accentSoft: "#26FF5A36"
     readonly property color accent2: "#FF8A5B"   // lighter tint for small highlights
+    readonly property color accentPink: "#FF3D8B" // other end of the accent gradient
     readonly property color selection: "#1FFFFFFF"
     readonly property color hover: "#0FFFFFFF"
 
@@ -57,9 +59,9 @@ QtObject {
     readonly property int spacing: 12
     readonly property int margin: 16
     readonly property int pageMargin: 40   // left/right margin on wide screens
-    readonly property int radiusSmall: 6
-    readonly property int radius: 10
-    readonly property int radiusLarge: 16
+    readonly property int radiusSmall: 8
+    readonly property int radius: 14
+    readonly property int radiusLarge: 22
     readonly property int contentMaxWidth: 1400
 
     // Phones in portrait are narrower than this.
@@ -106,6 +108,43 @@ QtObject {
         hash = hash ^ (hash >>> 16)
         const hue = ((hash >>> 0) % 360) / 360
         return Qt.hsla(hue, 0.45, lightness === undefined ? 0.22 : lightness, 1)
+    }
+
+    // A bright colour of a title's own (same hue as artColor), for tints and glows.
+    function vivid(title, alpha) {
+        const c = artColor(title, 0.5)
+        return Qt.hsla(c.hslHue, 0.85, 0.6, alpha === undefined ? 1 : alpha)
+    }
+
+    // "Good morning" / "Good afternoon" / "Good evening" / "Good night"
+    function greeting() {
+        const h = new Date().getHours()
+        return h < 5 ? qsTr("Good night") : h < 12 ? qsTr("Good morning")
+             : h < 18 ? qsTr("Good afternoon") : qsTr("Good evening")
+    }
+
+    // A small picture for a category, from words in its name ("" if none fits).
+    function categoryEmoji(name) {
+        const n = (name || "").toLowerCase()
+        const table = [
+            [/kid|child|cartoon|enfant|nino|kinder|أطفال|anime/, "🧸"],
+            [/sport|football|soccer|foot|bein|nba|nfl|f1|racing|tennis|golf|ufc|boxing|رياض/, "⚽"],
+            [/news|info|nachrichten|noticias|أخبار/, "📰"],
+            [/music|musique|musik|mtv|radio|أغاني/, "🎵"],
+            [/doc|nature|discovery|history|science|geo/, "🌍"],
+            [/movie|film|cinema|ciné|vod|box ?office|أفلام/, "🎬"],
+            [/series|série|serie|show|drama|مسلسل/, "🎭"],
+            [/relig|islam|quran|قرآن|church|christ|gospel/, "🕌"],
+            [/comed|funny|humou?r/, "😂"],
+            [/food|cook|cuisine/, "🍳"],
+            [/4k|uhd|hd/, "✨"],
+            [/adult|xxx|18\+/, "🔞"],
+        ]
+        for (const [re, emoji] of table) {
+            if (re.test(n))
+                return emoji
+        }
+        return ""
     }
 
     // "1 h 45 min" / "45 min"
