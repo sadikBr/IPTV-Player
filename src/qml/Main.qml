@@ -160,6 +160,16 @@ ApplicationWindow {
                                       "sourceId": sourceId })
     }
 
+    // Watch several channels at once. From the player, the player makes way.
+    function openMultiView(sourceId, extId) {
+        if (stack.currentItem instanceof PlayerPage) {
+            setFullScreen(false)
+            stack.pop(StackView.Immediate)
+        }
+        perfMark("multiView")
+        stack.push(multiViewComponent, { "sourceId": sourceId, "firstExtId": extId })
+    }
+
     // Opens Live TV and starts a channel there (so channel up/down works).
     function playChannelByExtId(sourceId, extId) {
         if (sourceId !== AppState.sourceId)
@@ -262,6 +272,14 @@ ApplicationWindow {
             current.episodeRequested(current.resumeEpisode.extId, false)
     }
     function smokeBack() { goBack() }
+    // Multi-view with three channels (screenshot), from the current provider
+    function smokeMultiView() {
+        openMultiView(AppState.sourceId, "")
+        const page = stack.currentItem
+        for (let i = 0; i < 3; ++i)
+            page.setSlot(i, i)
+        page.selectedSlot = 1
+    }
     function smokeHideGroup(group) {
         if (stack.currentItem && stack.currentItem.hideGroup)
             stack.currentItem.hideGroup(group)
@@ -439,6 +457,7 @@ ApplicationWindow {
             onChannelActivated: (index) => window.playChannel(livePage.channelModel,
                                                               livePage.sourceId, index)
             onGuideRequested: window.openGuide(livePage.channelModel)
+            onMultiViewRequested: window.openMultiView(livePage.sourceId, "")
         }
     }
 
@@ -535,6 +554,15 @@ ApplicationWindow {
                 window.setFullScreen(false)
                 stack.pop()
             }
+            onMultiViewRequested: (sourceId, extId) => window.openMultiView(sourceId, extId)
+        }
+    }
+
+    Component {
+        id: multiViewComponent
+        MultiViewPage {
+            // Full screen: play it in Live TV (channel up/down work there)
+            onWatchRequested: (extId) => window.playChannelByExtId(sourceId, extId)
         }
     }
 

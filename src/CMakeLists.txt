@@ -126,6 +126,8 @@ set(QML_SOURCES
     qml/PinDialog.qml
     qml/PlayerControls.qml
     qml/PlayerPage.qml
+    qml/MultiViewPage.qml
+    qml/MultiViewTile.qml
     qml/PosterCard.qml
     qml/RadioPage.qml
     qml/ProviderSwitcher.qml
@@ -158,6 +160,7 @@ set(QML_RESOURCES
     qml/icons/fullscreen-exit.svg
     qml/icons/fullscreen.svg
     qml/icons/grid.svg
+    qml/icons/multiview.svg
     qml/icons/guide.svg
     qml/icons/heart-outline.svg
     qml/icons/heart.svg

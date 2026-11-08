@@ -7,6 +7,10 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+- **Multi-view:** watch 2 or 4 live channels at once (the multi-view button in the player
+  or in Live TV). Tap a screen to hear it, double-tap to watch it full screen, and change
+  or remove the channel of each screen. Some providers only allow one or two streams at
+  the same time.
 - **Channels that need special headers now play:** playlists can say a channel needs a
   particular User-Agent or Referer (`#EXTVLCOPT:http-user-agent=…`, `http-referrer=…`, the
   same as `#EXTINF` attributes, or `url|User-Agent=…&Referer=…`). Those channels now play

@@ -24,6 +24,7 @@ Item {
     signal backClicked()
     signal fullScreenClicked()
     signal infoClicked()
+    signal multiViewClicked()
     signal previousChannel()
     signal nextChannel()
     signal channelListClicked()
@@ -331,6 +332,12 @@ Item {
                     tip: qsTr("Channel list (L)")
                     visible: root.hasChannels
                     onClicked: { root.channelListClicked(); root.activity() }
+                }
+                IconButton {
+                    iconName: "multiview"
+                    tip: qsTr("Multi-view: watch 2 or 4 channels")
+                    visible: root.hasChannels && root.player && root.player.live
+                    onClicked: root.multiViewClicked()
                 }
                 SleepTimerButton {
                     programEnd: root.program && root.program.now ? root.program.now.stop : null

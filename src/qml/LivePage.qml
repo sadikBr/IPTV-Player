@@ -20,6 +20,7 @@ Page {
 
     signal channelActivated(int index)
     signal guideRequested()
+    signal multiViewRequested()
 
     function playIndex(index) {
         if (index >= 0 && index < channels.count)
@@ -142,6 +143,11 @@ Page {
             iconName: "guide"
             tip: qsTr("TV guide")
             onClicked: page.guideRequested()
+        }
+        IconButton {
+            iconName: "multiview"
+            tip: qsTr("Multi-view: watch 2 or 4 channels")
+            onClicked: page.multiViewRequested()
         }
         SortButton {
             model: channels

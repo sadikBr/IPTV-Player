@@ -51,6 +51,8 @@ Page {
     }
 
     signal closeRequested()
+    // Multi-view, starting with the current channel
+    signal multiViewRequested(int sourceId, string extId)
 
     function showControls() {
         controlsVisible = true
@@ -588,6 +590,8 @@ Page {
         onNextChannel: page.isEpisode ? page.playEpisode(page.episodeIndex + 1)
                                       : page.playChannel(page.channelIndex + 1)
         onChannelListClicked: page.channelListVisible = !page.channelListVisible
+        onMultiViewClicked: page.multiViewRequested(page.sourceId,
+                                                    page.channelModel.get(page.channelIndex).extId)
         onFavoriteClicked: page.toggleFavorite()
         onActivity: page.showControls()
     }

@@ -111,6 +111,8 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 2800, QStringLiteral("channels"), [=] { invoke("smokeOpenGuide"); } });
         steps.append({ 1500, QStringLiteral("guide"), [=] { invoke("smokePlayFirst"); } });
         steps.append({ 2500, QStringLiteral("player"), [=] { invoke("smokeBack"); } });
+        steps.append({ 500, QString(), [=] { invoke("smokeMultiView"); } });
+        steps.append({ 2500, QStringLiteral("multiview"), [=] { invoke("smokeBack"); } });
         steps.append({ 500, QString(), [=] { invoke("smokeOpenSection", QStringLiteral("movie")); } });
         steps.append({ 1500, QStringLiteral("movies"), [=] { invoke("smokeOpenFirst"); } });
         steps.append({ 1500, QStringLiteral("movie"), [=] { invoke("smokePlay"); } });
