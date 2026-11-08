@@ -5,7 +5,7 @@ the app's update dialog. Keep it short and written for people using the app.
 Changes not released yet go under "Unreleased"; to release, rename it to the
 new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
-## Unreleased
+## v1.0.0
 
 The first release: watch live TV, the TV guide, movies and series from your IPTV provider
 (Xtream Codes or M3U) on Windows, Linux and Android. Highlights:
@@ -69,3 +69,7 @@ The first release: watch live TV, the TV guide, movies and series from your IPTV
 - **Windows installer** and **Linux AppImage**.
 - Series: all episode cards are the same size, and episode titles leave out the
   repeated show name.
+
+**Android note:** this build is signed with a temporary key. To install a later version you
+may need to uninstall this one first (export a backup in Settings beforehand to keep your
+providers and favorites).
