@@ -72,6 +72,10 @@ ApplicationWindow {
 
     // Shows a section, replacing everything on the stack.
     function goSection(name) {
+        if (name === "search") {
+            openSearch()
+            return
+        }
         // Parental control: Settings needs the PIN while locked.
         if (name === "settings" && ParentalControl.locked) {
             unlockDialog.afterUnlock = "settings"
@@ -122,6 +126,10 @@ ApplicationWindow {
         stack.currentItem.playExtId(extId)
     }
 
+    function openSearch() {
+        stack.push(searchComponent)
+    }
+
     function openGuide(channelModel) {
         stack.push(guideComponent, { "channelModel": channelModel, "showBack": true })
     }
@@ -160,6 +168,7 @@ ApplicationWindow {
     function smokeOpenGuide() { goSection("guide") }
     function smokeCheckUpdates() { UpdateManager.check(true) }
     function smokeRadioPlay() { RadioManager.play(0) }
+    function smokeSearch(text) { openSearch(); stack.currentItem.smokeType(text) }
     function smokeFreeTab() { addProvider(); stack.currentItem.smokeFreeTab() }
     function smokeAddFree(code) {
         SourceManager.addM3uSource("Free TV · " + code, FreeTvCatalog.countryUrl(code).toString(), "")
@@ -400,6 +409,16 @@ ApplicationWindow {
     }
 
     Component {
+        id: searchComponent
+        SearchPage {
+            onBackRequested: stack.pop()
+            onPlayChannelRequested: (model, index) => window.playChannel(model, AppState.sourceId, index)
+            onOpenMovieRequested: (extId) => window.openMovie(AppState.sourceId, extId)
+            onOpenSeriesRequested: (extId) => window.openSeries(AppState.sourceId, extId)
+        }
+    }
+
+    Component {
         id: radioComponent
         RadioPage {}
     }
@@ -488,5 +507,12 @@ ApplicationWindow {
                 error = qsTr("Wrong PIN, try again.")
             }
         }
+    }
+
+    // Search everything: Ctrl+F (pages with their own search field handle it first)
+    Shortcut {
+        sequence: StandardKey.Find
+        enabled: window.chromeVisible && !(stack.currentItem && stack.currentItem.objectName === "searchPage")
+        onActivated: window.openSearch()
     }
 }

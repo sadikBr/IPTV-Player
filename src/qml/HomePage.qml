@@ -623,6 +623,18 @@ Page {
         }
     }
 
+    // Phones (no side bar): search everything from Home
+    IconButton {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 14
+        visible: page.width < AppTheme.wideWidth
+        filled: true
+        iconName: "search"
+        tip: qsTr("Search")
+        onClicked: AppState.sectionRequested("search")
+    }
+
     // Delegates wrap the cards in a plain Item with typed properties named
     // after the model roles. (Re-declaring the cards' own properties as
     // "required" crashed some versions of Qt's QML compiler.)

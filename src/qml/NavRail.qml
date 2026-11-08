@@ -64,6 +64,7 @@ Rectangle {
             visible: AppState.hasSource
         }
 
+        NavItem { section: "search"; iconName: "search"; text: qsTr("Search") }
         NavItem { section: "home"; iconName: "home"; text: qsTr("Home") }
         NavItem {
             section: "live"; iconName: "live"; text: qsTr("Live TV")

@@ -121,6 +121,7 @@ set(QML_SOURCES
     qml/RadioPage.qml
     qml/ProviderSwitcher.qml
     qml/SearchField.qml
+    qml/SearchPage.qml
     qml/SeriesDetailsPage.qml
     qml/SettingsPage.qml
     qml/Shadow.qml

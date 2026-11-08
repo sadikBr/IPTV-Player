@@ -127,7 +127,11 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 600, QStringLiteral("categories-hidden"), [=] {
                           invoke("smokeOpenSection", QStringLiteral("live"));
                       } });
-        steps.append({ 1200, QStringLiteral("channels-filtered"), {} });
+        steps.append({ 1200, QStringLiteral("channels-filtered"), [=] {
+                          invoke("smokeSearch", QStringLiteral("show"));
+                      } });
+        steps.append({ 2500, QStringLiteral("search"), [=] { invoke("smokeBack"); } });
+        steps.append({ 500, QString(), {} });
     } else {
         steps.append({ 2000, QStringLiteral("player"), {} });
     }

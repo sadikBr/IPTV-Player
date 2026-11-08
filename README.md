@@ -33,6 +33,9 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 - **Home:** a hero with backdrops (what you're watching, what's new), then rows for continue
   watching, your channels, your movies, new movies and series
 
+- **Search everything:** live channels, movies, series and radio stations at once (side
+  bar, the search button on Home, or Ctrl+F)
+
 **Player**
 - Seek bar, audio tracks and the subtitles that come with a movie or episode, previous/next
   channel or episode, channel list, channel number entry, stream info, full screen

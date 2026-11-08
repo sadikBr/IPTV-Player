@@ -208,6 +208,38 @@ void RadioManager::query(const QUrl &url)
     emit stateChanged();
 }
 
+void RadioManager::searchStations(const QString &text)
+{
+    if (m_searchReply)
+        m_searchReply->abort();
+    if (text.trimmed().size() < 2) {
+        m_searchModel.setStations({}, {});
+        return;
+    }
+    withServer([this, text](const QString &server) {
+        m_searchReply = m_network->get(apiRequest(RadioBrowser::searchUrl(server, text, {}, {}, 20)));
+        QNetworkReply *reply = m_searchReply;
+        connect(reply, &QNetworkReply::finished, this, [this, reply] {
+            reply->deleteLater();
+            if (reply->error() == QNetworkReply::NoError)
+                m_searchModel.setStations(RadioBrowser::parseStations(reply->readAll()), favoriteIds());
+            else if (reply->error() != QNetworkReply::OperationCanceledError)
+                m_searchModel.setStations({}, {});
+        });
+    });
+}
+
+void RadioManager::playSearchResult(int row)
+{
+    const RadioStation *station = m_searchModel.station(row);
+    if (!station)
+        return;
+    m_current = *station;
+    RadioStore(Database::connection()).markPlayed(m_current);
+    emit currentChanged();
+    emit playRequested(QUrl(m_current.url), m_current.name);
+}
+
 void RadioManager::play(int row)
 {
     const RadioStation *station = m_model.station(row);

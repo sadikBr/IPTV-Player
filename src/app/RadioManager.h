@@ -20,6 +20,8 @@ class RadioManager : public QObject
     QML_SINGLETON
 
     Q_PROPERTY(RadioStationModel *stations READ stations CONSTANT)
+    // Stations for the app-wide search (separate from the Radio page)
+    Q_PROPERTY(RadioStationModel *searchResults READ searchResults CONSTANT)
     // "favorites", "recent", "top", "trending", "country", "genre", "search"
     Q_PROPERTY(QString mode READ mode NOTIFY stateChanged)
     Q_PROPERTY(QString modeValue READ modeValue NOTIFY stateChanged)
@@ -35,6 +37,7 @@ public:
     explicit RadioManager(QObject *parent = nullptr);
 
     RadioStationModel *stations() { return &m_model; }
+    RadioStationModel *searchResults() { return &m_searchModel; }
     QString mode() const { return m_mode; }
     QString modeValue() const { return m_modeValue; }
     bool isLoading() const { return m_reply != nullptr; }
@@ -55,6 +58,8 @@ public:
 
     // Plays the station in the list; emits playRequested with its URL.
     Q_INVOKABLE void play(int row);
+    Q_INVOKABLE void searchStations(const QString &text);
+    Q_INVOKABLE void playSearchResult(int row);
     Q_INVOKABLE void toggleFavorite(int row);
     Q_INVOKABLE void toggleCurrentFavorite();
 
@@ -74,6 +79,8 @@ private:
 
     QNetworkAccessManager *m_network = nullptr;
     RadioStationModel m_model;
+    RadioStationModel m_searchModel;
+    QPointer<QNetworkReply> m_searchReply;
     QPointer<QNetworkReply> m_reply;
     QString m_mode;
     QString m_modeValue;
