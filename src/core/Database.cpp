@@ -181,6 +181,14 @@ const QList<QStringList> &migrations()
                 ext_id TEXT NOT NULL,
                 PRIMARY KEY (source_id, kind, ext_id)))"),
         },
+        // Version 6: catch-up TV (programs from the provider's archive)
+        {
+            QStringLiteral("ALTER TABLE channels ADD COLUMN archive_days INTEGER NOT NULL DEFAULT 0"),
+            QStringLiteral("ALTER TABLE channels ADD COLUMN catchup_type TEXT NOT NULL DEFAULT ''"),
+            QStringLiteral("ALTER TABLE channels ADD COLUMN catchup_source TEXT NOT NULL DEFAULT ''"),
+            // Xtream: archive links use the server's local time
+            QStringLiteral("ALTER TABLE sources ADD COLUMN server_timezone TEXT NOT NULL DEFAULT ''"),
+        },
     };
     return list;
 }

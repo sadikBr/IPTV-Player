@@ -21,6 +21,7 @@ struct SourceRecord
     QString username;
     QString password;
     QString outputFormat = QStringLiteral("ts"); // Xtream: "ts" or "m3u8"
+    QString serverTimezone; // Xtream: time zone id of the server (catch-up links)
     QString epgUrl;
     QString status;
     QDateTime expiresAt;
@@ -117,6 +118,12 @@ public:
     // URL to play: the stored one for M3U, built from credentials for Xtream.
     static QUrl streamUrl(const SourceRecord &source, ContentKind kind, const QString &extId,
                           const QString &storedUrl, const QString &extension = {});
+    // Catch-up: the archive URL of a live channel for a program that started
+    // at start and ends at end. Empty if the channel has no archive.
+    static QUrl catchupUrl(const SourceRecord &source, const QString &extId,
+                           const QString &storedUrl, const QString &catchupType,
+                           const QString &catchupSource, const QDateTime &start,
+                           const QDateTime &end, const QDateTime &now);
 
     // Lower-cased, accent-free text used for searching.
     static QString searchKey(const QString &text);

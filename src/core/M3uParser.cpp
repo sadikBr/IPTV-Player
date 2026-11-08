@@ -121,6 +121,10 @@ SourceContent M3uParser::parse(const QByteArray &data)
     bool havePending = false;
     Attributes pending;
     QString pendingGroup;
+    // Catch-up defaults for the whole playlist (#EXTM3U catchup="..." ...)
+    QString defaultCatchupType;
+    QString defaultCatchupSource;
+    int defaultCatchupDays = 0;
 
     qsizetype pos = 0;
     if (data.startsWith("\xEF\xBB\xBF"))
@@ -146,6 +150,10 @@ SourceContent M3uParser::parse(const QByteArray &data)
             } else if (line.startsWith(QLatin1String("#EXTM3U"), Qt::CaseInsensitive)) {
                 if (content.epgUrl.isEmpty())
                     content.epgUrl = headerEpgUrl(line);
+                const Attributes header = parseExtInf(line.mid(7));
+                defaultCatchupType = header.values.value(QStringLiteral("catchup"));
+                defaultCatchupSource = header.values.value(QStringLiteral("catchup-source"));
+                defaultCatchupDays = header.values.value(QStringLiteral("catchup-days")).toInt();
             }
             // Other directives (#EXTVLCOPT, #KODIPROP, ...) are ignored for now.
             continue;
@@ -172,6 +180,35 @@ SourceContent M3uParser::parse(const QByteArray &data)
             const int chno = v.value(QStringLiteral("tvg-chno")).toInt(&ok);
             if (ok && chno > 0)
                 channel.number = chno;
+
+            // Catch-up: catchup="default|append|shift|flussonic|xc",
+            // catchup-days="7", catchup-source="..." (older lists: timeshift="7")
+            if (channel.kind == ContentKind::Live) {
+                channel.catchupType = v.value(QStringLiteral("catchup"), defaultCatchupType);
+                if (channel.catchupType.isEmpty())
+                    channel.catchupType = v.value(QStringLiteral("catchup-type"));
+                channel.catchupSource = v.value(QStringLiteral("catchup-source"), defaultCatchupSource);
+                int days = v.value(QStringLiteral("catchup-days")).toInt();
+                if (days <= 0)
+                    days = v.value(QStringLiteral("timeshift")).toInt();
+                if (days <= 0)
+                    days = v.value(QStringLiteral("tvg-rec")).toInt();
+                if (days <= 0)
+                    days = defaultCatchupDays;
+                // "shift" and "timeshift" lists often give the days only.
+                if (days > 0 && channel.catchupType.isEmpty())
+                    channel.catchupType = channel.catchupSource.isEmpty() ? QStringLiteral("shift")
+                                                                          : QStringLiteral("default");
+                if (!channel.catchupType.isEmpty() && days <= 0)
+                    days = 1;
+                if (channel.catchupType.compare(QLatin1String("vod"), Qt::CaseInsensitive) == 0)
+                    days = 0;
+                channel.archiveDays = days;
+                if (days <= 0) {
+                    channel.catchupType.clear();
+                    channel.catchupSource.clear();
+                }
+            }
         }
         if (channel.name.isEmpty()) {
             const QUrl url(line);

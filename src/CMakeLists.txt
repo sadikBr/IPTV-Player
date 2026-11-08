@@ -16,6 +16,8 @@ add_library(iptvcore STATIC
     core/XmltvParser.cpp
     core/EpgStore.h
     core/EpgStore.cpp
+    core/Catchup.h
+    core/Catchup.cpp
     core/UpdateCheck.h
     core/UpdateCheck.cpp
 )

@@ -102,6 +102,34 @@ private slots:
         QCOMPARE(content.categories.at(4).kind, ContentKind::Series);
     }
 
+    void catchupAttributes()
+    {
+        const QByteArray data =
+                "#EXTM3U catchup=\"shift\" catchup-days=\"2\"\n"
+                "#EXTINF:-1 tvg-id=\"a\" catchup=\"default\" catchup-days=\"7\" "
+                "catchup-source=\"http://a.tv/arc/1.m3u8?utc={utc}\",With source\n"
+                "http://a.tv/live/1.m3u8\n"
+                "#EXTINF:-1 tvg-id=\"b\",Playlist default\n"
+                "http://a.tv/live/2.m3u8\n"
+                "#EXTINF:-1 tvg-id=\"c\" catchup=\"vod\",No archive\n"
+                "http://a.tv/live/3.m3u8\n"
+                "#EXTINF:-1 tvg-id=\"d\" timeshift=\"3\",Old style\n"
+                "http://a.tv/live/4.m3u8\n";
+        const SourceContent c = M3uParser::parse(data);
+        QCOMPARE(c.channels.size(), 4);
+        QCOMPARE(c.channels.at(0).catchupType, QStringLiteral("default"));
+        QCOMPARE(c.channels.at(0).archiveDays, 7);
+        QCOMPARE(c.channels.at(0).catchupSource, QStringLiteral("http://a.tv/arc/1.m3u8?utc={utc}"));
+        QCOMPARE(c.channels.at(1).catchupType, QStringLiteral("shift"));
+        QCOMPARE(c.channels.at(1).archiveDays, 2);
+        QCOMPARE(c.channels.at(2).archiveDays, 0);
+        QCOMPARE(c.channels.at(3).archiveDays, 3);
+
+        const SourceContent plain = M3uParser::parse("#EXTM3U\n#EXTINF:-1,Plain\nhttp://x/1.ts\n");
+        QCOMPARE(plain.channels.at(0).archiveDays, 0);
+        QVERIFY(plain.channels.at(0).catchupType.isEmpty());
+    }
+
     void handlesEmptyAndGarbage()
     {
         QVERIFY(M3uParser::parse(QByteArray()).channels.isEmpty());

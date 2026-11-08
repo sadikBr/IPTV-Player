@@ -3,6 +3,16 @@
 The section for a version is used as its GitHub release notes and is shown in
 the app's update dialog. Keep it short and written for people using the app.
 
+## v0.9.0
+
+- **Catch-up TV:** watch programs that already aired, on channels where your provider keeps
+  an archive (marked with ↺ in the TV guide). Open a past program in the guide and press
+  **Watch**, or **Watch from the start** for one that is on now. It plays like a
+  recording: pause and seek. Works with Xtream providers and with M3U playlists that
+  describe their archive (`catchup` / `catchup-source`).
+- The TV guide now keeps a week of past programs and works with the TV remote: arrows move
+  between programs, OK opens one.
+
 ## v0.8.0
 
 - **Automatic updates:** the app checks for new versions and installs them for you

@@ -12,6 +12,8 @@ Page {
     // Either a single URL (streamUrl/streamTitle) ...
     property url streamUrl
     property string streamTitle
+    // A catch-up program (from the archive): can be paused and seeked.
+    property bool catchup: false
     // ... or a channel list to zap through ...
     property ChannelListModel channelModel: null
     property int channelIndex: -1
@@ -159,7 +161,7 @@ Page {
 
     PlayerController {
         id: player
-        vod: page.isVod
+        vod: page.isVod || page.catchup
         autoReconnect: AppSettings.autoReconnect
         lowLatency: AppSettings.lowLatency
         onVolumeChanged: AppSettings.volume = volume
@@ -320,7 +322,7 @@ Page {
 
     // --- Errors: friendly message, automatic retries for live channels ---
 
-    readonly property bool liveContext: !isVod
+    readonly property bool liveContext: !isVod && !catchup
     readonly property var retryDelays: [5, 10, 20]
     property int retryAttempt: 0
     property int retryCountdown: 0

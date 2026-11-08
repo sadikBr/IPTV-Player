@@ -23,6 +23,8 @@ class ChannelListModel : public QAbstractListModel
     Q_PROPERTY(int categoryId READ categoryId WRITE setCategoryId NOTIFY categoryIdChanged)
     Q_PROPERTY(QString searchText READ searchText WRITE setSearchText NOTIFY searchTextChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    // Live: the longest catch-up archive of the channels listed (days)
+    Q_PROPERTY(int maxArchiveDays READ maxArchiveDays NOTIFY countChanged)
     // "default" (provider order) or "newest" (most recently added first)
     Q_PROPERTY(QString sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
     // Maximum number of rows, 0 = all (home page rows)
@@ -43,6 +45,7 @@ public:
         YearRole,
         RatingRole,
         WatchedRole, // movies: how much has been watched, 0..1
+        ArchiveDaysRole, // live: catch-up days, 0 = none
     };
 
     explicit ChannelListModel(QObject *parent = nullptr);
@@ -67,6 +70,11 @@ public:
     // {channelId, extId, name, logo, number, favorite, epgKey}; empty if out of range.
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE QUrl streamUrl(int row) const;
+    int maxArchiveDays() const;
+    // Catch-up: can the program that started at start be watched from the
+    // archive, and its URL.
+    Q_INVOKABLE bool canCatchup(int row, const QDateTime &start) const;
+    Q_INVOKABLE QUrl catchupUrl(int row, const QDateTime &start, const QDateTime &end) const;
     Q_INVOKABLE int indexOfExtId(const QString &extId) const;
     Q_INVOKABLE int indexOfNumber(int number) const;
     Q_INVOKABLE void toggleFavorite(int row);
@@ -98,6 +106,9 @@ private:
         QString year;
         QString rating;
         double watched;
+        int archiveDays = 0;
+        QString catchupType;
+        QString catchupSource;
     };
 
     struct NowNext

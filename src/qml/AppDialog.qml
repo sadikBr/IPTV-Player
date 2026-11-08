@@ -6,6 +6,8 @@ import IPTVPlayer
 Dialog {
     id: control
 
+    // Always centered in the window, wherever the dialog is declared.
+    parent: Overlay.overlay
     anchors.centerIn: parent
     modal: true
     padding: 24

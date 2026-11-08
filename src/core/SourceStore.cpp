@@ -1,5 +1,7 @@
 #include "SourceStore.h"
 
+#include "Catchup.h"
+
 #include "EpgStore.h"
 #include "XtreamApi.h"
 
@@ -32,7 +34,7 @@ QDateTime fromEpoch(qint64 secs)
 const QString kSourceColumns = QStringLiteral(
         "id, name, type, url, username, password, output_format, epg_url, status, expires_at, "
         "max_connections, live_count, last_sync, created_at, epg_last_sync, epg_count, "
-        "movie_count, series_count, epg_shift_minutes");
+        "movie_count, series_count, epg_shift_minutes, server_timezone");
 
 SourceRecord readSource(const QSqlQuery &q)
 {
@@ -56,6 +58,7 @@ SourceRecord readSource(const QSqlQuery &q)
     s.movieCount = q.value(16).toInt();
     s.seriesCount = q.value(17).toInt();
     s.epgShiftMinutes = q.value(18).toInt();
+    s.serverTimezone = q.value(19).toString();
     return s;
 }
 
@@ -72,6 +75,7 @@ void bindSource(QSqlQuery &q, const SourceRecord &s)
     q.bindValue(QStringLiteral(":expires_at"), toEpoch(s.expiresAt));
     q.bindValue(QStringLiteral(":max_connections"), s.maxConnections);
     q.bindValue(QStringLiteral(":last_sync"), toEpoch(s.lastSync));
+    q.bindValue(QStringLiteral(":server_timezone"), text(s.serverTimezone));
 }
 
 } // namespace
@@ -110,9 +114,9 @@ int SourceStore::addSource(const SourceRecord &source)
     QSqlQuery q(m_db);
     q.prepare(QStringLiteral(
             "INSERT INTO sources (name, type, url, username, password, output_format, epg_url, "
-            "status, expires_at, max_connections, last_sync, created_at) VALUES (:name, :type, "
-            ":url, :username, :password, :output_format, :epg_url, :status, :expires_at, "
-            ":max_connections, :last_sync, :created_at)"));
+            "status, expires_at, max_connections, last_sync, created_at, server_timezone) "
+            "VALUES (:name, :type, :url, :username, :password, :output_format, :epg_url, "
+            ":status, :expires_at, :max_connections, :last_sync, :created_at, :server_timezone)"));
     bindSource(q, source);
     q.bindValue(QStringLiteral(":created_at"),
                 toEpoch(source.createdAt.isValid() ? source.createdAt
@@ -131,7 +135,7 @@ bool SourceStore::updateSource(const SourceRecord &source)
             "UPDATE sources SET name = :name, type = :type, url = :url, username = :username, "
             "password = :password, output_format = :output_format, epg_url = :epg_url, "
             "status = :status, expires_at = :expires_at, max_connections = :max_connections, "
-            "last_sync = :last_sync WHERE id = :id"));
+            "last_sync = :last_sync, server_timezone = :server_timezone WHERE id = :id"));
     bindSource(q, source);
     q.bindValue(QStringLiteral(":id"), source.id);
     if (!q.exec()) {
@@ -223,8 +227,9 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
 
     q.prepare(QStringLiteral(
             "INSERT INTO channels (source_id, category_id, kind, ext_id, name, search_name, logo, "
-            "epg_id, url, number, position, extension, rating, year, plot, genre) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+            "epg_id, url, number, position, extension, rating, year, plot, genre, archive_days, "
+            "catchup_type, catchup_source) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
     position = 0;
     int liveCount = 0;
     int movieCount = 0;
@@ -248,6 +253,9 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
         q.addBindValue(text(c.year));
         q.addBindValue(text(c.plot));
         q.addBindValue(text(c.genre));
+        q.addBindValue(c.archiveDays);
+        q.addBindValue(text(c.catchupType));
+        q.addBindValue(text(c.catchupSource));
         if (!q.exec())
             return fail(q);
         if (c.kind == ContentKind::Live)
@@ -440,13 +448,29 @@ QUrl SourceStore::streamUrl(const SourceRecord &source, ContentKind kind, const 
     }
 }
 
+QUrl SourceStore::catchupUrl(const SourceRecord &source, const QString &extId,
+                             const QString &storedUrl, const QString &catchupType,
+                             const QString &catchupSource, const QDateTime &start,
+                             const QDateTime &end, const QDateTime &now)
+{
+    if (source.isXtream() && storedUrl.isEmpty()) {
+        const QTimeZone zone = source.serverTimezone.isEmpty()
+                ? QTimeZone::utc()
+                : QTimeZone(source.serverTimezone.toUtf8());
+        return Catchup::xtreamUrl(QUrl(source.url), source.username, source.password, extId,
+                                  start, end, zone.isValid() ? zone : QTimeZone::utc());
+    }
+    return Catchup::m3uUrl(storedUrl, catchupType, catchupSource, start, end, now);
+}
+
 std::optional<ChannelData> SourceStore::item(int sourceId, ContentKind kind,
                                             const QString &extId) const
 {
     QSqlQuery q(m_db);
     q.prepare(QStringLiteral(
             "SELECT c.ext_id, c.name, c.logo, c.epg_id, COALESCE(cat.ext_id, ''), c.url, c.number, "
-            "c.extension, c.rating, c.year, c.plot, c.genre FROM channels c "
+            "c.extension, c.rating, c.year, c.plot, c.genre, c.archive_days, c.catchup_type, "
+            "c.catchup_source FROM channels c "
             "LEFT JOIN categories cat ON cat.id = c.category_id "
             "WHERE c.source_id = ? AND c.kind = ? AND c.ext_id = ? LIMIT 1"));
     q.addBindValue(sourceId);
@@ -468,6 +492,9 @@ std::optional<ChannelData> SourceStore::item(int sourceId, ContentKind kind,
     c.year = q.value(9).toString();
     c.plot = q.value(10).toString();
     c.genre = q.value(11).toString();
+    c.archiveDays = q.value(12).toInt();
+    c.catchupType = q.value(13).toString();
+    c.catchupSource = q.value(14).toString();
     return c;
 }
 

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
@@ -16,20 +17,24 @@ Page {
 
     signal backRequested()
     signal channelActivated(int index)
+    // Catch-up: play a program from the archive.
+    signal catchupRequested(url url, string title)
 
     readonly property bool narrow: width < AppTheme.compactWidth
     readonly property real pxPerMinute: narrow ? 3 : 4.5
     readonly property int rowHeight: 60
     readonly property int channelColumnWidth: narrow ? 92 : 210
     readonly property int rulerHeight: 34
-    readonly property int gridHours: 72
+    // Back as far as the channels' catch-up archives go (else 2 hours), and 3 days ahead.
+    readonly property int pastHours: activeModel && activeModel.maxArchiveDays > 0
+                                     ? Math.min(activeModel.maxArchiveDays, 7) * 24 : 2
+    readonly property int gridHours: pastHours + 70
 
-    // The grid starts 2 hours before the hour it was opened.
-    property date gridStart: {
+    // The grid starts pastHours before the hour it was opened.
+    readonly property date gridStart: {
         const d = new Date()
         d.setMinutes(0, 0, 0)
-        d.setHours(d.getHours() - 2)
-        return d
+        return new Date(d.getTime() - pastHours * 3600000)
     }
     readonly property date gridEnd: new Date(gridStart.getTime() + gridHours * 3600000)
     readonly property real gridWidth: gridHours * 60 * pxPerMinute
@@ -60,6 +65,28 @@ Page {
         grid.contentX = Math.max(0, Math.min(grid.contentWidth - grid.width,
                                              xFor(now) - grid.width * 0.2))
     }
+    // Smoke test: open the first program that can be watched from the archive.
+    function openFirstReplayable() {
+        for (let i = 0; i < activeModel.count; ++i) {
+            const ch = activeModel.get(i)
+            if (!ch.archiveDays || !ch.epgKey)
+                continue
+            const programs = EpgManager.programs(sourceId, ch.epgKey,
+                                                 new Date(now.getTime() - 6 * 3600000), now)
+            for (const p of programs) {
+                if (p.stop <= now && activeModel.canCatchup(i, p.start)) {
+                    showDetails(p, i, ch.name)
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    function playSelectedReplay() {
+        if (replayButton.visible)
+            replayButton.clicked()
+    }
+
     function showDetails(program, channelIndex, channelName) {
         details.program = program
         details.channelIndex = channelIndex
@@ -162,6 +189,7 @@ Page {
             required property string name
             required property string logo
             required property int number
+            required property int archiveDays
 
             width: channelColumn.width
             height: page.rowHeight
@@ -201,6 +229,16 @@ Page {
                     maximumLineCount: 2
                     Layout.fillWidth: true
                 }
+                // Catch-up channel
+                IconImage {
+                    visible: channelCell.archiveDays > 0
+                    source: "icons/retry.svg"
+                    sourceSize: Qt.size(14, 14)
+                    color: AppTheme.accent2
+                    ToolTip.visible: hoverTip.hovered
+                    ToolTip.text: qsTr("Catch-up: %n day(s) of past programs", "", channelCell.archiveDays)
+                    HoverHandler { id: hoverTip }
+                }
             }
         }
     }
@@ -216,6 +254,7 @@ Page {
         contentWidth: page.gridWidth
         flickableDirection: Flickable.HorizontalAndVerticalFlick
         boundsBehavior: Flickable.StopAtBounds
+        keyNavigationEnabled: false // arrow keys move focus between programs
         clip: true
         cacheBuffer: page.rowHeight * 4
         ScrollBar.horizontal: AppScrollBar {}
@@ -226,6 +265,7 @@ Page {
             required property int index
             required property string name
             required property string epgKey
+            required property int archiveDays
 
             readonly property var programs: {
                 page.revision // reload after a guide update
@@ -260,6 +300,10 @@ Page {
                     id: block
                     required property var modelData
                     readonly property bool onAir: modelData.start <= page.now && modelData.stop > page.now
+                    readonly property bool past: modelData.stop <= page.now
+                    // Can be watched from the provider's archive
+                    readonly property bool replayable: (past || onAir) && row.archiveDays > 0
+                                                       && page.activeModel.canCatchup(row.index, modelData.start)
                     readonly property real startX: Math.max(0, page.xFor(modelData.start))
 
                     x: startX + 1
@@ -269,9 +313,30 @@ Page {
                     radius: AppTheme.radiusSmall
                     color: blockArea.containsMouse ? AppTheme.surfaceHover
                          : onAir ? AppTheme.selection : AppTheme.surface
+                    opacity: past && !replayable ? 0.55 : 1
                     border.color: onAir ? AppTheme.accent : "transparent"
                     border.width: 1
                     clip: true
+                    // Keyboard / TV remote: arrows move between programs, OK opens one.
+                    activeFocusOnTab: true
+                    // Opened when OK is released: the release would otherwise
+                    // reach the new dialog and close it again.
+                    property bool okPressed: false
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                                || event.key === Qt.Key_Select) {
+                            okPressed = true
+                            event.accepted = true
+                        }
+                    }
+                    Keys.onReleased: (event) => {
+                        if (okPressed && !event.isAutoRepeat) {
+                            okPressed = false
+                            event.accepted = true
+                            page.showDetails(block.modelData, row.index, row.name)
+                        }
+                    }
+                    FocusRing { target: block; gap: 0 }
 
                     // Keep the text visible when the block starts left of the view.
                     Column {
@@ -279,13 +344,25 @@ Page {
                         width: Math.max(0, block.width - x - 6)
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
-                        Label {
+                        Row {
                             width: parent.width
-                            text: block.modelData.title
-                            elide: Text.ElideRight
-                            color: AppTheme.textPrimary
-                            font.pixelSize: 13
-                            font.bold: block.onAir
+                            spacing: 5
+                            IconImage {
+                                id: replayIcon
+                                visible: block.replayable && block.past
+                                anchors.verticalCenter: parent.verticalCenter
+                                source: "icons/retry.svg"
+                                sourceSize: Qt.size(13, 13)
+                                color: AppTheme.accent2
+                            }
+                            Label {
+                                width: parent.width - (replayIcon.visible ? replayIcon.width + 5 : 0)
+                                text: block.modelData.title
+                                elide: Text.ElideRight
+                                color: AppTheme.textPrimary
+                                font.pixelSize: 13
+                                font.bold: block.onAir
+                            }
                         }
                         Label {
                             width: parent.width
@@ -402,13 +479,45 @@ Page {
                 text: details.program && details.program.description
                       ? details.program.description : qsTr("No description.")
             }
-            Button {
-                text: qsTr("Watch %1").arg(details.channelName)
-                highlighted: true
-                onClicked: {
-                    details.close()
-                    page.channelActivated(details.channelIndex)
+            Flow {
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                spacing: 10
+                // Catch-up: from the provider's archive
+                AppButton {
+                    id: replayButton
+                    objectName: "replayButton"
+                    readonly property bool available: details.program !== null
+                            && details.program.start <= page.now
+                            && page.activeModel.canCatchup(details.channelIndex, details.program.start)
+                    visible: available
+                    iconName: "play"
+                    text: details.program && details.program.stop <= page.now
+                          ? qsTr("Watch") : qsTr("Watch from the start")
+                    onClicked: {
+                        const p = details.program
+                        const url = page.activeModel.catchupUrl(details.channelIndex, p.start, p.stop)
+                        details.close()
+                        page.catchupRequested(url, details.channelName + " · " + p.title)
+                    }
                 }
+                AppButton {
+                    variant: replayButton.visible ? "secondary" : "primary"
+                    iconName: "live"
+                    text: qsTr("Watch %1 live").arg(details.channelName)
+                    onClicked: {
+                        details.close()
+                        page.channelActivated(details.channelIndex)
+                    }
+                }
+            }
+            Label {
+                Layout.fillWidth: true
+                visible: details.program !== null && details.program.stop <= page.now && !replayButton.available
+                wrapMode: Text.Wrap
+                color: AppTheme.textTertiary
+                font.pixelSize: AppTheme.fontSmall
+                text: qsTr("This channel has no catch-up, or the program is too old.")
             }
         }
     }

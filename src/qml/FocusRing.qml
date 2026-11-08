@@ -15,5 +15,7 @@ Rectangle {
     color: "transparent"
     border.width: 2
     border.color: AppTheme.accent
-    visible: target ? target.visualFocus === true : false
+    // Controls have visualFocus (keyboard focus only); plain items activeFocus.
+    visible: target ? (target.visualFocus !== undefined ? target.visualFocus === true
+                                                        : target.activeFocus) : false
 }

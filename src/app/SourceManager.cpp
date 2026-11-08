@@ -128,6 +128,7 @@ void SourceManager::addXtreamSource(const QString &name, const QString &server,
         m_source.status = account.status;
         m_source.expiresAt = account.expiresAt;
         m_source.maxConnections = account.maxConnections;
+        m_source.serverTimezone = account.serverTimezone;
         // Use a format the provider allows.
         const QStringList allowed = account.allowedFormats;
         if (!allowed.isEmpty() && !allowed.contains(m_source.outputFormat)) {
@@ -204,6 +205,7 @@ void SourceManager::refresh(int sourceId)
             return finish(false, error);
         m_source.status = account.status;
         m_source.expiresAt = account.expiresAt;
+        m_source.serverTimezone = account.serverTimezone;
         m_source.maxConnections = account.maxConnections;
         SourceStore(Database::connection()).updateSource(m_source);
         syncXtream();

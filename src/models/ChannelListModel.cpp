@@ -1,5 +1,7 @@
 #include "ChannelListModel.h"
 
+#include "Catchup.h"
+
 #include "CategoryListModel.h"
 #include "Database.h"
 #include "EpgStore.h"
@@ -172,6 +174,8 @@ QVariant ChannelListModel::data(const QModelIndex &index, int role) const
         return row.rating;
     case WatchedRole:
         return row.watched;
+    case ArchiveDaysRole:
+        return row.archiveDays;
     default:
         return {};
     }
@@ -186,6 +190,7 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
         { NowProgressRole, "nowProgress" }, { NextTitleRole, "nextTitle" },
         { YearRole, "year" },           { RatingRole, "rating" },
         { WatchedRole, "watched" },
+        { ArchiveDaysRole, "archiveDays" },
     };
 }
 
@@ -201,7 +206,32 @@ QVariantMap ChannelListModel::get(int row) const
         { QStringLiteral("epgKey"), r.epgKey },
         { QStringLiteral("year"), r.year },     { QStringLiteral("rating"), r.rating },
         { QStringLiteral("watched"), r.watched },
+        { QStringLiteral("archiveDays"), r.archiveDays },
     };
+}
+
+int ChannelListModel::maxArchiveDays() const
+{
+    int days = 0;
+    for (const Row &r : m_rows)
+        days = qMax(days, r.archiveDays);
+    return days;
+}
+
+bool ChannelListModel::canCatchup(int row, const QDateTime &start) const
+{
+    if (row < 0 || row >= m_rows.size())
+        return false;
+    return Catchup::isAvailable(m_rows.at(row).archiveDays, start, QDateTime::currentDateTimeUtc());
+}
+
+QUrl ChannelListModel::catchupUrl(int row, const QDateTime &start, const QDateTime &end) const
+{
+    if (!canCatchup(row, start) || m_source.id < 0)
+        return {};
+    const Row &r = m_rows.at(row);
+    return SourceStore::catchupUrl(m_source, r.extId, r.url, r.catchupType, r.catchupSource,
+                                   start, end, QDateTime::currentDateTimeUtc());
 }
 
 QUrl ChannelListModel::streamUrl(int row) const
@@ -258,7 +288,8 @@ void ChannelListModel::reload()
         QString sql = QStringLiteral(
                 "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
                 "(f.ext_id IS NOT NULL), c.extension, c.year, c.rating, "
-                "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0) "
+                "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0), "
+                "c.archive_days, c.catchup_type, c.catchup_source "
                 "FROM channels c "
                 "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
                 "AND f.ext_id = c.ext_id "
@@ -303,7 +334,8 @@ void ChannelListModel::reload()
                               q.value(3).toString(), q.value(4).toString(), q.value(6).toString(),
                               q.value(5).toInt(), q.value(7).toBool(), q.value(8).toString(),
                               q.value(9).toString(), q.value(10).toString(),
-                              qBound(0.0, q.value(11).toDouble(), 1.0) });
+                              qBound(0.0, q.value(11).toDouble(), 1.0), q.value(12).toInt(),
+                              q.value(13).toString(), q.value(14).toString() });
             }
         } else {
             qWarning("Channel query failed: %s", qPrintable(q.lastError().text()));
@@ -315,6 +347,6 @@ void ChannelListModel::reload()
     m_rows = std::move(rows);
     m_guideCache.clear();
     endResetModel();
-    if (countChange)
-        emit countChanged();
+    Q_UNUSED(countChange)
+    emit countChanged(); // also updates maxArchiveDays
 }

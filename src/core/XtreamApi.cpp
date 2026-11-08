@@ -1,5 +1,7 @@
 #include "XtreamApi.h"
 
+#include "Catchup.h"
+
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -251,6 +253,13 @@ bool XtreamApi::parseAccount(const QByteArray &json, XtreamAccount *out, QString
     for (const QJsonValue &f : user.value(QStringLiteral("allowed_output_formats")).toArray())
         account.allowedFormats << str(f);
 
+    const QJsonObject server = doc.object().value(QStringLiteral("server_info")).toObject();
+    account.serverTimezone = QString::fromUtf8(
+            Catchup::serverZone(str(server.value(QStringLiteral("timezone"))),
+                                str(server.value(QStringLiteral("timestamp_now"))).toLongLong(),
+                                str(server.value(QStringLiteral("time_now"))))
+                    .id());
+
     if (!account.authenticated) {
         if (error)
             *error = tr("Login failed. Check the username and password.");
@@ -324,6 +333,12 @@ bool XtreamApi::parseLiveStreams(const QByteArray &json, QList<ChannelData> *out
         c.number = toInt(o.value(QStringLiteral("num")));
         if (c.number <= 0)
             c.number = position;
+        // Catch-up: "tv_archive": 1 and the number of days kept
+        if (toInt(o.value(QStringLiteral("tv_archive"))) == 1) {
+            c.archiveDays = toInt(o.value(QStringLiteral("tv_archive_duration")));
+            if (c.archiveDays <= 0)
+                c.archiveDays = 1;
+        }
 
         c.categoryExtId = str(o.value(QStringLiteral("category_id")));
         if (c.categoryExtId.isEmpty()) {

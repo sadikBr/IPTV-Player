@@ -31,6 +31,12 @@ struct ChannelData
     int number = 0;
     ContentKind kind = ContentKind::Live;
 
+    // Live: catch-up (archive) for this many days, 0 = none. M3U playlists
+    // also say how to build the archive URL (see Catchup::m3uUrl).
+    int archiveDays = 0;
+    QString catchupType;
+    QString catchupSource;
+
     // Movies and series
     QString extension; // container, e.g. "mkv" (Xtream movies)
     QString rating;    // e.g. "7.4"

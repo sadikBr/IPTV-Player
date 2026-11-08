@@ -25,6 +25,7 @@ struct XtreamAccount
     int activeConnections = 0;
     QStringList allowedFormats; // e.g. "ts", "m3u8"
     QString message;
+    QString serverTimezone;     // time zone id for catch-up links (see Catchup::serverZone)
 };
 
 // Xtream Codes "player_api.php" helpers. Pure functions: no networking here,

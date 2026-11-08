@@ -238,7 +238,7 @@ Each phase ends with something that runs and can be tested on a real device.
 
 ### Phase 6 — Optional extras
 - [ ] `MpvBackend` on desktop for better codec/stream support
-- [ ] Catch-up/timeshift (Xtream `tv_archive` channels)
+- [x] Catch-up/timeshift (Xtream `tv_archive` channels, M3U `catchup` attributes)
 - [ ] Picture-in-picture (Android), Chromecast
 - [ ] Multiple profiles, parental PIN, Stalker portal
 

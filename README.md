@@ -22,6 +22,10 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 - **Live TV:** categories (side panel or chips), search (accents ignored), favorites,
   channel logos and what's on now
 - **TV guide:** now/next under every channel and in the player, and a 3-day guide grid.
+- **Catch-up TV:** channels with an archive (↺ in the guide) let you watch past programs, or
+  the current one from its start. Xtream (`tv_archive`) and M3U (`catchup`,
+  `catchup-days`, `catchup-source`; types default, append, shift, flussonic, xc).
+  Xtream archive links use the server's time zone from the login
   Xtream guides download automatically; for M3U the playlist's guide link or the one you
   enter is used (`.xml.gz` supported). **Time shift per provider** in Settings for guides
   with wrong time zones

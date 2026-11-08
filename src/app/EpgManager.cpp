@@ -19,7 +19,7 @@ using namespace iptv;
 namespace {
 
 constexpr int kTransferTimeoutMs = 120000;
-constexpr qint64 kKeepPastSecs = 24 * 3600;       // keep 1 day back
+constexpr qint64 kKeepPastSecs = 7 * 24 * 3600;   // keep a week back (catch-up TV)
 constexpr qint64 kKeepFutureSecs = 4 * 24 * 3600; // and 4 days ahead
 
 QUrl guideUrl(const SourceRecord &source)

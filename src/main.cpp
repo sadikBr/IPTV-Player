@@ -110,6 +110,15 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 2000, QStringLiteral("player"), {} });
     }
 
+    // IPTV_SMOKE_CATCHUP=1: open a past program in the guide and play it from
+    // the archive.
+    if (addSource && qEnvironmentVariableIntValue("IPTV_SMOKE_CATCHUP") == 1) {
+        steps.append({ 300, QString(), [=] { invoke("smokeOpenSection", QStringLiteral("guide")); } });
+        steps.append({ 1500, QStringLiteral("catchup-guide"), [=] { invoke("smokeCatchupDetails"); } });
+        steps.append({ 2500, QStringLiteral("catchup-details"), [=] { invoke("smokeCatchupPlay"); } });
+        steps.append({ 3500, QStringLiteral("catchup-player"), [=] { invoke("smokeBack"); } });
+    }
+
     // IPTV_UPDATE_URL: check that (test) server for an update and show the
     // dialog; IPTV_SMOKE_INSTALL_UPDATE=1 also installs it.
     if (qEnvironmentVariableIsSet("IPTV_UPDATE_URL")) {

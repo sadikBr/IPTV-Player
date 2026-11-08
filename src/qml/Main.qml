@@ -92,6 +92,11 @@ ApplicationWindow {
         return true
     }
 
+    // A program from the provider's archive: plays like a recording (pause, seek).
+    function playCatchup(url, title) {
+        stack.push(playerComponent, { "streamUrl": url, "streamTitle": title, "catchup": true })
+    }
+
     function openStream(url, title) {
         stack.push(playerComponent, { "streamUrl": url, "streamTitle": title || "" })
     }
@@ -146,6 +151,11 @@ ApplicationWindow {
     }
     function smokeOpenGuide() { goSection("guide") }
     function smokeCheckUpdates() { UpdateManager.check(true) }
+    function smokeCatchupDetails() {
+        if (stack.currentItem.openFirstReplayable && !stack.currentItem.openFirstReplayable())
+            console.warn("Smoke test: no catch-up program found")
+    }
+    function smokeCatchupPlay() { stack.currentItem.playSelectedReplay() }
     function smokeInstallUpdate() { UpdateManager.install() }
     function smokePlayFirst() {
         goSection("live")
@@ -321,6 +331,7 @@ ApplicationWindow {
             onBackRequested: stack.pop()
             onChannelActivated: (index) => window.playChannel(guidePage.activeModel,
                                                               guidePage.sourceId, index)
+            onCatchupRequested: (url, title) => window.playCatchup(url, title)
         }
     }
 

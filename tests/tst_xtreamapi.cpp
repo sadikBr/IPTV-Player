@@ -92,6 +92,7 @@ private slots:
         QCOMPARE(account.maxConnections, 2);
         QCOMPARE(account.expiresAt.toSecsSinceEpoch(), 1798761600);
         QCOMPARE(account.allowedFormats, QStringList({ "m3u8", "ts", "rtmp" }));
+        QCOMPARE(account.serverTimezone, QStringLiteral("UTC")); // server_info.timezone
     }
 
     void parseAccountFailures()
@@ -134,6 +135,8 @@ private slots:
         QCOMPARE(channels.at(0).epgId, QStringLiteral("bbc1.uk"));
         QCOMPARE(channels.at(0).categoryExtId, QStringLiteral("1"));
         QVERIFY(channels.at(0).url.isEmpty());
+        QCOMPARE(channels.at(0).archiveDays, 0); // tv_archive: 0
+        QCOMPARE(channels.at(1).archiveDays, 1); // tv_archive: 1 without a duration
 
         QCOMPARE(channels.at(1).extId, QStringLiteral("1002")); // string id
         QCOMPARE(channels.at(1).number, 2);                     // string num
