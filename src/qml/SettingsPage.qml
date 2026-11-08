@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.impl
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import IPTVPlayer
 
@@ -398,6 +399,32 @@ Page {
                 }
             }
 
+            // --- Backup ---
+            Section {
+                title: qsTr("Backup and move to another device")
+                description: qsTr("Saves your providers (with their logins), favorites, hidden and locked "
+                                  + "categories, what you were watching, radio stations and settings in one "
+                                  + "file. Import it on your phone, TV box or another computer. The file "
+                                  + "contains your passwords: keep it private.")
+                Card {
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        AppButton {
+                            objectName: "exportButton"
+                            variant: "secondary"
+                            text: qsTr("Export…")
+                            onClicked: exportDialog.open()
+                        }
+                        AppButton {
+                            variant: "secondary"
+                            text: qsTr("Import…")
+                            onClicked: importDialog.open()
+                        }
+                    }
+                }
+            }
+
             // --- Updates ---
             Section {
                 title: qsTr("Updates")
@@ -608,6 +635,60 @@ Page {
                 editable: false
                 textFromValue: (value) => page.shiftText(value)
             }
+        }
+    }
+
+    FileDialog {
+        id: exportDialog
+        title: qsTr("Save the backup")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: [qsTr("IPTV Player backup (*.json)")]
+        onAccepted: {
+            const error = BackupManager.exportTo(selectedFile)
+            backupResult.title = error.length > 0 ? qsTr("Backup not saved") : qsTr("Backup saved")
+            backupResult.text = error.length > 0 ? error
+                    : qsTr("Copy the file to your other device and choose Import there.")
+            backupResult.open()
+        }
+    }
+    FileDialog {
+        id: importDialog
+        title: qsTr("Choose a backup")
+        nameFilters: [qsTr("IPTV Player backup (*.json)"), qsTr("All files (*)")]
+        onAccepted: {
+            const r = BackupManager.importFrom(selectedFile)
+            backupResult.title = r.ok ? qsTr("Backup imported") : qsTr("Couldn't import")
+            if (!r.ok) {
+                backupResult.text = r.error
+            } else {
+                const parts = []
+                if (r.providersAdded > 0)
+                    parts.push(r.providersAdded === 1 ? qsTr("1 provider added") : qsTr("%1 providers added").arg(r.providersAdded))
+                if (r.providersMerged > 0)
+                    parts.push(r.providersMerged === 1 ? qsTr("1 provider updated") : qsTr("%1 providers updated").arg(r.providersMerged))
+                if (r.radioStations > 0)
+                    parts.push(qsTr("%1 radio stations").arg(r.radioStations))
+                backupResult.text = (parts.length > 0 ? parts.join(", ") + ". " : "")
+                        + qsTr("Channel lists are downloaded again from your providers.")
+                if (r.firstNewSource > 0) {
+                    AppState.setSource(r.firstNewSource)
+                    SourceManager.refresh(r.firstNewSource)
+                }
+            }
+            backupResult.open()
+        }
+    }
+    AppDialog {
+        id: backupResult
+        property string text
+        width: Math.min(page.width - 48, 440)
+        standardButtons: Dialog.Ok
+        Label {
+            width: backupResult.availableWidth
+            wrapMode: Text.Wrap
+            color: AppTheme.textSecondary
+            text: backupResult.text
         }
     }
 

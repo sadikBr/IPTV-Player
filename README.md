@@ -50,6 +50,9 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   entered; locked again at every start
 - **Playback settings:** automatic reconnect, start channels faster, hardware decoding; live
   stream format per provider (MPEG-TS or HLS)
+- **Backup and move to another device:** one file with providers (and logins), favorites,
+  hidden/locked categories, watch progress, radio stations and settings (Settings → Backup);
+  importing merges
 - **Keyboard and TV remote:** arrows move between everything on screen, Enter/OK opens,
   Escape/Back goes back
 - Cinematic dark design that adapts to desktops, tablets, and phones in portrait and

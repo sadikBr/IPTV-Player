@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "SourceStore.h"
+#include "Backup.h"
 #include "RadioStore.h"
 
 #include <QSqlQuery>
@@ -367,6 +368,66 @@ private slots:
 
         QVERIFY(radio.setFavorite(a, false));
         QVERIFY(radio.favorites().isEmpty());
+    }
+
+    void backupRoundTrip()
+    {
+        QSqlDatabase db = Database::connection();
+        SourceStore store(db);
+        const int id = store.sources().constFirst().id;
+        QVERIFY(store.replaceContent(id, sampleContent(10)));
+        QVERIFY(store.setFavorite(id, ContentKind::Live, QStringLiteral("1003"), true));
+        QVERIFY(store.setCategoriesHidden(id, ContentKind::Live, { QStringLiteral("2") }, true));
+        QVERIFY(store.setCategoryLocked(id, ContentKind::Live, QStringLiteral("1"), true));
+        QSqlQuery(db).exec(QStringLiteral("DELETE FROM radio_stations"));
+        RadioStation station;
+        station.uuid = QStringLiteral("r1");
+        station.name = QStringLiteral("Radio One");
+        station.url = QStringLiteral("http://radio.example/1");
+        QVERIFY(RadioStore(db).setFavorite(station, true));
+        const auto source = *store.source(id);
+
+        const QByteArray json = Backup::exportJson(db, { { QStringLiteral("browse/sort-movie"), QStringLiteral("rating") } });
+        QVERIFY(json.contains("\"password\""));
+
+        // A fresh device: nothing there
+        QVERIFY(store.removeSource(id));
+        QSqlQuery(db).exec(QStringLiteral("DELETE FROM radio_stations"));
+        QCOMPARE(store.sources().size(), 0);
+
+        const Backup::ImportResult r = Backup::importJson(db, json);
+        QVERIFY2(r.ok, qPrintable(r.error));
+        QCOMPARE(r.providersAdded, 1);
+        QCOMPARE(r.newSourceIds.size(), 1);
+        QCOMPARE(r.radioStations, 1);
+        QCOMPARE(r.settings.value(QStringLiteral("browse/sort-movie")).toString(), QStringLiteral("rating"));
+        const int newId = r.newSourceIds.first();
+        const auto restored = store.source(newId);
+        QVERIFY(restored.has_value());
+        QCOMPARE(restored->name, source.name);
+        QCOMPARE(restored->url, source.url);
+        QCOMPARE(restored->password, source.password);
+        QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM favorites WHERE ext_id = '1003'")), 1);
+        QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM hidden_categories")), 1);
+        QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM locked_categories")), 1);
+        QVERIFY(RadioStore(db).isFavorite(QStringLiteral("r1")));
+
+        // Importing again merges into the same provider (no duplicate)
+        const Backup::ImportResult again = Backup::importJson(db, json);
+        QVERIFY(again.ok);
+        QCOMPARE(again.providersAdded, 0);
+        QCOMPARE(again.providersMerged, 1);
+        QCOMPARE(store.sources().size(), 1);
+        QCOMPARE(count(QStringLiteral("SELECT COUNT(*) FROM favorites WHERE ext_id = '1003'")), 1);
+
+        // Not a backup
+        QVERIFY(!Backup::importJson(db, "{\"hello\": 1}").ok);
+        QVERIFY(!Backup::importJson(db, "garbage").ok);
+
+        // Leave the provider in place for the remaining tests
+        QVERIFY(store.replaceContent(newId, sampleContent(10)));
+        QVERIFY(store.setCategoryLocked(newId, ContentKind::Live, QStringLiteral("1"), false));
+        QVERIFY(store.setCategoriesHidden(newId, ContentKind::Live, { QStringLiteral("2") }, false));
     }
 
     void removeSourceCascades()

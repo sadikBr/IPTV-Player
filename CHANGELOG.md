@@ -19,6 +19,9 @@ The first release: watch live TV, the TV guide, movies and series from your IPTV
   category), one country, or one category.
 - **Home banner** shows well-rated, recent movies and series (a new selection every day)
   instead of the provider's latest uploads, without "EN|"-style prefixes in the title.
+- **Backup / move to another device:** Settings → Backup exports your providers, favorites,
+  hidden and locked categories, what you were watching, radio stations and settings to one
+  file; import it on another device (it merges, nothing is duplicated).
 - **Search everything:** one search for live channels, movies, series and radio stations
   (Search in the side bar, the search button on Home, or Ctrl+F).
 - **Sleep timer:** stop TV or radio after 15–90 minutes or at the end of the program; the

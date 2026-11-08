@@ -64,6 +64,12 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
     };
 
     QList<Step> steps;
+    // IPTV_SMOKE_EXPORT=file / IPTV_SMOKE_IMPORT=file: backup at the end / at the start.
+    if (qEnvironmentVariableIsSet("IPTV_SMOKE_IMPORT")) {
+        const QString file = qEnvironmentVariable("IPTV_SMOKE_IMPORT");
+        steps.prepend({ 300, QString(), [=] { invoke("smokeImport", file); } });
+    }
+
     // IPTV_SMOKE_RADIO=1: the radio (real directory), play the first station,
     // go Home with the mini player.
     if (qEnvironmentVariableIntValue("IPTV_SMOKE_RADIO") == 1) {
@@ -198,6 +204,11 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
                           std::fprintf(stderr, "key %s -> \"%s\" %s\n", qPrintable(keyName),
                                        qPrintable(text.left(40)), qPrintable(chain.join(QLatin1String(" < "))));
                       } });
+    }
+
+    if (qEnvironmentVariableIsSet("IPTV_SMOKE_EXPORT")) {
+        const QString file = qEnvironmentVariable("IPTV_SMOKE_EXPORT");
+        steps.append({ 300, QString(), [=] { invoke("smokeExport", file); } });
     }
 
     int at = 0;

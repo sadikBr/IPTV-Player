@@ -168,6 +168,14 @@ ApplicationWindow {
     function smokeOpenGuide() { goSection("guide") }
     function smokeCheckUpdates() { UpdateManager.check(true) }
     function smokeRadioPlay() { RadioManager.play(0) }
+    function smokeExport(path) {
+        const error = BackupManager.exportTo("file://" + path)
+        console.log("Smoke test: export", error.length > 0 ? error : "ok")
+    }
+    function smokeImport(path) {
+        const r = BackupManager.importFrom("file://" + path)
+        console.log("Smoke test: import", r.ok, r.error || "", "added", r.providersAdded, "radio", r.radioStations)
+    }
     function smokeSearch(text) { openSearch(); stack.currentItem.smokeType(text) }
     function smokeFreeTab() { addProvider(); stack.currentItem.smokeFreeTab() }
     function smokeAddFree(code) {

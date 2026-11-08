@@ -16,6 +16,8 @@ add_library(iptvcore STATIC
     core/XmltvParser.cpp
     core/EpgStore.h
     core/EpgStore.cpp
+    core/Backup.h
+    core/Backup.cpp
     core/Catchup.h
     core/Catchup.cpp
     core/FreeTv.h
@@ -44,6 +46,8 @@ qt_add_executable(iptvplayer
     app/VodManager.h
     app/VodManager.cpp
     app/SourceManager.cpp
+    app/BackupManager.h
+    app/BackupManager.cpp
     app/FreeTvCatalog.h
     app/FreeTvCatalog.cpp
     app/ParentalControl.h
