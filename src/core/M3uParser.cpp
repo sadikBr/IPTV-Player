@@ -121,6 +121,9 @@ SourceContent M3uParser::parse(const QByteArray &data)
     bool havePending = false;
     Attributes pending;
     QString pendingGroup;
+    // #EXTVLCOPT:http-user-agent=... / http-referrer=... before the URL
+    QString pendingUserAgent;
+    QString pendingReferrer;
     // Catch-up defaults for the whole playlist (#EXTM3U catchup="..." ...)
     QString defaultCatchupType;
     QString defaultCatchupSource;
@@ -144,7 +147,20 @@ SourceContent M3uParser::parse(const QByteArray &data)
             if (line.startsWith(QLatin1String("#EXTINF:"), Qt::CaseInsensitive)) {
                 pending = parseExtInf(line.mid(8));
                 pendingGroup.clear();
+                pendingUserAgent.clear();
+                pendingReferrer.clear();
                 havePending = true;
+            } else if (line.startsWith(QLatin1String("#EXTVLCOPT:"), Qt::CaseInsensitive)) {
+                const QString option = line.mid(11).trimmed();
+                const qsizetype eq = option.indexOf(QLatin1Char('='));
+                if (eq > 0) {
+                    const QString key = option.left(eq).trimmed().toLower();
+                    const QString value = option.mid(eq + 1).trimmed();
+                    if (key == QLatin1String("http-user-agent"))
+                        pendingUserAgent = value;
+                    else if (key == QLatin1String("http-referrer") || key == QLatin1String("http-referer"))
+                        pendingReferrer = value;
+                }
             } else if (line.startsWith(QLatin1String("#EXTGRP:"), Qt::CaseInsensitive)) {
                 pendingGroup = line.mid(8).trimmed();
             } else if (line.startsWith(QLatin1String("#EXTM3U"), Qt::CaseInsensitive)) {
@@ -155,15 +171,39 @@ SourceContent M3uParser::parse(const QByteArray &data)
                 defaultCatchupSource = header.values.value(QStringLiteral("catchup-source"));
                 defaultCatchupDays = header.values.value(QStringLiteral("catchup-days")).toInt();
             }
-            // Other directives (#EXTVLCOPT, #KODIPROP, ...) are ignored for now.
+            // Other directives (#KODIPROP, ...) are ignored for now.
             continue;
         }
 
-        // A URL line.
+        // A URL line, maybe with headers after a "|" (Kodi style):
+        // http://host/stream.m3u8|User-Agent=Foo&Referer=https%3A%2F%2Fsite%2F
         ChannelData channel;
-        channel.url = line;
         channel.extId = line;
-        channel.kind = classifyUrl(line);
+        QString url = line;
+        const qsizetype pipe = line.indexOf(QLatin1Char('|'));
+        if (pipe > 0) {
+            url = line.left(pipe).trimmed();
+            const QStringList pairs = line.mid(pipe + 1).split(QLatin1Char('&'), Qt::SkipEmptyParts);
+            for (const QString &pair : pairs) {
+                const qsizetype eq = pair.indexOf(QLatin1Char('='));
+                if (eq <= 0)
+                    continue;
+                const QString key = pair.left(eq).trimmed().toLower();
+                const QString value = QUrl::fromPercentEncoding(pair.mid(eq + 1).trimmed().toUtf8());
+                if (key == QLatin1String("user-agent"))
+                    channel.httpUserAgent = value;
+                else if (key == QLatin1String("referer") || key == QLatin1String("referrer"))
+                    channel.httpReferrer = value;
+            }
+        }
+        channel.url = url;
+        channel.kind = classifyUrl(url);
+        if (channel.httpUserAgent.isEmpty())
+            channel.httpUserAgent = pendingUserAgent;
+        if (channel.httpReferrer.isEmpty())
+            channel.httpReferrer = pendingReferrer;
+        pendingUserAgent.clear();
+        pendingReferrer.clear();
 
         QString group;
         if (havePending) {
@@ -172,6 +212,16 @@ SourceContent M3uParser::parse(const QByteArray &data)
             if (channel.name.isEmpty())
                 channel.name = v.value(QStringLiteral("tvg-name"));
             channel.logo = v.value(QStringLiteral("tvg-logo"));
+            if (channel.httpUserAgent.isEmpty())
+                channel.httpUserAgent = v.value(QStringLiteral("http-user-agent"),
+                                                v.value(QStringLiteral("user-agent")));
+            if (channel.httpReferrer.isEmpty()) {
+                for (const char *key : { "http-referrer", "http-referer", "referrer", "referer" }) {
+                    channel.httpReferrer = v.value(QLatin1String(key));
+                    if (!channel.httpReferrer.isEmpty())
+                        break;
+                }
+            }
             channel.epgId = v.value(QStringLiteral("tvg-id"));
             group = v.value(QStringLiteral("group-title"));
             if (group.isEmpty())
@@ -215,8 +265,8 @@ SourceContent M3uParser::parse(const QByteArray &data)
             }
         }
         if (channel.name.isEmpty()) {
-            const QUrl url(line);
-            channel.name = url.fileName().isEmpty() ? line : url.fileName();
+            const QUrl parsed(url);
+            channel.name = parsed.fileName().isEmpty() ? url : parsed.fileName();
         }
 
         if (!group.isEmpty()) {

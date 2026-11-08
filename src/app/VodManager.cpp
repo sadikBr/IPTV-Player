@@ -3,6 +3,7 @@
 #include "Database.h"
 #include "NetworkFactory.h"
 #include "SourceStore.h"
+#include "StreamRelay.h"
 #include "XtreamApi.h"
 
 #include <QNetworkAccessManager>
@@ -188,7 +189,10 @@ QUrl VodManager::movieUrl(int sourceId, const QString &extId) const
     if (const auto details = store.details(sourceId, ContentKind::Movie, extId);
         details && !details->extension.isEmpty())
         extension = details->extension;
-    return SourceStore::streamUrl(*source, ContentKind::Movie, extId, item->url, extension);
+    // Through the local relay when the playlist asks for particular headers.
+    return StreamRelay::instance()->wrap(
+            SourceStore::streamUrl(*source, ContentKind::Movie, extId, item->url, extension),
+            { item->httpUserAgent, item->httpReferrer });
 }
 
 double VodManager::resumePosition(int sourceId, const QString &kind, const QString &extId) const

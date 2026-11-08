@@ -37,6 +37,11 @@ struct ChannelData
     QString catchupType;
     QString catchupSource;
 
+    // HTTP headers some streams need (M3U: #EXTVLCOPT http-user-agent /
+    // http-referrer, the same as #EXTINF attributes, or "url|User-Agent=...").
+    QString httpUserAgent;
+    QString httpReferrer;
+
     // Movies and series
     QString extension; // container, e.g. "mkv" (Xtream movies)
     QString rating;    // e.g. "7.4"

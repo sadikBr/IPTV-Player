@@ -30,9 +30,11 @@ add_library(iptvcore STATIC
     core/Parental.cpp
     core/UpdateCheck.h
     core/UpdateCheck.cpp
+    core/StreamRelay.h
+    core/StreamRelay.cpp
 )
 target_include_directories(iptvcore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core)
-target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Sql ZLIB::ZLIB)
+target_link_libraries(iptvcore PUBLIC Qt6::Core Qt6::Network Qt6::Sql ZLIB::ZLIB)
 
 qt_add_executable(iptvplayer
     main.cpp

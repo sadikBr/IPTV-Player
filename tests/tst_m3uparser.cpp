@@ -130,6 +130,37 @@ private slots:
         QVERIFY(plain.channels.at(0).catchupType.isEmpty());
     }
 
+    void httpHeaders()
+    {
+        // The three ways playlists give headers: #EXTVLCOPT lines, #EXTINF
+        // attributes, and Kodi-style "url|User-Agent=...&Referer=...".
+        const QByteArray data =
+                "#EXTM3U\n"
+                "#EXTINF:-1 tvg-id=\"a\",VLC options\n"
+                "#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Smart TV)\n"
+                "#EXTVLCOPT:http-referrer=https://site.example/\n"
+                "http://x/a.m3u8\n"
+                "#EXTINF:-1 http-user-agent=\"Agent B\" http-referrer=\"https://b.example/\",Attributes\n"
+                "http://x/b.m3u8\n"
+                "#EXTINF:-1,Kodi\n"
+                "http://x/c.m3u8|User-Agent=Agent%20C&Referer=https%3A%2F%2Fc.example%2F\n"
+                "#EXTINF:-1,Plain\n"
+                "http://x/d.ts\n";
+        const SourceContent c = M3uParser::parse(data);
+        QCOMPARE(c.channels.size(), 4);
+        QCOMPARE(c.channels[0].httpUserAgent, QStringLiteral("Mozilla/5.0 (Smart TV)"));
+        QCOMPARE(c.channels[0].httpReferrer, QStringLiteral("https://site.example/"));
+        QCOMPARE(c.channels[1].httpUserAgent, QStringLiteral("Agent B"));
+        QCOMPARE(c.channels[1].httpReferrer, QStringLiteral("https://b.example/"));
+        QCOMPARE(c.channels[2].httpUserAgent, QStringLiteral("Agent C"));
+        QCOMPARE(c.channels[2].httpReferrer, QStringLiteral("https://c.example/"));
+        QCOMPARE(c.channels[2].url, QStringLiteral("http://x/c.m3u8")); // without the headers
+        QCOMPARE(c.channels[2].kind, ContentKind::Live);
+        // Options don't leak into the next channel
+        QVERIFY(c.channels[3].httpUserAgent.isEmpty());
+        QVERIFY(c.channels[3].httpReferrer.isEmpty());
+    }
+
     void handlesEmptyAndGarbage()
     {
         QVERIFY(M3uParser::parse(QByteArray()).channels.isEmpty());

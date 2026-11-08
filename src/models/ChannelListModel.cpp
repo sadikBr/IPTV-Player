@@ -5,6 +5,7 @@
 #include "CategoryListModel.h"
 #include "Database.h"
 #include "DisplayText.h"
+#include "StreamRelay.h"
 #include "EpgStore.h"
 #include "XtreamApi.h"
 
@@ -229,13 +230,20 @@ bool ChannelListModel::canCatchup(int row, const QDateTime &start) const
     return Catchup::isAvailable(m_rows.at(row).archiveDays, start, QDateTime::currentDateTimeUtc());
 }
 
+// Streams that need particular headers play through the local relay.
+QUrl ChannelListModel::relayed(const Row &row, const QUrl &url)
+{
+    return StreamRelay::instance()->wrap(url, { row.httpUserAgent, row.httpReferrer });
+}
+
 QUrl ChannelListModel::catchupUrl(int row, const QDateTime &start, const QDateTime &end) const
 {
     if (!canCatchup(row, start) || m_source.id < 0)
         return {};
     const Row &r = m_rows.at(row);
-    return SourceStore::catchupUrl(m_source, r.extId, r.url, r.catchupType, r.catchupSource,
-                                   start, end, QDateTime::currentDateTimeUtc());
+    return relayed(r, SourceStore::catchupUrl(m_source, r.extId, r.url, r.catchupType,
+                                              r.catchupSource, start, end,
+                                              QDateTime::currentDateTimeUtc()));
 }
 
 QUrl ChannelListModel::streamUrl(int row) const
@@ -243,7 +251,8 @@ QUrl ChannelListModel::streamUrl(int row) const
     if (row < 0 || row >= m_rows.size() || m_source.id < 0)
         return {};
     const Row &r = m_rows.at(row);
-    return SourceStore::streamUrl(m_source, kindFromString(m_kind), r.extId, r.url, r.extension);
+    return relayed(r, SourceStore::streamUrl(m_source, kindFromString(m_kind), r.extId, r.url,
+                                             r.extension));
 }
 
 int ChannelListModel::indexOfExtId(const QString &extId)
@@ -363,7 +372,7 @@ QList<ChannelListModel::Row> ChannelListModel::queryRows(int offset, int count) 
             "SELECT c.id, c.ext_id, c.name, c.logo, c.url, c.number, c.epg_key, "
             "(f.ext_id IS NOT NULL), c.extension, c.year, c.rating, "
             "COALESCE(CAST(wp.position_ms AS REAL) / NULLIF(wp.duration_ms, 0), 0), "
-            "c.archive_days, c.catchup_type, c.catchup_source "
+            "c.archive_days, c.catchup_type, c.catchup_source, c.http_user_agent, c.http_referrer "
             "FROM channels c "
             "LEFT JOIN favorites f ON f.source_id = c.source_id AND f.kind = c.kind "
             "AND f.ext_id = c.ext_id "
@@ -389,7 +398,8 @@ QList<ChannelListModel::Row> ChannelListModel::queryRows(int offset, int count) 
                       q.value(5).toInt(), q.value(7).toBool(), q.value(8).toString(),
                       q.value(9).toString(), q.value(10).toString(),
                       qBound(0.0, q.value(11).toDouble(), 1.0), q.value(12).toInt(),
-                      q.value(13).toString(), q.value(14).toString() });
+                      q.value(13).toString(), q.value(14).toString(), q.value(15).toString(),
+                      q.value(16).toString() });
     }
     return rows;
 }

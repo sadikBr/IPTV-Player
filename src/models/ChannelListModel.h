@@ -126,6 +126,8 @@ private:
         int archiveDays = 0;
         QString catchupType;
         QString catchupSource;
+        QString httpUserAgent; // headers the stream needs (M3U playlists)
+        QString httpReferrer;
         // Name without symbols the device can't draw, worked out when first shown.
         mutable QString displayName;
         mutable bool displayReady = false;
@@ -139,6 +141,7 @@ private:
     };
 
     const QString &displayName(int row) const;
+    static QUrl relayed(const Row &row, const QUrl &url);
     void reloadSource();
     // Keeps at least as many rows loaded as before (data changed, same list).
     void refresh();

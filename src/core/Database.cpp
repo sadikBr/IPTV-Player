@@ -213,6 +213,11 @@ const QList<QStringList> &migrations()
                 favorited_at INTEGER NOT NULL DEFAULT 0,
                 played_at INTEGER NOT NULL DEFAULT 0))"),
         },
+        // Version 9: HTTP headers some streams need (User-Agent, Referer)
+        {
+            QStringLiteral("ALTER TABLE channels ADD COLUMN http_user_agent TEXT NOT NULL DEFAULT ''"),
+            QStringLiteral("ALTER TABLE channels ADD COLUMN http_referrer TEXT NOT NULL DEFAULT ''"),
+        },
     };
     return list;
 }

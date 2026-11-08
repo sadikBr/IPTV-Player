@@ -230,8 +230,8 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
     q.prepare(QStringLiteral(
             "INSERT INTO channels (source_id, category_id, kind, ext_id, name, search_name, logo, "
             "epg_id, url, number, position, extension, rating, year, plot, genre, archive_days, "
-            "catchup_type, catchup_source) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+            "catchup_type, catchup_source, http_user_agent, http_referrer) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
     position = 0;
     int liveCount = 0;
     int movieCount = 0;
@@ -258,6 +258,8 @@ bool SourceStore::replaceContent(int sourceId, const SourceContent &content)
         q.addBindValue(c.archiveDays);
         q.addBindValue(text(c.catchupType));
         q.addBindValue(text(c.catchupSource));
+        q.addBindValue(text(c.httpUserAgent));
+        q.addBindValue(text(c.httpReferrer));
         if (!q.exec())
             return fail(q);
         if (c.kind == ContentKind::Live)
@@ -571,7 +573,7 @@ std::optional<ChannelData> SourceStore::item(int sourceId, ContentKind kind,
     q.prepare(QStringLiteral(
             "SELECT c.ext_id, c.name, c.logo, c.epg_id, COALESCE(cat.ext_id, ''), c.url, c.number, "
             "c.extension, c.rating, c.year, c.plot, c.genre, c.archive_days, c.catchup_type, "
-            "c.catchup_source FROM channels c "
+            "c.catchup_source, c.http_user_agent, c.http_referrer FROM channels c "
             "LEFT JOIN categories cat ON cat.id = c.category_id "
             "WHERE c.source_id = ? AND c.kind = ? AND c.ext_id = ? LIMIT 1"));
     q.addBindValue(sourceId);
@@ -596,6 +598,8 @@ std::optional<ChannelData> SourceStore::item(int sourceId, ContentKind kind,
     c.archiveDays = q.value(12).toInt();
     c.catchupType = q.value(13).toString();
     c.catchupSource = q.value(14).toString();
+    c.httpUserAgent = q.value(15).toString();
+    c.httpReferrer = q.value(16).toString();
     return c;
 }
 

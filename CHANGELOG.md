@@ -7,6 +7,11 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+- **Channels that need special headers now play:** playlists can say a channel needs a
+  particular User-Agent or Referer (`#EXTVLCOPT:http-user-agent=…`, `http-referrer=…`, the
+  same as `#EXTINF` attributes, or `url|User-Agent=…&Referer=…`). Those channels now play
+  through a small relay inside the app that sends them; this includes many of the free
+  channels. Update a provider (refresh button) to pick this up.
 - **Android back gesture, for real this time:** on Android 13 and newer the app now
   receives the back gesture itself (it no longer relies on the Back key, which phones
   with gesture navigation don't always send). Back closes a dialog, leaves the player or
