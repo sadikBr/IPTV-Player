@@ -187,6 +187,16 @@ void AppSettings::applyHardwareDecodingSetting()
         qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "");
 }
 
+QString AppSettings::sortOrder(const QString &kind) const
+{
+    return m_settings.value(QStringLiteral("browse/sort-") + kind, QStringLiteral("default")).toString();
+}
+
+void AppSettings::setSortOrder(const QString &kind, const QString &order)
+{
+    m_settings.setValue(QStringLiteral("browse/sort-") + kind, order);
+}
+
 QString AppSettings::liveViewMode() const
 {
     return m_settings.value(QStringLiteral("browse/liveViewMode"), QStringLiteral("grid")).toString();

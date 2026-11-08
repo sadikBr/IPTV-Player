@@ -19,8 +19,10 @@ const auto kUserAgentKey = QStringLiteral("network/userAgent");
 QMutex g_deadHostsMutex;
 QSet<QString> g_deadHosts;
 
-const QUrl kEmptyImage(QStringLiteral(
-        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"));
+// Answer for dead hosts: an empty image that fails to load right away, so
+// the views show their placeholder (a valid 1x1 image would be stretched
+// to the poster size and look like an empty tile).
+const QUrl kEmptyImage(QStringLiteral("data:image/gif;base64,"));
 
 // Adds the app's User-Agent to every request that doesn't set one.
 class AppNetworkAccessManager : public QNetworkAccessManager

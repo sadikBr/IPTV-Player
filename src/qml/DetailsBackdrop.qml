@@ -8,11 +8,25 @@ Item {
 
     property string backdrop
     property string poster
+    property string title // colour of the wash when there is no artwork
 
     clip: true
 
-    Image {
+    // No artwork (or it doesn't load): a soft wash in the title's colour.
+    Rectangle {
         anchors.fill: parent
+        visible: !AppTheme.hasArtwork(art)
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: AppTheme.background }
+            GradientStop { position: 1.0; color: AppTheme.artColor(root.title, 0.2) }
+        }
+    }
+
+    Image {
+        id: art
+        anchors.fill: parent
+        visible: AppTheme.hasArtwork(art)
         source: root.backdrop.length > 0 ? root.backdrop : root.poster
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

@@ -280,7 +280,7 @@ Each phase ends with something that runs and can be tested on a real device.
 
 ## 10. Progress
 
-- **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/Android, release on `v*` tags
+- **Phase 0:** done — CMake/QML skeleton, CI for Linux/Windows/Android, releases
 - **Phase 1:** done — URL player with controls, stream info, wake lock, background handling
 - **Phase 2:** done — Xtream + M3U providers, live TV browser, favorites, zapping
 - **Phase 3:** done — TV guide: now/next in the channel list and player, guide grid
@@ -289,11 +289,10 @@ Each phase ends with something that runs and can be tested on a real device.
 - **Phase 4b:** done — new design, app shell, dashboard, settings, guide time shift;
   then a second, cinematic pass (neutral palette + warm accent, backdrop hero carousel,
   channel tile grid, backdrop details pages, custom scroll bars and inputs)
-- **Phase 5 (part 1):** done — automatic reconnect, app icon and Android launch screen,
-  Windows installer, Linux AppImage, Android version code per build (v0.7)
-- **Phase 5 (part 2):** done — automatic updates from GitHub Releases, keyboard / TV remote
-  navigation everywhere (v0.8)
-- **Phase 5:** done — playback settings, stream format per provider, landscape and tablet
-  layouts (v0.8)
-- **Next:** whatever comes up in daily use; Phase 6 extras (mpv engine, catch-up TV,
-  picture-in-picture) when wanted
+- **Phase 5:** done — automatic reconnect, app icon and Android launch screen, Windows
+  installer, Linux AppImage, automatic updates from GitHub Releases, keyboard / TV remote
+  navigation, playback settings, stream format per provider, landscape and tablet layouts
+- **Phase 6 (chosen extras):** done — catch-up TV, picture-in-picture (Android), parental PIN
+- **Version 1.0.0:** all of the above, first public release
+- **Later, if wanted:** mpv engine for streams Qt can't play, Chromecast, profiles,
+  Stalker portals

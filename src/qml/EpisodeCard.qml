@@ -47,9 +47,16 @@ ItemDelegate {
                 scale: root.emphasized && !root.compact ? 1.03 : 1
                 Behavior on scale { NumberAnimation { duration: AppTheme.normal; easing.type: Easing.OutCubic } }
 
+                ArtworkPlaceholder {
+                    anchors.fill: parent
+                    visible: !AppTheme.hasArtwork(thumb)
+                    title: root.title
+                    showTitle: false
+                    iconName: "series"
+                }
                 Label {
                     anchors.centerIn: parent
-                    visible: thumb.status !== Image.Ready
+                    visible: !AppTheme.hasArtwork(thumb)
                     text: root.episode
                     font.pixelSize: 28
                     font.weight: Font.Bold
@@ -62,6 +69,7 @@ ItemDelegate {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     sourceSize.width: 480
+                    visible: AppTheme.hasArtwork(thumb)
                 }
                 Rectangle {
                     anchors.fill: parent

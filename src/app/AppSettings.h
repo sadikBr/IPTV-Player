@@ -49,6 +49,10 @@ public:
     qreal volume() const { return m_volume; }
     void setVolume(qreal volume);
 
+    // Sort order of a section ("live", "movie", "series"), see ChannelListModel.
+    Q_INVOKABLE QString sortOrder(const QString &kind) const;
+    Q_INVOKABLE void setSortOrder(const QString &kind, const QString &order);
+
     QString liveViewMode() const;
     void setLiveViewMode(const QString &mode);
 

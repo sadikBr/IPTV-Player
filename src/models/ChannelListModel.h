@@ -26,6 +26,8 @@ class ChannelListModel : public QAbstractListModel
     // Live: the longest catch-up archive of the channels listed (days)
     Q_PROPERTY(int maxArchiveDays READ maxArchiveDays NOTIFY countChanged)
     // "default" (provider order) or "newest" (most recently added first)
+    // "default" (provider order), "newest" (recently added), "name", "name-desc",
+    // "rating", "year" (movies/series), "number" (live)
     Q_PROPERTY(QString sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
     // Maximum number of rows, 0 = all (home page rows)
     Q_PROPERTY(int limit READ limit WRITE setLimit NOTIFY limitChanged)

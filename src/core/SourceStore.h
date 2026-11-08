@@ -111,6 +111,9 @@ public:
     static QString notInHiddenCategory(const QString &alias = QStringLiteral("c"));
     // Parental control: while locked, content of locked categories is left
     // out everywhere (notInHiddenCategory / categoryNotHidden include it).
+    // ORDER BY for channels (alias c) in a sort order: "default", "newest",
+    // "name", "name-desc", "rating", "year", "number".
+    static QString orderBy(const QString &order);
     static void setParentalLocked(bool locked);
     static bool parentalLocked();
     // "1 = 1" when unlocked. For channels (alias.category_id) ...

@@ -6,61 +6,53 @@ M3U playlist.
 
 See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
-## Status
+## Features (version 1.0)
 
-**Version 0.8: live TV, TV guide, movies and series; automatic updates; automatic reconnect.**
+**Watching**
+- **Providers:** Xtream Codes login or M3U playlist (URL or file); paste a full
+  `get.php?username=…&password=…` link and the login fills in by itself. Several providers,
+  switch from the side bar
+- **Live TV:** channel tiles or a compact list with what's on now; categories, search
+  (accents ignored), favorites, channel numbers
+- **TV guide:** now/next everywhere and a guide grid; Xtream guides download by themselves,
+  M3U uses the playlist's guide link or yours (`.xml.gz` too); time shift per provider for
+  guides in the wrong time zone
+- **Catch-up TV:** on channels with an archive (↺ in the guide) watch past programs, or the
+  current one from its start. Xtream (`tv_archive`) and M3U (`catchup`, `catchup-days`,
+  `catchup-source`; default, append, shift, flussonic, xc)
+- **Movies and series:** poster grids, details pages, seasons and episodes, resume where you
+  stopped, next episode after a countdown, favorites
+- **Sorting:** by name, rating, year, channel number or recently added (remembered per
+  section); titles without artwork get a coloured card with their name
+- **Home:** a hero with backdrops (what you're watching, what's new), then rows for continue
+  watching, your channels, your movies, new movies and series
 
-- **Cinematic design:** neutral near-black surfaces with one warm accent, artwork-first
-  screens, soft shadows, the Inter typeface; side navigation on desktop (Home, Live TV,
-  Movies, Series, TV guide, Settings) and a bottom tab bar on phones
-- **Home:** a full-width rotating hero with backdrops (what you're watching, new movies and
-  series), then rows for continue watching, your channels, my movies, new movies and series
-- **Details pages** with full-width backdrops; episodes as cards with stills and progress
-- **Live TV** as a grid of channel tiles with what's on now (or a compact list)
-- Add providers with an **Xtream Codes login** or an **M3U playlist** (URL or file).
-  Paste a full `get.php?username=…&password=…` link and the login fills in by itself.
-- **Live TV:** categories (side panel or chips), search (accents ignored), favorites,
-  channel logos and what's on now
-- **TV guide:** now/next under every channel and in the player, and a 3-day guide grid.
-- **Catch-up TV:** channels with an archive (↺ in the guide) let you watch past programs, or
-  the current one from its start. Xtream (`tv_archive`) and M3U (`catchup`,
-  `catchup-days`, `catchup-source`; types default, append, shift, flussonic, xc).
-  Xtream archive links use the server's time zone from the login
-  Xtream guides download automatically; for M3U the playlist's guide link or the one you
-  enter is used (`.xml.gz` supported). **Time shift per provider** in Settings for guides
-  with wrong time zones
-- **Movies and series:** poster grids with ratings, details pages, seasons and episodes,
-  resume where you stopped, next episode after a 10 s countdown, favorites
-- **Choose categories:** hide what you don't watch, per provider. Whole languages or regions
-  at once (detected from prefixes like `[EN]`, `[FR]`, `[AR]`, `UK |`), or category by
-  category with search. Hidden categories disappear from lists, search and Home; favorites
-  stay. Open it from the filter button on Live TV / Movies / Series, from Settings, or
-  right-click / long-press a category
-- **Settings:** manage providers (use, update, choose categories, remove; the gear button
-  sets the live stream format, MPEG-TS or HLS, and the guide time shift), playback
-  (automatic reconnect, start channels faster, hardware decoding), User-Agent, updates,
-  play a single stream URL
-- **Automatic reconnect:** when a stream that was playing drops, freezes or stays stuck
-  buffering, the player reconnects by itself (up to 5 tries). Live channels pick up at
-  "now", movies and episodes where they were
-- Player: seek bar, audio and subtitle tracks, previous/next channel or episode, channel
-  list, channel number entry, stream info, full screen
-- **Automatic updates:** the app checks GitHub for a new version (at start-up and every
-  12 hours), shows what's new and installs it: the Windows installer updates in place and
-  restarts the app, the AppImage replaces itself, Android opens the system installer.
-  Downloads are checked against the release's SHA-256. Settings → Updates to check now or
-  turn it off. Copies built from source or the portable zip only get a link to the release
+**Player**
+- Seek bar, audio tracks and the subtitles that come with a movie or episode, previous/next
+  channel or episode, channel list, channel number entry, stream info, full screen
+- **Reconnects by itself** when a stream drops, freezes or keeps buffering (up to 5 tries);
+  live TV picks up at "now", movies where they were
+- **Picture-in-picture** on Android (button, or Android 12+ when you leave the app)
+
+**Your way**
+- **Choose categories:** hide what you don't watch, whole languages or regions at once
+  (`[EN]`, `FR |`, ...) or one by one
+- **Parental control:** a PIN hides the categories you lock, and Settings, until it is
+  entered; locked again at every start
+- **Playback settings:** automatic reconnect, start channels faster, hardware decoding; live
+  stream format per provider (MPEG-TS or HLS)
+- **Keyboard and TV remote:** arrows move between everything on screen, Enter/OK opens,
+  Escape/Back goes back
+- Cinematic dark design that adapts to desktops, tablets, and phones in portrait and
+  landscape
+
+**Keeping up to date**
+- **Automatic updates** from GitHub Releases, checked against the release's SHA-256: the
+  Windows installer updates in place, the AppImage replaces itself, Android opens the
+  system installer. Settings → Updates
 - Lists refresh once a day and the guide every 12 hours (or use the refresh buttons)
-- Android: screen stays on while playing; back button goes back one screen;
-  **picture-in-picture** (player button, or automatically on Android 12+ when you leave the
-  app while something plays)
-- **Subtitles and audio tracks** that come with a movie or episode: the subtitles button in
-  the player (it says so when a video has none)
-- **Parental control:** a PIN (Settings → Parental control) hides the categories you lock
-  (lock button in Choose categories) and Settings, until it is entered; locked again at every
-  start. Offers to lock categories that look like adult content
 
-### Troubleshooting
+## Troubleshooting
 
 - **"The server closed the connection" / "Connection reset by peer":** many providers only
   answer clients that look like a known player. The app identifies itself as VLC
@@ -78,7 +70,7 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   `curl -sS -A "VLC/3.0.20 LibVLC/3.0.20" -o /dev/null -w "%{http_code}\n" "http://SERVER:PORT/player_api.php"`
   should print `200`.
 
-### Where your data is stored
+## Where your data is stored
 
 Providers, channel lists and favorites are kept in a SQLite database in the app's
 private data folder (Linux: `~/.local/share/IPTVPlayer/IPTV Player/`, Windows:
@@ -88,15 +80,18 @@ provider.
 
 ## Download
 
-Every push to `main` builds the app on GitHub Actions. Open the
-[Actions tab](../../actions/workflows/build.yml), pick the latest successful
-run and download from **Artifacts**:
+Get the files from the **[latest release](../../releases/latest)**. Once installed, the app
+updates itself.
 
-| Artifact | Platform |
+| File | Platform |
 |---|---|
-| `IPTVPlayer-windows-x64` | Windows 10/11 — `IPTVPlayer-setup-x64.exe` installs it (Start menu, uninstaller, updates in place; no admin rights needed). Or unzip the portable `.zip` and run `IPTVPlayer.exe` |
-| `IPTVPlayer-linux-x86_64` | Any Linux distribution — `chmod +x IPTVPlayer-x86_64.AppImage` and run it |
-| `IPTVPlayer-android` | Android 9+ (arm64 and 32-bit ARM) — install the APK ("allow unknown sources") |
+| `IPTVPlayer-setup-x64.exe` | Windows 10/11 — installs it (Start menu, uninstaller, updates in place; no admin rights needed) |
+| `IPTVPlayer-windows-x64.zip` | Windows, portable — unzip and run `IPTVPlayer.exe` (no automatic updates) |
+| `IPTVPlayer-x86_64.AppImage` | Any Linux distribution — `chmod +x IPTVPlayer-x86_64.AppImage` and run it |
+| `IPTVPlayer-android.apk` | Android 9+ (phones, tablets, TV boxes; arm64 and 32-bit ARM) — install it ("allow unknown sources") |
+
+Test builds of every push to `main` are on the [Actions tab](../../actions/workflows/build.yml)
+(open a successful run, **Artifacts**).
 
 Windows may show "Windows protected your PC" because the installer isn't signed with a
 paid certificate: click **More info → Run anyway**.

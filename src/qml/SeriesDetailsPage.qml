@@ -86,6 +86,7 @@ Page {
             width: flick.width
             height: page.narrow ? 300 : Math.max(420, Math.min(page.height * 0.78, flick.width * 0.5))
             backdrop: page.info.backdrop || ""
+            title: page.info.name || ""
             poster: page.info.poster || ""
         }
 
@@ -115,12 +116,21 @@ Page {
                         radius: AppTheme.radius
                         color: AppTheme.surfaceHigh
                         clip: true
+                        ArtworkPlaceholder {
+                            anchors.fill: parent
+                            visible: !AppTheme.hasArtwork(detailsPoster)
+                            title: page.info.name || ""
+                            iconName: "series"
+                            fontSize: AppTheme.fontH3
+                        }
                         Image {
+                            id: detailsPoster
                             anchors.fill: parent
                             source: page.info.poster || ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             sourceSize.width: 500
+                            visible: AppTheme.hasArtwork(detailsPoster)
                         }
                     }
                 }

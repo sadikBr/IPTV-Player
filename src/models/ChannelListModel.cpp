@@ -308,8 +308,7 @@ void ChannelListModel::reload()
         } else if (m_categoryId > 0) {
             sql += QStringLiteral(" AND c.category_id = :category");
         }
-        sql += m_sortOrder == QLatin1String("newest") ? QStringLiteral(" ORDER BY c.position DESC")
-                                                      : QStringLiteral(" ORDER BY c.position");
+        sql += QStringLiteral(" ORDER BY ") + SourceStore::orderBy(m_sortOrder);
         if (m_limit > 0)
             sql += QStringLiteral(" LIMIT %1").arg(m_limit);
 

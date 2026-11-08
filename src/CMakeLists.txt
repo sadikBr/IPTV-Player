@@ -77,6 +77,7 @@ set(QML_SOURCES
     qml/AppSwitch.qml
     qml/AppTextField.qml
     qml/AppTheme.qml
+    qml/ArtworkPlaceholder.qml
     qml/Avatar.qml
     qml/BottomNav.qml
     qml/CategoryChips.qml
@@ -109,6 +110,7 @@ set(QML_SOURCES
     qml/SeriesDetailsPage.qml
     qml/SettingsPage.qml
     qml/Shadow.qml
+    qml/SortButton.qml
     qml/StatusBanner.qml
     qml/UpdateDialog.qml
     qml/VodPage.qml
@@ -151,6 +153,7 @@ set(QML_RESOURCES
     qml/icons/search.svg
     qml/icons/series.svg
     qml/icons/settings.svg
+    qml/icons/sort.svg
     qml/icons/star-outline.svg
     qml/icons/star.svg
     qml/icons/subtitles.svg

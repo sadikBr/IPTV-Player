@@ -25,6 +25,22 @@ Page {
     property int heroIndex: 0
     readonly property var hero: heroItems.length > 0 ? heroItems[Math.min(heroIndex, heroItems.length - 1)] : null
     property var requestedDetails: ({})
+    // Artwork URLs that failed to load (or came back empty): their slides are
+    // left out so the hero never shows an empty banner.
+    property var failedArt: ({})
+
+    function hasHeroArt(item) {
+        return (item.backdrop.length > 0 && !failedArt[item.backdrop])
+                || (item.poster.length > 0 && !failedArt[item.poster])
+    }
+    function markArtFailed(url) {
+        if (!url || failedArt[url])
+            return
+        const failed = failedArt
+        failed[url] = true
+        failedArt = failed
+        Qt.callLater(rebuildHero)
+    }
 
     function metaLine(parts) {
         return parts.filter(t => t && String(t).length > 0).join("  ·  ")
@@ -79,8 +95,8 @@ Page {
             })
             requestDetails("series", s.extId, info)
         }
-        heroItems = items
-        if (heroIndex >= items.length)
+        heroItems = items.filter(hasHeroArt)
+        if (heroIndex >= heroItems.length)
             heroIndex = 0
     }
 
@@ -211,24 +227,37 @@ Page {
                 Repeater {
                     model: page.heroItems
                     delegate: Item {
+                        id: slide
                         required property var modelData
                         required property int index
+                        // Backdrop if it loads, else the poster.
+                        readonly property bool backdropOk: modelData.backdrop.length > 0
+                                                           && !page.failedArt[modelData.backdrop]
+                        readonly property bool posterOk: modelData.poster.length > 0
+                                                         && !page.failedArt[modelData.poster]
+                        function check(image, url) {
+                            if (image.status === Image.Error
+                                    || (image.status === Image.Ready && image.implicitWidth <= 4))
+                                page.markArtFailed(url)
+                        }
                         anchors.fill: parent
                         opacity: index === page.heroIndex ? 1 : 0
                         visible: opacity > 0
                         Behavior on opacity { NumberAnimation { duration: AppTheme.slow; easing.type: Easing.InOutQuad } }
 
                         Image {
+                            id: heroBackdrop
                             anchors.fill: parent
-                            source: modelData.backdrop
+                            source: slide.backdropOk ? slide.modelData.backdrop : ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             sourceSize.width: 1600
-                            visible: modelData.backdrop.length > 0
+                            visible: slide.backdropOk && AppTheme.hasArtwork(heroBackdrop)
+                            onStatusChanged: slide.check(heroBackdrop, slide.modelData.backdrop)
                         }
-                        // No backdrop: the poster large on the right
+                        // No (working) backdrop: the poster large on the right
                         Item {
-                            visible: modelData.backdrop.length === 0 && modelData.poster.length > 0
+                            visible: !slide.backdropOk && slide.posterOk
                             anchors.fill: parent
                             Image {
                                 id: blurredPoster
@@ -252,11 +281,13 @@ Page {
                                 color: AppTheme.surface
                                 clip: true
                                 Image {
+                                    id: heroPoster
                                     anchors.fill: parent
-                                    source: modelData.poster
+                                    source: slide.posterOk ? slide.modelData.poster : ""
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                     sourceSize.width: 500
+                                    onStatusChanged: slide.check(heroPoster, slide.modelData.poster)
                                 }
                             }
                         }

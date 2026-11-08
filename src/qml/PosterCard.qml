@@ -44,26 +44,11 @@ ItemDelegate {
                 scale: root.emphasized ? 1.04 : 1
                 Behavior on scale { NumberAnimation { duration: AppTheme.normal; easing.type: Easing.OutCubic } }
 
-                // Placeholder while loading / when there is no poster
-                Rectangle {
+                // While loading, or when there is no (working) poster
+                ArtworkPlaceholder {
                     anchors.fill: parent
-                    visible: posterImage.status !== Image.Ready
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: AppTheme.surfaceHover }
-                        GradientStop { position: 1.0; color: AppTheme.surface }
-                    }
-                    Label {
-                        anchors.centerIn: parent
-                        width: parent.width - 24
-                        text: root.title
-                        wrapMode: Text.Wrap
-                        horizontalAlignment: Text.AlignHCenter
-                        maximumLineCount: 4
-                        elide: Text.ElideRight
-                        color: AppTheme.textSecondary
-                        font.pixelSize: AppTheme.fontBody
-                        font.weight: Font.DemiBold
-                    }
+                    visible: !AppTheme.hasArtwork(posterImage)
+                    title: root.title
                 }
 
                 Image {
@@ -74,7 +59,7 @@ ItemDelegate {
                     cache: true
                     fillMode: Image.PreserveAspectCrop
                     sourceSize.width: 360
-                    opacity: status === Image.Ready ? 1 : 0
+                    opacity: AppTheme.hasArtwork(posterImage) ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: AppTheme.normal } }
                 }
 

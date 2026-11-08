@@ -7,6 +7,14 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+The first release: watch live TV, the TV guide, movies and series from your IPTV provider
+(Xtream Codes or M3U) on Windows, Linux and Android. Highlights:
+
+- **Sorting:** sort channels, movies and series by name, rating, year, channel number or
+  recently added (sort button at the top; remembered per section).
+- **Missing artwork:** movies and series without a picture (or whose picture doesn't load)
+  get a coloured card with their title instead of an empty tile, and the Home banner only
+  shows titles whose artwork loads.
 - **Parental control:** set a PIN (Settings → Parental control) and lock categories with the
   lock button in Choose categories. Locked categories, and Settings, stay hidden until the
   PIN is entered; the app locks again every time it starts. When you set the PIN it offers

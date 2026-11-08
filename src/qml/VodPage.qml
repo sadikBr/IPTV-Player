@@ -90,6 +90,10 @@ Page {
                 }
             }
         }
+        SortButton {
+            model: items
+            kind: page.kind
+        }
         IconButton {
             iconName: "filter"
             tip: qsTr("Choose categories")

@@ -133,6 +133,10 @@ Page {
             tip: qsTr("TV guide")
             onClicked: page.guideRequested()
         }
+        SortButton {
+            model: channels
+            kind: "live"
+        }
         IconButton {
             iconName: "filter"
             tip: qsTr("Choose categories")

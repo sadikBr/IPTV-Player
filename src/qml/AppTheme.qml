@@ -88,6 +88,26 @@ QtObject {
         return (words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : "")).toUpperCase()
     }
 
+    // Whether an Image shows real artwork: loaded, and not a tiny image.
+    function hasArtwork(image) {
+        return image !== null && image.status === Image.Ready && image.implicitWidth > 4
+    }
+
+    // A deep colour picked from a title, for placeholders: each title gets
+    // its own, and it stays the same.
+    function artColor(title, lightness) {
+        let hash = 0
+        const text = title || ""
+        for (let i = 0; i < text.length; ++i)
+            hash = (Math.imul(hash, 31) + text.charCodeAt(i)) | 0
+        // Mix the bits so similar titles ("Movie 3", "Movie 6") get different colours.
+        hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b)
+        hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b)
+        hash = hash ^ (hash >>> 16)
+        const hue = ((hash >>> 0) % 360) / 360
+        return Qt.hsla(hue, 0.45, lightness === undefined ? 0.22 : lightness, 1)
+    }
+
     // "1 h 45 min" / "45 min"
     function duration(secs) {
         if (!secs)

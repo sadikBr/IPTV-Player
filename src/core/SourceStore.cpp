@@ -443,6 +443,27 @@ QString SourceStore::categoryNotHidden(const QString &alias)
     return sql;
 }
 
+// ORDER BY for a sort order (see the sortOrder property).
+QString SourceStore::orderBy(const QString &order)
+{
+    if (order == QLatin1String("newest"))
+        return QStringLiteral("c.position DESC");
+    if (order == QLatin1String("name"))
+        return QStringLiteral("c.search_name, c.position");
+    if (order == QLatin1String("name-desc"))
+        return QStringLiteral("c.search_name DESC, c.position");
+    // Titles without a rating or year go last.
+    if (order == QLatin1String("rating"))
+        return QStringLiteral("(c.rating = '' OR CAST(c.rating AS REAL) <= 0), "
+                              "CAST(c.rating AS REAL) DESC, c.search_name");
+    if (order == QLatin1String("year"))
+        return QStringLiteral("(CAST(c.year AS INTEGER) <= 0), CAST(c.year AS INTEGER) DESC, "
+                              "c.search_name");
+    if (order == QLatin1String("number"))
+        return QStringLiteral("(c.number <= 0), c.number, c.position");
+    return QStringLiteral("c.position");
+}
+
 bool SourceStore::setCategoryLocked(int sourceId, ContentKind kind, const QString &extId, bool locked)
 {
     QSqlQuery q(m_db);

@@ -248,6 +248,44 @@ private slots:
         QCOMPARE(visible(), 10);
     }
 
+    void sortOrders()
+    {
+        SourceStore store(Database::connection());
+        const int id = store.sources().constFirst().id;
+        SourceContent content;
+        const auto movie = [](const char *name, const char *rating, const char *year) {
+            ChannelData c;
+            c.kind = ContentKind::Movie;
+            c.extId = QString::fromUtf8(name);
+            c.name = QString::fromUtf8(name);
+            c.rating = QString::fromLatin1(rating);
+            c.year = QString::fromLatin1(year);
+            return c;
+        };
+        content.channels = { movie("Zorro", "6.5", "1998"), movie("Ébène", "", "2001"),
+                             movie("alpha", "8.1", ""), movie("Beta", "7", "2020") };
+        QVERIFY(store.replaceContent(id, content));
+        const auto order = [id](const QString &sort) {
+            QSqlQuery q(Database::connection());
+            q.prepare(QStringLiteral("SELECT c.name FROM channels c WHERE c.source_id = ? "
+                                     "AND c.kind = 'movie' ORDER BY ") + SourceStore::orderBy(sort));
+            q.addBindValue(id);
+            QStringList names;
+            if (q.exec())
+                while (q.next())
+                    names << q.value(0).toString();
+            return names.join(QLatin1Char(','));
+        };
+        QCOMPARE(order(QStringLiteral("default")), QStringLiteral("Zorro,Ébène,alpha,Beta"));
+        QCOMPARE(order(QStringLiteral("newest")), QStringLiteral("Beta,alpha,Ébène,Zorro"));
+        // Case and accents don't matter
+        QCOMPARE(order(QStringLiteral("name")), QStringLiteral("alpha,Beta,Ébène,Zorro"));
+        QCOMPARE(order(QStringLiteral("name-desc")), QStringLiteral("Zorro,Ébène,Beta,alpha"));
+        // Without a rating / year: last
+        QCOMPARE(order(QStringLiteral("rating")), QStringLiteral("alpha,Beta,Zorro,Ébène"));
+        QCOMPARE(order(QStringLiteral("year")), QStringLiteral("Beta,Ébène,Zorro,alpha"));
+    }
+
     void lockedCategories()
     {
         SourceStore store(Database::connection());
