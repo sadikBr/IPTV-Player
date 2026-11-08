@@ -228,7 +228,7 @@ Each phase ends with something that runs and can be tested on a real device.
 - [ ] Review on a real phone, tablet and TV (you)
 
 ### Phase 5 — Polish & platform work (≈ 1–2 weeks)
-- [ ] Responsive layouts: phone portrait, phone landscape, tablet, desktop
+- [x] Responsive layouts: phone portrait, phone landscape (icon side bar), tablet, desktop
 - [x] Keyboard shortcuts (desktop) and D-pad focus navigation (Android TV)
 - [x] Settings: stream format (TS/HLS) per provider, low-latency live TV, hardware decoding, auto-reconnect, user agent
 - [x] Network robustness: automatic reconnect on stream drop/stall (timeouts and retries for lists were already in)
@@ -291,4 +291,7 @@ Each phase ends with something that runs and can be tested on a real device.
   Windows installer, Linux AppImage, Android version code per build (v0.7)
 - **Phase 5 (part 2):** done — automatic updates from GitHub Releases, keyboard / TV remote
   navigation everywhere (v0.8)
-- **Next:** phone landscape and tablet layouts, plus whatever comes up in daily use
+- **Phase 5:** done — playback settings, stream format per provider, landscape and tablet
+  layouts (v0.8)
+- **Next:** whatever comes up in daily use; Phase 6 extras (mpv engine, catch-up TV,
+  picture-in-picture) when wanted

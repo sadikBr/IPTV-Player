@@ -24,6 +24,9 @@ ApplicationWindow {
     Material.foreground: AppTheme.textPrimary
 
     readonly property bool wide: width >= AppTheme.wideWidth
+    // Phones in landscape: an icon-only side bar instead of the bottom bar,
+    // which would take too much of the little height there is.
+    readonly property bool landscapeCompact: !wide && width > height && height < 600
     readonly property bool fullScreen: visibility === Window.FullScreen
     property int visibilityBeforeFullScreen: Window.Windowed
     // Pages like the player hide the navigation.
@@ -225,9 +228,10 @@ ApplicationWindow {
 
     NavRail {
         id: rail
-        width: 240
+        width: compact ? 64 : 240
         height: parent.height
-        visible: window.wide && window.chromeVisible
+        compact: window.landscapeCompact
+        visible: (window.wide || window.landscapeCompact) && window.chromeVisible
     }
 
     StackView {
@@ -262,7 +266,7 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        visible: !window.wide && window.chromeVisible
+        visible: !window.wide && !window.landscapeCompact && window.chromeVisible
     }
 
     // --- Pages ---

@@ -4,9 +4,12 @@ import QtQuick.Controls.impl
 import QtQuick.Layouts
 import IPTVPlayer
 
-// Side navigation for wide screens.
+// Side navigation for wide screens. compact: icons only (phones in
+// landscape, where a bottom bar would take too much of the height).
 Rectangle {
     id: root
+
+    property bool compact: false
 
     color: AppTheme.background
 
@@ -19,12 +22,13 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 16
-        anchors.rightMargin: 17
-        spacing: 6
+        anchors.margins: root.compact ? 10 : 16
+        anchors.rightMargin: root.compact ? 11 : 17
+        spacing: root.compact ? 4 : 6
 
         // Brand
         RowLayout {
+            visible: !root.compact
             Layout.bottomMargin: 18
             Layout.leftMargin: 6
             spacing: 10
@@ -53,8 +57,10 @@ Rectangle {
         }
 
         ProviderSwitcher {
-            Layout.fillWidth: true
-            Layout.bottomMargin: 14
+            Layout.fillWidth: !root.compact
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: root.compact ? 6 : 14
+            compact: root.compact
             visible: AppState.hasSource
         }
 
@@ -86,6 +92,7 @@ Rectangle {
             visible: SourceManager.busy || EpgManager.busy
             Label {
                 Layout.fillWidth: true
+                visible: !root.compact
                 text: SourceManager.busy ? SourceManager.statusText : EpgManager.statusText
                 color: AppTheme.textTertiary
                 font.pixelSize: AppTheme.fontCaption
@@ -108,10 +115,14 @@ Rectangle {
         readonly property bool active: AppState.section === section
 
         Layout.fillWidth: true
-        implicitHeight: 44
+        implicitHeight: root.compact ? 40 : 44
         hoverEnabled: true
         focusPolicy: Qt.TabFocus
         onClicked: AppState.sectionRequested(section)
+        Accessible.name: text
+        ToolTip.visible: root.compact && hovered
+        ToolTip.text: text
+        ToolTip.delay: 500
 
         background: Rectangle {
             radius: AppTheme.radius
@@ -131,13 +142,15 @@ Rectangle {
         contentItem: RowLayout {
             spacing: 14
             IconImage {
-                Layout.leftMargin: 14
+                Layout.leftMargin: root.compact ? 0 : 14
+                Layout.alignment: root.compact ? Qt.AlignCenter : Qt.AlignLeft | Qt.AlignVCenter
                 source: "icons/" + item.iconName + ".svg"
                 sourceSize: Qt.size(20, 20)
                 color: item.active ? AppTheme.textPrimary : AppTheme.textSecondary
             }
             Label {
                 Layout.fillWidth: true
+                visible: !root.compact
                 text: item.text
                 font.pixelSize: AppTheme.fontBody
                 font.weight: item.active ? Font.DemiBold : Font.Medium

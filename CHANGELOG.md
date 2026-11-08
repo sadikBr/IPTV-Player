@@ -15,6 +15,8 @@ the app's update dialog. Keep it short and written for people using the app.
   buffering), or switch hardware decoding off if the picture looks wrong.
 - **Stream format per provider:** MPEG-TS or HLS, changeable any time (Settings → the
   gear button of a provider). Try the other one if channels don't start.
+- **Phones in landscape** get a slim icon side bar instead of the bottom bar, so there is
+  more room for the picture and lists; **tablets** show more posters per row.
 - **New app icon**, and a dark launch screen on Android.
 - **Windows installer** and **Linux AppImage**.
 - Series: all episode cards are the same size, and episode titles leave out the

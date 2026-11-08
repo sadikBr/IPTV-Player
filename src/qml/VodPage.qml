@@ -166,7 +166,8 @@ Page {
                     anchors.fill: parent
                     anchors.leftMargin: page.wide ? 18 : AppTheme.margin - 6
                     anchors.rightMargin: page.wide ? AppTheme.pageMargin - 10 : AppTheme.margin - 6
-                    readonly property int columns: Math.max(2, Math.floor(width / (page.wide ? 180 : 140)))
+                    // About 175 px per poster on tablets and desktops, 140 px on phones
+                    readonly property int columns: Math.max(2, Math.round(width / (page.wide ? 175 : 140)))
                     readonly property int gap: page.narrow ? 12 : 18
                     cellWidth: Math.floor(width / columns)
                     cellHeight: (cellWidth - gap) * 1.5 + 66

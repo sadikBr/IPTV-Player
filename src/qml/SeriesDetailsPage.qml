@@ -92,7 +92,8 @@ Page {
         ColumnLayout {
             id: content
             x: page.sideMargin
-            y: page.narrow ? 180 : Math.max(120, backdrop.height - 340)
+            // Short screens (phones in landscape): start near the top so Play shows.
+            y: page.narrow ? 180 : Math.max(72, Math.min(Math.max(120, backdrop.height - 340), page.height - 400))
             width: Math.min(flick.width - 2 * page.sideMargin, 1180)
             spacing: 28
 
