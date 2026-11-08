@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(IPTVPlayer
-    VERSION 1.0.1
+    VERSION 1.0.2
     DESCRIPTION "Cross-platform IPTV player"
     LANGUAGES CXX)
 

@@ -5,7 +5,7 @@ the app's update dialog. Keep it short and written for people using the app.
 Changes not released yet go under "Unreleased"; to release, rename it to the
 new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
-## Unreleased
+## v1.0.2
 
 - **Multi-view:** watch 2 or 4 live channels at once (the multi-view button in the player
   or in Live TV). Tap a screen to hear it, double-tap to watch it full screen, and change
@@ -20,6 +20,10 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
   receives the back gesture itself (it no longer relies on the Back key, which phones
   with gesture navigation don't always send). Back closes a dialog, leaves the player or
   goes back one screen; on Home it sends the app to the background like other apps.
+
+**Android note:** this build is signed with a temporary key, like the earlier ones. To
+install it, first export a backup (Settings → Backup), uninstall the old version, install
+this one and import the backup.
 
 ## v1.0.1
 
