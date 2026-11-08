@@ -5,6 +5,16 @@ the app's update dialog. Keep it short and written for people using the app.
 Changes not released yet go under "Unreleased"; to release, rename it to the
 new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
+## Unreleased
+
+- **Android back gesture** goes back one screen (closes a dialog, leaves the player…) and
+  only closes the app on Home.
+- **Phones:** buttons no longer run off the screen. Page buttons move to a row of their
+  own when they don't fit next to the title; the player's controls use two rows; the
+  bottom bar has five tabs (Settings is the gear on Home and in the provider menu).
+- Channel names lose decorative symbols the phone can't draw (no more "NO GLYPH" boxes).
+- In the player, program times are no longer shown backwards next to Arabic titles.
+
 ## v1.0.0
 
 The first release: watch live TV, the TV guide, movies and series from your IPTV provider

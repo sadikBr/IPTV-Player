@@ -64,9 +64,13 @@ Item {
             }
             ColumnLayout {
                 Layout.fillWidth: true
+                // Shrink (and elide) instead of pushing the buttons off screen.
+                Layout.preferredWidth: 1
+                Layout.minimumWidth: 0
                 spacing: 2
                 Label {
                     Layout.fillWidth: true
+                    Layout.preferredWidth: 1
                     text: root.title
                     elide: Text.ElideMiddle
                     color: "white"
@@ -77,14 +81,22 @@ Item {
                     visible: root.program.now !== undefined
                     Layout.fillWidth: true
                     spacing: 8
+                    // Times on their own: next to a right-to-left title (Arabic...)
+                    // they would be shown in reverse order.
                     Label {
                         text: root.program.now
-                              ? root.program.now.title + "  " + AppTheme.time(root.program.now.start)
-                                + "–" + AppTheme.time(root.program.now.stop)
+                              ? AppTheme.time(root.program.now.start) + "–" + AppTheme.time(root.program.now.stop)
                               : ""
+                        color: "#99FFFFFF"
+                        font.pixelSize: 13
+                    }
+                    Label {
+                        text: root.program.now ? root.program.now.title : ""
                         color: "#DDFFFFFF"
                         font.pixelSize: 13
                         elide: Text.ElideRight
+                        Layout.fillWidth: root.compact
+                        Layout.preferredWidth: root.compact ? 1 : -1
                         Layout.maximumWidth: root.width * 0.5
                     }
                     Rectangle {
@@ -177,8 +189,16 @@ Item {
                 }
             }
 
-            RowLayout {
+            // Playback buttons, then tools. Side by side on wide screens; on phones
+            // two rows, so every button stays on screen.
+            GridLayout {
                 Layout.fillWidth: true
+                columns: root.compact ? 1 : 2
+                rowSpacing: 0
+                columnSpacing: AppTheme.spacing / 2
+
+            RowLayout {
+                Layout.alignment: root.compact ? Qt.AlignHCenter : Qt.AlignLeft
                 spacing: AppTheme.spacing / 2
 
                 IconButton {
@@ -220,6 +240,12 @@ Item {
                         font.pixelSize: 12
                     }
                 }
+
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: AppTheme.spacing / 2
 
                 Item { Layout.fillWidth: true }
 
@@ -320,6 +346,8 @@ Item {
                     tip: qsTr("Full screen (F)")
                     onClicked: root.fullScreenClicked()
                 }
+                Item { Layout.fillWidth: root.compact }
+            }
             }
         }
     }

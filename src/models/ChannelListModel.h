@@ -126,6 +126,9 @@ private:
         int archiveDays = 0;
         QString catchupType;
         QString catchupSource;
+        // Name without symbols the device can't draw, worked out when first shown.
+        mutable QString displayName;
+        mutable bool displayReady = false;
     };
 
     struct NowNext
@@ -135,6 +138,7 @@ private:
         QString nextTitle;
     };
 
+    const QString &displayName(int row) const;
     void reloadSource();
     // Keeps at least as many rows loaded as before (data changed, same list).
     void refresh();

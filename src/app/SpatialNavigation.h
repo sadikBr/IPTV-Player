@@ -43,4 +43,7 @@ private:
 
     QPointer<QQuickWindow> m_window;
     bool m_delivering = false;
+    // The last Back press was used (went back, or a page handled it): its release
+    // must be swallowed too, or Android closes the app.
+    bool m_backUsed = false;
 };

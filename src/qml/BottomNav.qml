@@ -42,9 +42,12 @@ Rectangle {
             visible: (AppState.sourceInfo.seriesCount || 0) > 0
         }
         Tab { section: "radio"; iconName: "radio"; text: qsTr("Radio") }
+        // With a provider, five tabs are enough on a phone: Settings is the gear on
+        // Home and in the provider menu. Without one it stays here (restore a backup).
         Tab {
             section: "settings"; text: qsTr("Settings")
             iconName: ParentalControl.locked ? "lock" : "settings"
+            visible: !AppState.hasSource
         }
     }
 

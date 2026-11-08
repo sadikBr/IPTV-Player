@@ -52,7 +52,21 @@ SpatialNavigation::SpatialNavigation(QQuickWindow *window) : QObject(window), m_
 
 bool SpatialNavigation::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched != m_window || event->type() != QEvent::KeyPress || m_delivering)
+    if (watched != m_window || m_delivering)
+        return false;
+    if (event->type() == QEvent::KeyRelease) {
+        // Android quits when the Back release is not accepted, even if its press
+        // took us back a screen. Swallow it unless Back is meant to close the app.
+        auto *key = static_cast<QKeyEvent *>(event);
+        if (key->key() == Qt::Key_Back && m_backUsed) {
+            if (!key->isAutoRepeat())
+                m_backUsed = false;
+            key->accept();
+            return true;
+        }
+        return false;
+    }
+    if (event->type() != QEvent::KeyPress)
         return false;
     auto *key = static_cast<QKeyEvent *>(event);
     if (key->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))
@@ -76,11 +90,15 @@ bool SpatialNavigation::eventFilter(QObject *watched, QEvent *event)
         QCoreApplication::sendEvent(m_window, key);
         m_delivering = false;
         if (key->isAccepted() && m_window->activeFocusItem()
-            && m_window->activeFocusItem() != m_window->contentItem())
+            && m_window->activeFocusItem() != m_window->contentItem()) {
+            m_backUsed = key->key() == Qt::Key_Back;
             return true;
+        }
         QVariant result;
         QMetaObject::invokeMethod(m_window, "goBack", Q_RETURN_ARG(QVariant, result));
         const bool wentBack = result.toBool();
+        if (key->key() == Qt::Key_Back)
+            m_backUsed = wentBack;
         // Nothing to go back to: Android closes the app (Back key).
         return wentBack || key->key() == Qt::Key_Escape;
     }

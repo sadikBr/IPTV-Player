@@ -4,6 +4,7 @@
 
 #include "CategoryListModel.h"
 #include "Database.h"
+#include "DisplayText.h"
 #include "EpgStore.h"
 #include "XtreamApi.h"
 
@@ -154,7 +155,7 @@ QVariant ChannelListModel::data(const QModelIndex &index, int role) const
         return row.extId;
     case NameRole:
     case Qt::DisplayRole:
-        return row.name;
+        return displayName(index.row());
     case LogoRole:
         return XtreamApi::imageUrl(row.logo);
     case NumberRole:
@@ -195,6 +196,16 @@ QHash<int, QByteArray> ChannelListModel::roleNames() const
     };
 }
 
+const QString &ChannelListModel::displayName(int row) const
+{
+    const Row &r = m_rows.at(row);
+    if (!r.displayReady) {
+        r.displayName = DisplayText::visibleText(r.name);
+        r.displayReady = true;
+    }
+    return r.displayName;
+}
+
 QVariantMap ChannelListModel::get(int row) const
 {
     if (row < 0 || row >= m_rows.size())
@@ -202,7 +213,7 @@ QVariantMap ChannelListModel::get(int row) const
     const Row &r = m_rows.at(row);
     return {
         { QStringLiteral("channelId"), r.id }, { QStringLiteral("extId"), r.extId },
-        { QStringLiteral("name"), r.name },    { QStringLiteral("logo"), r.logo },
+        { QStringLiteral("name"), displayName(row) },    { QStringLiteral("logo"), r.logo },
         { QStringLiteral("number"), r.number }, { QStringLiteral("favorite"), r.favorite },
         { QStringLiteral("epgKey"), r.epgKey },
         { QStringLiteral("year"), r.year },     { QStringLiteral("rating"), r.rating },

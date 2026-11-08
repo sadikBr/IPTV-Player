@@ -655,6 +655,14 @@ Page {
                 tip: qsTr("Search")
                 onClicked: AppState.sectionRequested("search")
             }
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: page.narrow
+                filled: true
+                iconName: ParentalControl.locked ? "lock" : "settings"
+                tip: qsTr("Settings")
+                onClicked: AppState.sectionRequested("settings")
+            }
             ProviderSwitcher {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: page.narrow

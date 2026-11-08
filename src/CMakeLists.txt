@@ -64,6 +64,7 @@ qt_add_executable(iptvplayer
     models/CategoryListModel.cpp
     models/ChannelListModel.h
     models/ChannelListModel.cpp
+    models/DisplayText.cpp
     models/RadioStationModel.h
     models/RadioStationModel.cpp
     models/EpisodeListModel.h
