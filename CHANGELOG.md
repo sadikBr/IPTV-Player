@@ -5,7 +5,7 @@ the app's update dialog. Keep it short and written for people using the app.
 Changes not released yet go under "Unreleased"; to release, rename it to the
 new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
-## Unreleased
+## v1.0.1
 
 - **A more colourful, playful look:** every channel, movie and category gets a colour of
   its own (tinted cards, glowing initials, coloured chips with little category icons);
@@ -19,6 +19,10 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
   bottom bar has five tabs (Settings is the gear on Home and in the provider menu).
 - Channel names lose decorative symbols the phone can't draw (no more "NO GLYPH" boxes).
 - In the player, program times are no longer shown backwards next to Arabic titles.
+
+**Android note:** this build is signed with a temporary key, like v1.0.0. To install it,
+first export a backup (Settings → Backup), uninstall the old version, install this one
+and import the backup.
 
 ## v1.0.0
 
