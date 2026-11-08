@@ -158,6 +158,10 @@ ApplicationWindow {
     }
     function smokeOpenGuide() { goSection("guide") }
     function smokeCheckUpdates() { UpdateManager.check(true) }
+    function smokeFreeTab() { addProvider(); stack.currentItem.smokeFreeTab() }
+    function smokeAddFree(code) {
+        SourceManager.addM3uSource("Free TV · " + code, FreeTvCatalog.countryUrl(code).toString(), "")
+    }
     function smokeCatchupDetails() {
         if (stack.currentItem.openFirstReplayable && !stack.currentItem.openFirstReplayable())
             console.warn("Smoke test: no catch-up program found")

@@ -10,6 +10,9 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 The first release: watch live TV, the TV guide, movies and series from your IPTV provider
 (Xtream Codes or M3U) on Windows, Linux and Android. Highlights:
 
+- **Free channels:** no subscription needed. Add provider → Free channels gives you
+  thousands of free-to-air channels from the open iptv-org project: everything (grouped by
+  category), one country, or one category.
 - **Sorting:** sort channels, movies and series by name, rating, year, channel number or
   recently added (sort button at the top; remembered per section).
 - **Missing artwork:** movies and series without a picture (or whose picture doesn't load)

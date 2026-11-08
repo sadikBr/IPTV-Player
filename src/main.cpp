@@ -64,6 +64,16 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
     };
 
     QList<Step> steps;
+    // IPTV_SMOKE_FREETV=FR: the free channels tab, then add that country's channels.
+    const QString freeTv = qEnvironmentVariable("IPTV_SMOKE_FREETV");
+    if (!freeTv.isEmpty()) {
+        steps.append({ 500, QString(), [=] { invoke("smokeFreeTab"); } });
+        steps.append({ 3000, QStringLiteral("freetv-tab"), [=] {
+                          invoke("smokeCloseAddPage");
+                          invoke("smokeAddFree", freeTv);
+                      } });
+        steps.append({ 8000, QStringLiteral("freetv-channels"), {} });
+    }
     steps.append({ 500, QStringLiteral("home"), [=] { invoke("smokeShowAddPage"); } });
     steps.append({ 700, QStringLiteral("add"), [=] {
                       invoke("smokeCloseAddPage");

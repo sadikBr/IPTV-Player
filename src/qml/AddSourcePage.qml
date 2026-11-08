@@ -12,9 +12,14 @@ Page {
     property bool waiting: false
     property string errorText: ""
     readonly property bool xtreamTab: tabBar.currentIndex === 0
+    readonly property bool freeTab: tabBar.currentIndex === 2
+    // Free channels: "all", "country" or "category", and the chosen one
+    property string freeMode: "all"
+    property var freeChoice: null
     readonly property bool canSave: !SourceManager.busy
             && (xtreamTab ? serverField.text.trim().length > 0 && userField.text.trim().length > 0
                             && passwordField.text.length > 0
+                : freeTab ? (freeMode === "all" || freeChoice !== null)
                           : m3uUrlField.text.trim().length > 0)
     // Xtream login found inside the M3U link, if any
     readonly property var m3uCredentials: SourceManager.parseCredentialsUrl(m3uUrlField.text)
@@ -31,9 +36,22 @@ Page {
             SourceManager.addXtreamSource(xtreamName.text, serverField.text, userField.text,
                                           passwordField.text,
                                           formatCombo.currentIndex === 1 ? "m3u8" : "ts")
+        } else if (freeTab) {
+            const url = freeMode === "country" ? FreeTvCatalog.countryUrl(freeChoice.code)
+                      : freeMode === "category" ? FreeTvCatalog.categoryUrl(freeChoice.code)
+                      : FreeTvCatalog.allChannelsUrl()
+            const name = freeMode === "all" ? qsTr("Free TV")
+                                            : qsTr("Free TV · %1").arg(freeChoice.name)
+            SourceManager.addM3uSource(name, url.toString(), "")
         } else {
             SourceManager.addM3uSource(m3uName.text, m3uUrlField.text, epgField.text)
         }
+    }
+
+    // Smoke test: show the free channels tab, choose a country.
+    function smokeFreeTab(code) {
+        tabBar.currentIndex = 2
+        freeMode = "country"
     }
 
     // Fills the Xtream form from a link like http://host/get.php?username=..&password=..
@@ -67,7 +85,7 @@ Page {
 
     header: PageHeader {
         title: qsTr("Add provider")
-        subtitle: qsTr("Xtream Codes login or M3U playlist")
+        subtitle: qsTr("Xtream Codes login, M3U playlist or free channels")
         showBack: true
         onBackClicked: if (!page.waiting) page.backRequested()
     }
@@ -102,9 +120,16 @@ Page {
                 Layout.fillWidth: true
                 enabled: !page.waiting
                 Material.background: "transparent"
-                TabButton { text: qsTr("Xtream Codes login") }
-                TabButton { text: qsTr("M3U playlist") }
-                onCurrentIndexChanged: page.errorText = ""
+                // Short names on phones, where the long ones get cut off
+                readonly property bool shortNames: width < 460
+                TabButton { text: tabBar.shortNames ? qsTr("Xtream") : qsTr("Xtream Codes login") }
+                TabButton { text: tabBar.shortNames ? qsTr("M3U") : qsTr("M3U playlist") }
+                TabButton { text: tabBar.shortNames ? qsTr("Free") : qsTr("Free channels") }
+                onCurrentIndexChanged: {
+                    page.errorText = ""
+                    if (currentIndex === 2)
+                        FreeTvCatalog.load()
+                }
             }
 
             StackLayout {
@@ -251,7 +276,150 @@ Page {
                         selectByMouse: true
                     }
                 }
-            }
+            
+                // --- Free channels (iptv-org) ---
+                ColumnLayout {
+                    id: freePanel
+                    spacing: AppTheme.spacing
+
+                    readonly property var choices: page.freeMode === "country" ? FreeTvCatalog.countries
+                                                 : page.freeMode === "category" ? FreeTvCatalog.categories : []
+                    readonly property var filtered: {
+                        const key = freeSearch.text.trim().toLowerCase()
+                        const list = choices.filter(c => key.length === 0 || c.name.toLowerCase().indexOf(key) >= 0
+                                                    || c.code.toLowerCase() === key)
+                        // This device's country first
+                        if (page.freeMode === "country") {
+                            const local = list.findIndex(c => c.code === FreeTvCatalog.localCountry)
+                            if (local > 0)
+                                list.unshift(list.splice(local, 1)[0])
+                        }
+                        return list
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                        color: AppTheme.textSecondary
+                        text: qsTr("Thousands of channels that are free to watch, collected by the "
+                                   + "open iptv-org project. No account needed. Some channels may be "
+                                   + "offline at times.")
+                    }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Chip {
+                            text: qsTr("All channels")
+                            selected: page.freeMode === "all"
+                            onClicked: { page.freeMode = "all"; page.freeChoice = null }
+                        }
+                        Chip {
+                            text: qsTr("A country")
+                            selected: page.freeMode === "country"
+                            onClicked: { page.freeMode = "country"; page.freeChoice = null }
+                        }
+                        Chip {
+                            text: qsTr("A category")
+                            selected: page.freeMode === "category"
+                            onClicked: { page.freeMode = "category"; page.freeChoice = null }
+                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        visible: page.freeMode === "all"
+                        wrapMode: Text.Wrap
+                        color: AppTheme.textTertiary
+                        font.pixelSize: AppTheme.fontSmall
+                        text: qsTr("Every channel (more than 10,000), grouped by category. Use Choose "
+                                   + "categories afterwards to hide what you don't want.")
+                    }
+                    SearchField {
+                        id: freeSearch
+                        Layout.fillWidth: true
+                        visible: page.freeMode !== "all"
+                        placeholderText: page.freeMode === "country" ? qsTr("Search countries")
+                                                                     : qsTr("Search categories")
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 260
+                        visible: page.freeMode !== "all"
+                        radius: AppTheme.radius
+                        color: AppTheme.surface
+                        border.width: 1
+                        border.color: AppTheme.stroke
+
+                        BusyIndicator {
+                            anchors.centerIn: parent
+                            running: FreeTvCatalog.loading
+                            visible: running
+                        }
+                        Label {
+                            anchors.centerIn: parent
+                            width: parent.width - 32
+                            visible: !FreeTvCatalog.loading && FreeTvCatalog.errorString.length > 0
+                            wrapMode: Text.Wrap
+                            horizontalAlignment: Text.AlignHCenter
+                            color: AppTheme.error
+                            text: FreeTvCatalog.errorString
+                        }
+                        ListView {
+                            id: freeList
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            clip: true
+                            model: freePanel.filtered
+                            keyNavigationEnabled: false
+                            ScrollBar.vertical: AppScrollBar {}
+                            delegate: ItemDelegate {
+                                id: choiceRow
+                                required property var modelData
+                                readonly property bool chosen: page.freeChoice !== null
+                                                               && page.freeChoice.code === modelData.code
+                                width: freeList.width
+                                height: 40
+                                focusPolicy: Qt.TabFocus
+                                hoverEnabled: true
+                                onClicked: page.freeChoice = modelData
+                                background: Rectangle {
+                                    radius: AppTheme.radiusSmall
+                                    color: choiceRow.chosen ? AppTheme.accentSoft
+                                         : choiceRow.hovered ? AppTheme.hover : "transparent"
+                                    FocusRing { target: choiceRow; gap: 0 }
+                                }
+                                // Country code instead of a flag emoji (Windows can't show those)
+                                contentItem: Row {
+                                    leftPadding: 10
+                                    spacing: 10
+                                    Rectangle {
+                                        visible: page.freeMode === "country"
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 30
+                                        height: 20
+                                        radius: 4
+                                        color: AppTheme.surfaceHigh
+                                        Label {
+                                            anchors.centerIn: parent
+                                            text: choiceRow.modelData.code
+                                            font.pixelSize: 11
+                                            font.weight: Font.Bold
+                                            color: AppTheme.textSecondary
+                                        }
+                                    }
+                                    Label {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: choiceRow.width - 60
+                                        text: choiceRow.modelData.name
+                                        color: choiceRow.chosen ? AppTheme.textPrimary : AppTheme.textSecondary
+                                        font.weight: choiceRow.chosen ? Font.DemiBold : Font.Normal
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+}
 
             // Progress
             Pane {
@@ -284,6 +452,7 @@ Page {
             }
 
             Label {
+                visible: !page.freeTab
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 color: AppTheme.textSecondary

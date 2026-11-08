@@ -9,6 +9,9 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
 ## Features (version 1.0)
 
 **Watching**
+- **Free channels:** no subscription needed: thousands of free-to-air channels from the open
+  [iptv-org](https://github.com/iptv-org/iptv) project, all of them or by country or category
+  (Add provider → Free channels)
 - **Providers:** Xtream Codes login or M3U playlist (URL or file); paste a full
   `get.php?username=…&password=…` link and the login fills in by itself. Several providers,
   switch from the side bar

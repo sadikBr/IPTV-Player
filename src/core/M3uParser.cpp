@@ -176,6 +176,10 @@ SourceContent M3uParser::parse(const QByteArray &data)
             group = v.value(QStringLiteral("group-title"));
             if (group.isEmpty())
                 group = pendingGroup;
+            // "Animation;Kids" (iptv-org lists several categories): the first one.
+            static const QRegularExpression multiGroup(QStringLiteral("^[\\w&]+(?:;[\\w&]+)+$"));
+            if (multiGroup.match(group).hasMatch())
+                group = group.section(QLatin1Char(';'), 0, 0);
             bool ok = false;
             const int chno = v.value(QStringLiteral("tvg-chno")).toInt(&ok);
             if (ok && chno > 0)
