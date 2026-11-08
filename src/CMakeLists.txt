@@ -270,6 +270,25 @@ set_target_properties(iptvplayer PROPERTIES
     QT_ANDROID_PACKAGE_NAME io.github.sadikbr.iptvplayer
     QT_ANDROID_APP_NAME "IPTV Player")
 
+# Android: Qt needs OpenSSL in the APK for https (artwork from image servers,
+# the radio directory, free channel lists, update checks). The prebuilt
+# libraries come from KDAB/android_openssl (the source Qt's documentation
+# recommends), pinned to a commit. CI passes a shallow checkout in
+# IPTV_ANDROID_OPENSSL_DIR; otherwise it is downloaded.
+if(ANDROID)
+    set(IPTV_ANDROID_OPENSSL_DIR "" CACHE PATH "Checkout of github.com/KDAB/android_openssl")
+    if(NOT IPTV_ANDROID_OPENSSL_DIR)
+        include(FetchContent)
+        FetchContent_Declare(android_openssl
+            GIT_REPOSITORY https://github.com/KDAB/android_openssl.git
+            GIT_TAG b71f1470962019bd89534a2919f5925f93bc5779)
+        FetchContent_MakeAvailable(android_openssl)
+        set(IPTV_ANDROID_OPENSSL_DIR ${android_openssl_SOURCE_DIR})
+    endif()
+    include(${IPTV_ANDROID_OPENSSL_DIR}/android_openssl.cmake)
+    add_android_openssl_libraries(iptvplayer)
+endif()
+
 # Android is packaged by the "apk" target instead.
 if(NOT ANDROID)
     include(GNUInstallDirs)

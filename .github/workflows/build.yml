@@ -246,6 +246,15 @@ jobs:
             echo "QT_ANDROID_KEYSTORE_KEY_PASS=$KEYSTORE_PASSWORD"
           } >> "$GITHUB_ENV"
 
+      # OpenSSL for https on Android (KDAB's prebuilt libraries, pinned commit)
+      - name: Get OpenSSL for Android
+        run: |
+          git init -q "$RUNNER_TEMP/android_openssl"
+          cd "$RUNNER_TEMP/android_openssl"
+          git fetch -q --depth 1 https://github.com/KDAB/android_openssl.git b71f1470962019bd89534a2919f5925f93bc5779
+          git checkout -q FETCH_HEAD
+          ls ssl_3
+
       - name: Configure
         run: |
           QT_BASE=$(ls -d "$RUNNER_TEMP"/Qt/6.* | sort -V | tail -n 1)
@@ -257,13 +266,16 @@ jobs:
             -DANDROID_NDK_ROOT="$ANDROID_NDK_ROOT" \
             -DQT_ANDROID_ABIS="arm64-v8a;armeabi-v7a" \
             -DQT_ANDROID_SIGN_APK=ON \
-            -DIPTV_ANDROID_VERSION_CODE=${{ github.run_number }}
+            -DIPTV_ANDROID_VERSION_CODE=${{ github.run_number }} \
+            -DIPTV_ANDROID_OPENSSL_DIR="$RUNNER_TEMP/android_openssl"
 
       - name: Build APK
         run: |
           cmake --build build --target apk
           APK=$(find build -path '*outputs/apk*' -name '*.apk' | head -n 1)
           echo "Built: $APK"
+          # https needs OpenSSL inside the APK
+          unzip -l "$APK" | grep -E "lib(ssl|crypto)_3\.so" || { echo "::error::OpenSSL missing from the APK"; exit 1; }
           mkdir -p dist && cp "$APK" dist/IPTVPlayer-android.apk
 
       - uses: actions/upload-artifact@v4
