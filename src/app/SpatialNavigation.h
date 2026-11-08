@@ -27,6 +27,12 @@ public:
     bool move(Direction direction);
     // Clicks the focused button; returns false if it isn't one.
     bool activate();
+    // Back (Escape, the Back key, Android's back gesture): the focused item or an
+    // open popup gets it first, otherwise the app goes back one screen. Returns
+    // false when there was nothing to go back to (Home).
+    bool back(QKeyEvent *key = nullptr);
+    // The instance for the app's window (used by the Android back callback).
+    static SpatialNavigation *instance();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

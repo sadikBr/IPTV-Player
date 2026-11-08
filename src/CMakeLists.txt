@@ -79,6 +79,8 @@ qt_add_executable(iptvplayer
     player/PlayerController.h
     player/PlayerController.cpp
     platform/PictureInPicture.h
+    platform/AndroidBack.h
+    platform/AndroidBack.cpp
     platform/PictureInPicture.cpp
     platform/ScreenWakeLock.h
     platform/ScreenWakeLock.cpp

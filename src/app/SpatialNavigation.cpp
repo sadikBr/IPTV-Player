@@ -45,9 +45,38 @@ QRectF windowRect(const QQuickItem *item)
 
 } // namespace
 
+namespace {
+QPointer<SpatialNavigation> s_instance;
+}
+
 SpatialNavigation::SpatialNavigation(QQuickWindow *window) : QObject(window), m_window(window)
 {
     window->installEventFilter(this);
+    s_instance = this;
+}
+
+SpatialNavigation *SpatialNavigation::instance()
+{
+    return s_instance;
+}
+
+bool SpatialNavigation::back(QKeyEvent *key)
+{
+    QKeyEvent synthetic(QEvent::KeyPress, Qt::Key_Back, Qt::NoModifier);
+    if (!key)
+        key = &synthetic;
+    // The focused item (a page, an open dialog or menu) gets it first.
+    m_delivering = true;
+    key->setAccepted(true);
+    QCoreApplication::sendEvent(m_window, key);
+    m_delivering = false;
+    if (key->isAccepted() && m_window->activeFocusItem()
+        && m_window->activeFocusItem() != m_window->contentItem())
+        return true;
+    // Otherwise back one screen.
+    QVariant result;
+    QMetaObject::invokeMethod(m_window, "goBack", Q_RETURN_ARG(QVariant, result));
+    return result.toBool();
 }
 
 bool SpatialNavigation::eventFilter(QObject *watched, QEvent *event)
@@ -84,23 +113,13 @@ bool SpatialNavigation::eventFilter(QObject *watched, QEvent *event)
     case Qt::Key_Select: activateKey = true; break;
     case Qt::Key_Escape:
     case Qt::Key_Back: {
-        // Back one screen when nothing on the page used the key.
-        m_delivering = true;
-        key->setAccepted(true);
-        QCoreApplication::sendEvent(m_window, key);
-        m_delivering = false;
-        if (key->isAccepted() && m_window->activeFocusItem()
-            && m_window->activeFocusItem() != m_window->contentItem()) {
-            m_backUsed = key->key() == Qt::Key_Back;
-            return true;
-        }
-        QVariant result;
-        QMetaObject::invokeMethod(m_window, "goBack", Q_RETURN_ARG(QVariant, result));
-        const bool wentBack = result.toBool();
+        const bool used = back(key);
         if (key->key() == Qt::Key_Back)
-            m_backUsed = wentBack;
+            m_backUsed = used;
+        // Accepted, so Qt doesn't close the window on Android either.
+        key->setAccepted(used);
         // Nothing to go back to: Android closes the app (Back key).
-        return wentBack || key->key() == Qt::Key_Escape;
+        return used || key->key() == Qt::Key_Escape;
     }
     default: return false;
     }

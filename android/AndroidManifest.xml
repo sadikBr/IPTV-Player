@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
-<!-- Qt's default manifest (Qt 6.10 template) plus the app icon and a dark
-     launch screen. Qt fills in the %%INSERT_...%% placeholders. -->
+<!-- Qt's default manifest (Qt 6.10 template) plus the app icon, a dark
+     launch screen and our activity (IptvActivity: Android's back gesture).
+     Qt fills in the %%INSERT_...%% placeholders. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.qtproject.example"
     android:installLocation="auto"
@@ -23,9 +24,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
-        android:fullBackupOnly="false">
+        android:fullBackupOnly="false"
+        android:enableOnBackInvokedCallback="true">
         <activity
-            android:name="org.qtproject.qt.android.bindings.QtActivity"
+            android:name="org.iptvplayer.IptvActivity"
             android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
             android:label="-- %%INSERT_APP_NAME%% --"
             android:launchMode="singleTop"

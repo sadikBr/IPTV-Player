@@ -5,6 +5,13 @@ the app's update dialog. Keep it short and written for people using the app.
 Changes not released yet go under "Unreleased"; to release, rename it to the
 new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
+## Unreleased
+
+- **Android back gesture, for real this time:** on Android 13 and newer the app now
+  receives the back gesture itself (it no longer relies on the Back key, which phones
+  with gesture navigation don't always send). Back closes a dialog, leaves the player or
+  goes back one screen; on Home it sends the app to the background like other apps.
+
 ## v1.0.1
 
 - **A more colourful, playful look:** every channel, movie and category gets a colour of

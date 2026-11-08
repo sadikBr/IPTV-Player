@@ -10,6 +10,7 @@
 #include "app/AppSettings.h"
 #include "SourceStore.h"
 #include "app/SpatialNavigation.h"
+#include "platform/AndroidBack.h"
 #include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
@@ -314,6 +315,7 @@ int main(int argc, char *argv[])
     // Arrow keys / TV remote move between buttons, cards and lists.
     if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst())) {
         new SpatialNavigation(window);
+        AndroidBack::install(); // back gesture on Android 13+
         window->setProperty("perfLogging", qEnvironmentVariableIsSet("IPTV_PERF"));
     }
 
