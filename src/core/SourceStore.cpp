@@ -2,6 +2,8 @@
 
 #include "Catchup.h"
 
+#include <atomic>
+
 #include "EpgStore.h"
 #include "XtreamApi.h"
 
@@ -386,17 +388,86 @@ QString SourceStore::categoryGroup(const QString &name)
     return m.hasMatch() ? m.captured(1).trimmed().toUpper() : QString();
 }
 
+namespace {
+std::atomic<bool> g_parentalLocked { false };
+}
+
+void SourceStore::setParentalLocked(bool locked)
+{
+    g_parentalLocked = locked;
+}
+
+bool SourceStore::parentalLocked()
+{
+    return g_parentalLocked;
+}
+
+QString SourceStore::notInLockedCategory(const QString &alias)
+{
+    if (!g_parentalLocked)
+        return QStringLiteral("1 = 1");
+    return QStringLiteral("NOT EXISTS (SELECT 1 FROM categories lc JOIN locked_categories lk "
+                          "ON lk.source_id = lc.source_id AND lk.kind = lc.kind AND lk.ext_id = lc.ext_id "
+                          "WHERE lc.id = %1.category_id)").arg(alias);
+}
+
+QString SourceStore::progressNotLocked(const QString &alias)
+{
+    if (!g_parentalLocked)
+        return QStringLiteral("1 = 1");
+    return QStringLiteral(
+            "NOT EXISTS (SELECT 1 FROM channels lch JOIN categories lc ON lc.id = lch.category_id "
+            "JOIN locked_categories lk ON lk.source_id = lc.source_id AND lk.kind = lc.kind "
+            "AND lk.ext_id = lc.ext_id WHERE lch.source_id = %1.source_id AND "
+            "((%1.kind = 'movie' AND lch.kind = 'movie' AND lch.ext_id = %1.ext_id) OR "
+            "(%1.kind = 'episode' AND lch.kind = 'series' AND lch.ext_id = %1.series_ext_id)))")
+            .arg(alias);
+}
+
 QString SourceStore::notInHiddenCategory(const QString &alias)
 {
     return QStringLiteral("NOT EXISTS (SELECT 1 FROM categories hc JOIN hidden_categories hh "
                           "ON hh.source_id = hc.source_id AND hh.kind = hc.kind AND hh.ext_id = hc.ext_id "
-                          "WHERE hc.id = %1.category_id)").arg(alias);
+                          "WHERE hc.id = %1.category_id) AND %2").arg(alias, notInLockedCategory(alias));
 }
 
 QString SourceStore::categoryNotHidden(const QString &alias)
 {
-    return QStringLiteral("NOT EXISTS (SELECT 1 FROM hidden_categories hh WHERE hh.source_id = %1.source_id "
-                          "AND hh.kind = %1.kind AND hh.ext_id = %1.ext_id)").arg(alias);
+    QString sql = QStringLiteral("NOT EXISTS (SELECT 1 FROM hidden_categories hh WHERE hh.source_id = %1.source_id "
+                                 "AND hh.kind = %1.kind AND hh.ext_id = %1.ext_id)").arg(alias);
+    if (g_parentalLocked) {
+        sql += QStringLiteral(" AND NOT EXISTS (SELECT 1 FROM locked_categories lk WHERE "
+                              "lk.source_id = %1.source_id AND lk.kind = %1.kind "
+                              "AND lk.ext_id = %1.ext_id)").arg(alias);
+    }
+    return sql;
+}
+
+bool SourceStore::setCategoryLocked(int sourceId, ContentKind kind, const QString &extId, bool locked)
+{
+    QSqlQuery q(m_db);
+    q.prepare(locked ? QStringLiteral("INSERT OR IGNORE INTO locked_categories (source_id, kind, ext_id) "
+                                      "VALUES (?, ?, ?)")
+                     : QStringLiteral("DELETE FROM locked_categories WHERE source_id = ? AND kind = ? "
+                                      "AND ext_id = ?"));
+    q.addBindValue(sourceId);
+    q.addBindValue(kindToString(kind));
+    q.addBindValue(text(extId));
+    if (!q.exec()) {
+        m_lastError = q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+int SourceStore::lockedCategoryCount(int sourceId) const
+{
+    QSqlQuery q(m_db);
+    q.prepare(QStringLiteral("SELECT COUNT(*) FROM locked_categories WHERE source_id = ?"));
+    q.addBindValue(sourceId);
+    if (!q.exec() || !q.next())
+        return 0;
+    return q.value(0).toInt();
 }
 
 bool SourceStore::setFavorite(int sourceId, ContentKind kind, const QString &extId, bool favorite)
@@ -706,7 +777,7 @@ QList<WatchProgress> SourceStore::recentProgress(int limit) const
             "AND position_ms < duration_ms * 0.95 AND position_ms > 0 "
             "AND (kind = 'movie' OR updated_at = (SELECT MAX(updated_at) FROM watch_progress p2 "
             "     WHERE p2.source_id = p.source_id AND p2.series_ext_id = p.series_ext_id)) "
-            "ORDER BY updated_at DESC LIMIT ?").arg(kProgressColumns));
+            "AND %2 ORDER BY updated_at DESC LIMIT ?").arg(kProgressColumns, progressNotLocked(QStringLiteral("p"))));
     q.addBindValue(limit);
     if (!q.exec()) {
         m_lastError = q.lastError().text();

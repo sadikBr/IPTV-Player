@@ -18,6 +18,8 @@ add_library(iptvcore STATIC
     core/EpgStore.cpp
     core/Catchup.h
     core/Catchup.cpp
+    core/Parental.h
+    core/Parental.cpp
     core/UpdateCheck.h
     core/UpdateCheck.cpp
 )
@@ -36,6 +38,8 @@ qt_add_executable(iptvplayer
     app/VodManager.h
     app/VodManager.cpp
     app/SourceManager.cpp
+    app/ParentalControl.h
+    app/ParentalControl.cpp
     app/SpatialNavigation.h
     app/SpatialNavigation.cpp
     app/UpdateManager.h
@@ -96,6 +100,7 @@ set(QML_SOURCES
     qml/NavRail.qml
     qml/Osd.qml
     qml/PageHeader.qml
+    qml/PinDialog.qml
     qml/PlayerControls.qml
     qml/PlayerPage.qml
     qml/PosterCard.qml
@@ -132,6 +137,8 @@ set(QML_RESOURCES
     qml/icons/link.svg
     qml/icons/list.svg
     qml/icons/live.svg
+    qml/icons/lock-open.svg
+    qml/icons/lock.svg
     qml/icons/more.svg
     qml/icons/mute.svg
     qml/icons/next.svg

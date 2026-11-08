@@ -241,7 +241,8 @@ Each phase ends with something that runs and can be tested on a real device.
 - [x] Catch-up/timeshift (Xtream `tv_archive` channels, M3U `catchup` attributes)
 - [x] Picture-in-picture (Android)
 - [ ] Chromecast
-- [ ] Multiple profiles, parental PIN, Stalker portal
+- [x] Parental PIN (locked categories, protected Settings)
+- [ ] Multiple profiles, Stalker portal
 
 **Rough total for v1.0 (Phases 0–5):** 6–9 weeks part-time.
 

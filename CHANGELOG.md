@@ -7,6 +7,12 @@ new version (e.g. "## v1.0.0") and set the same VERSION in CMakeLists.txt.
 
 ## Unreleased
 
+- **Parental control:** set a PIN (Settings → Parental control) and lock categories with the
+  lock button in Choose categories. Locked categories, and Settings, stay hidden until the
+  PIN is entered; the app locks again every time it starts. When you set the PIN it offers
+  to lock categories that look like adult content.
+- The subtitles button is always shown for movies and episodes, and says when a video has
+  no subtitles.
 - **Picture-in-picture (Android):** keep watching in a small floating window while you use
   other apps: the button in the player, or (Android 12+) just go to the home screen while
   something plays.

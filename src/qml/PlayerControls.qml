@@ -245,7 +245,9 @@ Item {
                 IconButton {
                     iconName: "subtitles"
                     tip: qsTr("Audio and subtitles")
-                    visible: root.player && (root.player.audioTracks.length > 1
+                    // Always there for movies and episodes, so it's clear whether the
+                    // video has subtitles; for live TV only when there is a choice.
+                    visible: root.player && (root.player.vod || root.player.audioTracks.length > 1
                                              || root.player.subtitleTracks.length > 0)
                     onClicked: { tracksMenu.popup(); root.activity() }
 
@@ -274,9 +276,8 @@ Item {
                         }
                         MenuItem {
                             enabled: false
-                            text: qsTr("Subtitles")
-                            visible: root.player && root.player.subtitleTracks.length > 0
-                            height: visible ? implicitHeight : 0
+                            text: root.player && root.player.subtitleTracks.length > 0
+                                  ? qsTr("Subtitles") : qsTr("No subtitles in this video")
                         }
                         MenuItem {
                             text: qsTr("Off")

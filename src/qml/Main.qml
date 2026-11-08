@@ -71,6 +71,13 @@ ApplicationWindow {
 
     // Shows a section, replacing everything on the stack.
     function goSection(name) {
+        // Parental control: Settings needs the PIN while locked.
+        if (name === "settings" && ParentalControl.locked) {
+            unlockDialog.afterUnlock = "settings"
+            unlockDialog.ask(qsTr("Enter your PIN"),
+                             qsTr("Settings and locked categories are protected."))
+            return
+        }
         if (name !== "home" && name !== "settings" && !AppState.hasSource)
             name = "home"
         AppState.section = name
@@ -156,6 +163,13 @@ ApplicationWindow {
             console.warn("Smoke test: no catch-up program found")
     }
     function smokeCatchupPlay() { stack.currentItem.playSelectedReplay() }
+    function smokeParentalLock() {
+        ParentalControl.setPin("", "1234")
+        ParentalControl.setCategoryLocked(AppState.sourceId, "live", "2", true)
+        ParentalControl.lock()
+        goSection("live")
+    }
+    function smokeParentalUnlock() { unlockDialog.entered("1234") }
     function smokeInstallUpdate() { UpdateManager.install() }
     function smokePlayFirst() {
         goSection("live")
@@ -402,4 +416,22 @@ ApplicationWindow {
         function onStateChanged() { window.maybePromptUpdate() }
     }
     onChromeVisibleChanged: maybePromptUpdate()
+
+    // --- Parental control ---
+
+    PinDialog {
+        id: unlockDialog
+        // Section to open once unlocked
+        property string afterUnlock
+        onEntered: (pin) => {
+            if (ParentalControl.unlock(pin)) {
+                close()
+                if (afterUnlock.length > 0)
+                    window.goSection(afterUnlock)
+                afterUnlock = ""
+            } else {
+                error = qsTr("Wrong PIN, try again.")
+            }
+        }
+    }
 }

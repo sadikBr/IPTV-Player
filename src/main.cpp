@@ -8,6 +8,7 @@
 #include <QKeySequence>
 #include <QQuickItem>
 #include "app/AppSettings.h"
+#include "SourceStore.h"
 #include "app/SpatialNavigation.h"
 #include <QImage>
 #include <QQmlApplicationEngine>
@@ -119,6 +120,19 @@ void runSmokeTest(QQmlApplicationEngine &engine, const int &qmlWarnings)
         steps.append({ 3500, QStringLiteral("catchup-player"), [=] { invoke("smokeBack"); } });
     }
 
+    // IPTV_SMOKE_PARENTAL=1: PIN 1234, lock a category, lock, try Settings, unlock.
+    if (addSource && qEnvironmentVariableIntValue("IPTV_SMOKE_PARENTAL") == 1) {
+        steps.append({ 300, QString(), [=] { invoke("smokeParentalLock"); } });
+        steps.append({ 1500, QStringLiteral("parental-locked"), [=] {
+                          invoke("smokeOpenSection", QStringLiteral("settings"));
+                      } });
+        steps.append({ 1500, QStringLiteral("parental-pin"), [=] { invoke("smokeParentalUnlock"); } });
+        steps.append({ 1500, QStringLiteral("parental-settings"), [=] {
+                          invoke("smokeOpenSection", QStringLiteral("live"));
+                      } });
+        steps.append({ 1500, QStringLiteral("parental-unlocked"), {} });
+    }
+
     // IPTV_UPDATE_URL: check that (test) server for an update and show the
     // dialog; IPTV_SMOKE_INSTALL_UPDATE=1 also installs it.
     if (qEnvironmentVariableIsSet("IPTV_UPDATE_URL")) {
@@ -224,6 +238,9 @@ int main(int argc, char *argv[])
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, dataDir);
     }
     AppSettings::applyHardwareDecodingSetting();
+    // Parental control: start locked when a PIN is set, before any list loads.
+    iptv::SourceStore::setParentalLocked(
+            !QSettings().value(QStringLiteral("parental/pinHash")).toByteArray().isEmpty());
 
     QString dbError;
     if (!iptv::Database::initialize(QDir(dataDir).filePath(QStringLiteral("iptv.sqlite")),

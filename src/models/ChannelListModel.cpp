@@ -304,7 +304,7 @@ void ChannelListModel::reload()
         } else if (m_categoryId == CategoryListModel::AllCategories) {
             sql += QStringLiteral(" AND ") + SourceStore::notInHiddenCategory();
         } else if (m_categoryId == CategoryListModel::FavoritesCategory) {
-            sql += QStringLiteral(" AND f.ext_id IS NOT NULL");
+            sql += QStringLiteral(" AND f.ext_id IS NOT NULL AND ") + SourceStore::notInLockedCategory();
         } else if (m_categoryId > 0) {
             sql += QStringLiteral(" AND c.category_id = :category");
         }

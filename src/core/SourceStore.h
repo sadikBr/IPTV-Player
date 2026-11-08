@@ -109,6 +109,16 @@ public:
 
     // SQL condition: true when channel row `alias` is not in a hidden category.
     static QString notInHiddenCategory(const QString &alias = QStringLiteral("c"));
+    // Parental control: while locked, content of locked categories is left
+    // out everywhere (notInHiddenCategory / categoryNotHidden include it).
+    static void setParentalLocked(bool locked);
+    static bool parentalLocked();
+    // "1 = 1" when unlocked. For channels (alias.category_id) ...
+    static QString notInLockedCategory(const QString &alias = QStringLiteral("c"));
+    // ... and for watch_progress rows (movies, and episodes by their series).
+    static QString progressNotLocked(const QString &alias = QStringLiteral("p"));
+    bool setCategoryLocked(int sourceId, ContentKind kind, const QString &extId, bool locked);
+    int lockedCategoryCount(int sourceId) const;
     // SQL condition: true when category row `alias` is not hidden.
     static QString categoryNotHidden(const QString &alias = QStringLiteral("cat"));
 

@@ -41,7 +41,10 @@ Rectangle {
             section: "series"; iconName: "series"; text: qsTr("Series")
             visible: (AppState.sourceInfo.seriesCount || 0) > 0
         }
-        Tab { section: "settings"; iconName: "settings"; text: qsTr("Settings") }
+        Tab {
+            section: "settings"; text: qsTr("Settings")
+            iconName: ParentalControl.locked ? "lock" : "settings"
+        }
     }
 
     component Tab: AbstractButton {

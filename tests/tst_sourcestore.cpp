@@ -248,6 +248,54 @@ private slots:
         QCOMPARE(visible(), 10);
     }
 
+    void lockedCategories()
+    {
+        SourceStore store(Database::connection());
+        const int id = store.sources().constFirst().id;
+        QVERIFY(store.replaceContent(id, sampleContent(10))); // categories "1" and "2"
+        const auto visible = [id]() {
+            QSqlQuery q(Database::connection());
+            q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels c WHERE c.source_id = ? AND ")
+                      + SourceStore::notInHiddenCategory());
+            q.addBindValue(id);
+            return q.exec() && q.next() ? q.value(0).toInt() : -1;
+        };
+        const auto favoritesVisible = [id]() {
+            QSqlQuery q(Database::connection());
+            q.prepare(QStringLiteral("SELECT COUNT(*) FROM channels c JOIN favorites f ON "
+                                     "f.source_id = c.source_id AND f.kind = c.kind AND f.ext_id = c.ext_id "
+                                     "WHERE c.source_id = ? AND ")
+                      + SourceStore::notInLockedCategory());
+            q.addBindValue(id);
+            return q.exec() && q.next() ? q.value(0).toInt() : -1;
+        };
+        // A favorite in category "2"
+        QSqlQuery q(Database::connection());
+        q.prepare(QStringLiteral("SELECT c.ext_id FROM channels c JOIN categories cat ON cat.id = c.category_id "
+                                 "WHERE c.source_id = ? AND cat.ext_id = '2' LIMIT 1"));
+        q.addBindValue(id);
+        QVERIFY(q.exec() && q.next());
+        QVERIFY(store.setFavorite(id, ContentKind::Live, q.value(0).toString(), true));
+
+        QVERIFY(store.setCategoryLocked(id, ContentKind::Live, QStringLiteral("2"), true));
+        QCOMPARE(store.lockedCategoryCount(id), 1);
+        // Unlocked (PIN entered, or no lock): everything shows
+        SourceStore::setParentalLocked(false);
+        QCOMPARE(visible(), 10);
+        QCOMPARE(favoritesVisible(), 1);
+        // Locked: the category is gone, favorites in it too
+        SourceStore::setParentalLocked(true);
+        QCOMPARE(visible(), 5);
+        QCOMPARE(favoritesVisible(), 0);
+        // Survives a re-sync
+        QVERIFY(store.replaceContent(id, sampleContent(10)));
+        QCOMPARE(visible(), 5);
+        QVERIFY(store.setCategoryLocked(id, ContentKind::Live, QStringLiteral("2"), false));
+        QCOMPARE(visible(), 10);
+        SourceStore::setParentalLocked(false);
+        QVERIFY(store.setFavorite(id, ContentKind::Live, q.value(0).toString(), false));
+    }
+
     void removeSourceCascades()
     {
         SourceStore store(Database::connection());

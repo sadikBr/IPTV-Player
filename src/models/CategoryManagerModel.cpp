@@ -83,6 +83,8 @@ QVariant CategoryManagerModel::data(const QModelIndex &index, int role) const
         return c.count;
     case HiddenRole:
         return c.hidden;
+    case LockedRole:
+        return c.locked;
     case GroupRole:
         return c.group.isEmpty() ? kOther : c.group;
     default:
@@ -92,8 +94,20 @@ QVariant CategoryManagerModel::data(const QModelIndex &index, int role) const
 
 QHash<int, QByteArray> CategoryManagerModel::roleNames() const
 {
-    return { { NameRole, "name" }, { CountRole, "count" }, { HiddenRole, "hidden" },
+    return { { NameRole, "name" }, { CountRole, "count" }, { HiddenRole, "hidden" }, { LockedRole, "locked" },
              { GroupRole, "group" } };
+}
+
+void CategoryManagerModel::setLocked(int row, bool locked)
+{
+    if (row < 0 || row >= m_rows.size() || SourceStore::parentalLocked())
+        return;
+    Category &c = m_all[m_rows.at(row)];
+    SourceStore(Database::connection()).setCategoryLocked(m_sourceId, kindFromString(m_kind),
+                                                          c.extId, locked);
+    c.locked = locked;
+    emit dataChanged(index(row), index(row), { LockedRole });
+    emit DataNotifier::instance()->contentChanged(m_sourceId);
 }
 
 void CategoryManagerModel::setHidden(int row, bool hidden)
@@ -153,7 +167,9 @@ void CategoryManagerModel::reload()
         q.prepare(QStringLiteral(
                 "SELECT cat.ext_id, cat.name, COUNT(c.id), "
                 "EXISTS (SELECT 1 FROM hidden_categories h WHERE h.source_id = cat.source_id "
-                "AND h.kind = cat.kind AND h.ext_id = cat.ext_id) "
+                "AND h.kind = cat.kind AND h.ext_id = cat.ext_id), "
+                "EXISTS (SELECT 1 FROM locked_categories l WHERE l.source_id = cat.source_id "
+                "AND l.kind = cat.kind AND l.ext_id = cat.ext_id) "
                 "FROM categories cat LEFT JOIN channels c ON c.category_id = cat.id "
                 "WHERE cat.source_id = ? AND cat.kind = ? GROUP BY cat.id ORDER BY cat.position"));
         q.addBindValue(m_sourceId);
@@ -165,6 +181,10 @@ void CategoryManagerModel::reload()
                 c.name = q.value(1).toString();
                 c.count = q.value(2).toInt();
                 c.hidden = q.value(3).toBool();
+                c.locked = q.value(4).toBool();
+                // While locked, locked categories don't even show their names.
+                if (c.locked && SourceStore::parentalLocked())
+                    continue;
                 c.searchKey = SourceStore::searchKey(c.name);
                 c.group = SourceStore::categoryGroup(c.name);
                 if (c.count > 0 || c.hidden)

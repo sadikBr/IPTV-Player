@@ -49,6 +49,8 @@ Page {
             color: AppTheme.textSecondary
             text: qsTr("Switch off what you don't watch. Hidden categories disappear from the lists, "
                        + "search and Home; your favorites stay.")
+                  + (ParentalControl.hasPin && !ParentalControl.locked
+                     ? " " + qsTr("The lock puts a category behind your PIN.") : "")
         }
 
         // Content type
@@ -160,6 +162,7 @@ Page {
                 required property int count
                 required property bool hidden
                 required property string group
+                required property bool locked
 
                 width: list.width
                 height: 52
@@ -187,6 +190,16 @@ Page {
                         text: row.count
                         color: AppTheme.textTertiary
                         font.pixelSize: AppTheme.fontCaption
+                    }
+                    // Parental control: behind the PIN (only while unlocked)
+                    IconButton {
+                        visible: ParentalControl.hasPin && !ParentalControl.locked
+                        size: 36
+                        iconName: row.locked ? "lock" : "lock-open"
+                        iconColor: row.locked ? AppTheme.accent : AppTheme.textTertiary
+                        tip: row.locked ? qsTr("Locked by your PIN: tap to unlock")
+                                        : qsTr("Lock with your PIN")
+                        onClicked: manager.setLocked(row.index, !row.locked)
                     }
                     AppSwitch {
                         checked: !row.hidden

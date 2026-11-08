@@ -13,6 +13,66 @@ Page {
 
     signal updateRequested()
 
+    // Parental PIN dialogs: "new" -> "confirm"; "current-change" -> "new" -> "confirm";
+    // "current-remove".
+    property string pinStage
+    property string pinCurrent
+    property string pinNew
+    function pinStep(stage) {
+        pinStage = stage
+        if (stage === "new") {
+            pinDialog.length = 4
+            pinDialog.ask(qsTr("Choose a PIN"), qsTr("4 digits. You'll need it to see locked categories and Settings."))
+        } else if (stage === "confirm") {
+            pinDialog.ask(qsTr("Repeat the PIN"), "")
+        } else {
+            pinCurrent = ""
+            pinNew = ""
+            pinDialog.length = 4
+            pinDialog.ask(qsTr("Enter your current PIN"), "")
+        }
+    }
+    function pinEntered(pin) {
+        switch (pinStage) {
+        case "current-change":
+        case "current-remove":
+            if (!ParentalControl.checkPin(pin)) {
+                pinDialog.error = qsTr("Wrong PIN, try again.")
+                return
+            }
+            pinCurrent = pin
+            if (pinStage === "current-remove") {
+                ParentalControl.removePin(pin)
+                pinDialog.close()
+            } else {
+                pinStep("new")
+            }
+            return
+        case "new":
+            pinNew = pin
+            pinStep("confirm")
+            return
+        case "confirm":
+            if (pin !== pinNew) {
+                pinNew = ""
+                pinStep("new")
+                pinDialog.error = qsTr("The PINs didn't match. Choose a PIN again.")
+                return
+            }
+            ParentalControl.setPin(pinCurrent, pin)
+            pinDialog.close()
+            pinCurrent = ""
+            pinNew = ""
+            // Offer to lock what looks like adult content.
+            const adult = AppState.sourceId > 0 ? ParentalControl.adultCategoryCount(AppState.sourceId) : 0
+            if (adult > 0) {
+                adultDialog.count = adult
+                adultDialog.open()
+            }
+            return
+        }
+    }
+
     function timeAgo(date) {
         if (!date || isNaN(date.getTime()))
             return qsTr("never")
@@ -249,6 +309,95 @@ Page {
                 }
             }
 
+            // --- Parental control ---
+            Section {
+                title: qsTr("Parental control")
+                description: qsTr("A PIN hides the categories you lock, and these settings, until "
+                                  + "it is entered. The app locks again every time it starts.")
+                Card {
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 14
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: AppTheme.spacing
+                            IconImage {
+                                source: ParentalControl.hasPin ? "icons/lock.svg" : "icons/lock-open.svg"
+                                sourceSize: Qt.size(22, 22)
+                                color: ParentalControl.hasPin ? AppTheme.accent : AppTheme.textTertiary
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Label {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    font.weight: Font.DemiBold
+                                    color: AppTheme.textPrimary
+                                    text: ParentalControl.hasPin ? qsTr("PIN is set") : qsTr("No PIN")
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    color: AppTheme.textTertiary
+                                    font.pixelSize: AppTheme.fontCaption
+                                    text: {
+                                        ParentalControl.hasPin // re-evaluate on changes
+                                        const n = AppState.sourceId > 0
+                                                ? ParentalControl.lockedCategoryCount(AppState.sourceId) : 0
+                                        return ParentalControl.hasPin
+                                                ? (n === 1 ? qsTr("1 locked category for this provider.")
+                                                           : qsTr("%1 locked categories for this provider.").arg(n))
+                                                  + " " + qsTr("Lock or unlock them in Choose categories (lock button).")
+                                                : qsTr("Set a PIN to lock categories, for example for children.")
+                                    }
+                                }
+                            }
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 10
+                            AppButton {
+                                visible: !ParentalControl.hasPin
+                                variant: "accent"
+                                iconName: "lock"
+                                text: qsTr("Set a PIN")
+                                onClicked: page.pinStep("new")
+                            }
+                            AppButton {
+                                visible: ParentalControl.hasPin
+                                variant: "secondary"
+                                iconName: "lock"
+                                text: qsTr("Lock now")
+                                onClicked: {
+                                    ParentalControl.lock()
+                                    AppState.sectionRequested("home")
+                                }
+                            }
+                            AppButton {
+                                visible: ParentalControl.hasPin
+                                variant: "secondary"
+                                text: qsTr("Choose categories")
+                                enabled: AppState.sourceId > 0
+                                onClicked: AppState.manageCategoriesRequested(AppState.sourceId, "live")
+                            }
+                            AppButton {
+                                visible: ParentalControl.hasPin
+                                variant: "ghost"
+                                text: qsTr("Change PIN")
+                                onClicked: page.pinStep("current-change")
+                            }
+                            AppButton {
+                                visible: ParentalControl.hasPin
+                                variant: "ghost"
+                                text: qsTr("Remove PIN")
+                                onClicked: page.pinStep("current-remove")
+                            }
+                        }
+                    }
+                }
+            }
+
             // --- Updates ---
             Section {
                 title: qsTr("Updates")
@@ -460,6 +609,29 @@ Page {
                 textFromValue: (value) => page.shiftText(value)
             }
         }
+    }
+
+    PinDialog {
+        id: pinDialog
+        onEntered: (pin) => page.pinEntered(pin)
+    }
+
+    AppDialog {
+        id: adultDialog
+        property int count: 0
+        width: Math.min(page.width - 48, 440)
+        title: qsTr("Lock adult categories?")
+        standardButtons: Dialog.No | Dialog.Yes
+        Label {
+            width: adultDialog.availableWidth
+            wrapMode: Text.Wrap
+            color: AppTheme.textSecondary
+            text: (adultDialog.count === 1
+                   ? qsTr("1 category of this provider looks like adult content.")
+                   : qsTr("%1 categories of this provider look like adult content.").arg(adultDialog.count))
+                  + " " + qsTr("Lock them now? You can change this in Choose categories.")
+        }
+        onAccepted: ParentalControl.lockAdultCategories(AppState.sourceId)
     }
 
     // --- Pieces ---

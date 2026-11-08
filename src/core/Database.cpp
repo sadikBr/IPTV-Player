@@ -189,6 +189,14 @@ const QList<QStringList> &migrations()
             // Xtream: archive links use the server's local time
             QStringLiteral("ALTER TABLE sources ADD COLUMN server_timezone TEXT NOT NULL DEFAULT ''"),
         },
+        // Version 7: parental control, categories behind the PIN
+        {
+            QStringLiteral(R"(CREATE TABLE locked_categories (
+                source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+                kind TEXT NOT NULL,
+                ext_id TEXT NOT NULL,
+                PRIMARY KEY (source_id, kind, ext_id)))"),
+        },
     };
     return list;
 }

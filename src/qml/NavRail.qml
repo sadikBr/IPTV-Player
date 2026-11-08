@@ -105,7 +105,11 @@ Rectangle {
             }
         }
 
-        NavItem { section: "settings"; iconName: "settings"; text: qsTr("Settings") }
+        NavItem {
+            section: "settings"; text: qsTr("Settings")
+            // Locked by the parental PIN
+            iconName: ParentalControl.locked ? "lock" : "settings"
+        }
     }
 
     component NavItem: AbstractButton {

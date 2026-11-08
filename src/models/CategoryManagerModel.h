@@ -24,7 +24,7 @@ class CategoryManagerModel : public QAbstractListModel
     Q_PROPERTY(QVariantList groups READ groups NOTIFY statsChanged)
 
 public:
-    enum Role { NameRole = Qt::UserRole + 1, CountRole, HiddenRole, GroupRole };
+    enum Role { NameRole = Qt::UserRole + 1, CountRole, HiddenRole, GroupRole, LockedRole };
 
     explicit CategoryManagerModel(QObject *parent = nullptr);
 
@@ -46,6 +46,8 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void setHidden(int row, bool hidden);
+    // Parental control (needs the PIN to be set and entered)
+    Q_INVOKABLE void setLocked(int row, bool locked);
     // Every category of a group ("Other" for those without one)
     Q_INVOKABLE void setGroupHidden(const QString &group, bool hidden);
     // Every category currently listed (respects search and group filter)
@@ -71,6 +73,7 @@ private:
         QString group;
         int count = 0;
         bool hidden = false;
+        bool locked = false; // parental control
     };
 
     void applyFilter();

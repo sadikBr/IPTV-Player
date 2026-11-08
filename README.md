@@ -55,7 +55,10 @@ See [PLAN.md](PLAN.md) for the roadmap and architecture.
   **picture-in-picture** (player button, or automatically on Android 12+ when you leave the
   app while something plays)
 - **Subtitles and audio tracks** that come with a movie or episode: the subtitles button in
-  the player
+  the player (it says so when a video has none)
+- **Parental control:** a PIN (Settings → Parental control) hides the categories you lock
+  (lock button in Choose categories) and Settings, until it is entered; locked again at every
+  start. Offers to lock categories that look like adult content
 
 ### Troubleshooting
 
