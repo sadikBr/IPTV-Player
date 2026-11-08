@@ -17,6 +17,10 @@ The first release: watch live TV, the TV guide, movies and series from your IPTV
 - **Free channels:** no subscription needed. Add provider → Free channels gives you
   thousands of free-to-air channels from the open iptv-org project: everything (grouped by
   category), one country, or one category.
+- **Home banner** shows well-rated, recent movies and series (a new selection every day)
+  instead of the provider's latest uploads, without "EN|"-style prefixes in the title.
+- **Sleep timer:** stop TV or radio after 15–90 minutes or at the end of the program; the
+  sound fades out (moon button in the player and the radio bar).
 - **Sorting:** sort channels, movies and series by name, rating, year, channel number or
   recently added (sort button at the top; remembered per section).
 - **Missing artwork:** movies and series without a picture (or whose picture doesn't load)

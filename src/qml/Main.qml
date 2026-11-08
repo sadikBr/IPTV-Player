@@ -301,12 +301,20 @@ ApplicationWindow {
         playInBackground: true
         keepScreenOn: false
         autoReconnect: true
+        volumeScale: SleepTimer.fade
         volume: AppSettings.volume
     }
     readonly property bool radioActive: radioPlayer.source.toString().length > 0
     Connections {
         target: RadioManager
         function onPlayRequested(url, name) { radioPlayer.open(url) }
+    }
+    Connections {
+        target: SleepTimer
+        function onExpired() {
+            if (window.radioActive)
+                radioPlayer.stop()
+        }
     }
     Connections {
         target: stack

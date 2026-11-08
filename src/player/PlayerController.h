@@ -25,6 +25,8 @@ class PlayerController : public QObject
     Q_PROPERTY(bool failed READ hasFailed NOTIFY stateChanged)
     Q_PROPERTY(QString errorString READ errorString NOTIFY errorStringChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
+    // Multiplies the volume (0..1) without changing it: fading out (sleep timer).
+    Q_PROPERTY(qreal volumeScale READ volumeScale WRITE setVolumeScale NOTIFY volumeChanged)
     Q_PROPERTY(bool muted READ isMuted WRITE setMuted NOTIFY mutedChanged)
     Q_PROPERTY(qreal bufferProgress READ bufferProgress NOTIFY bufferProgressChanged)
     Q_PROPERTY(qint64 position READ position NOTIFY positionChanged)
@@ -71,6 +73,8 @@ public:
 
     qreal volume() const { return m_volume; }
     void setVolume(qreal volume);
+    qreal volumeScale() const { return m_volumeScale; }
+    void setVolumeScale(qreal scale);
     bool isMuted() const { return m_muted; }
     void setMuted(bool muted);
 
@@ -151,6 +155,7 @@ private:
     QUrl m_source;
     QString m_errorString;
     qreal m_volume = 1.0;
+    qreal m_volumeScale = 1.0;
     bool m_muted = false;
     bool m_resumeOnActivate = false;
     bool m_vod = false;

@@ -42,6 +42,30 @@ Page {
         Qt.callLater(rebuildHero)
     }
 
+    // "EN| Some Title" -> "Some Title" (provider language prefixes)
+    function cleanTitle(title) {
+        return (title || "").replace(/^\s*[\[(]?[A-Za-z]{2,3}[\])]?\s*[|:\-]\s*/, "")
+                            .replace(/^\s*\[[A-Za-z]{2,3}\]\s*/, "")
+    }
+
+    // A few rows of a model, a different selection every day: the best are
+    // shuffled with the date as seed so the banner changes but stays stable.
+    function dailyPick(model, count) {
+        const rows = []
+        for (let i = 0; i < model.count; ++i)
+            rows.push(i)
+        let seed = Math.floor(Date.now() / 86400000)
+        const random = () => {
+            seed = (seed * 1103515245 + 12345) & 0x7fffffff
+            return seed / 0x7fffffff
+        }
+        for (let i = rows.length - 1; i > 0; --i) {
+            const j = Math.floor(random() * (i + 1))
+            const t = rows[i]; rows[i] = rows[j]; rows[j] = t
+        }
+        return rows.slice(0, count).sort((a, b) => a - b)
+    }
+
     function metaLine(parts) {
         return parts.filter(t => t && String(t).length > 0).join("  ·  ")
     }
@@ -61,7 +85,7 @@ Page {
                                                 : VodManager.series(sourceId, c.seriesExtId)
                 items.push({
                     type: "continue", kind: c.kind, extId: c.extId, seriesExtId: c.seriesExtId,
-                    eyebrow: qsTr("Continue watching"), title: c.title,
+                    eyebrow: qsTr("Continue watching"), title: cleanTitle(c.title),
                     meta: metaLine([c.subtitle, qsTr("%1 min left").arg(c.remainingMinutes)]),
                     plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || c.image,
                     progress: c.watched, action: qsTr("Resume")
@@ -70,12 +94,18 @@ Page {
                                c.kind === "movie" ? c.extId : c.seriesExtId, info)
             }
         }
-        for (let i = 0; i < Math.min(5, newMovies.count); ++i) {
-            const m = newMovies.get(i)
+        // Fall back to the newest when the provider gives no ratings.
+        const movies = featuredMovies.count > 0 && featuredMovies.get(0).rating ? featuredMovies : newMovies
+        const series = featuredSeries.count > 0 && featuredSeries.get(0).rating ? featuredSeries : newSeries
+        for (const i of dailyPick(movies, 5)) {
+            const m = movies.get(i)
+            if (m.watched > 0.9)
+                continue
             const info = VodManager.movie(sourceId, m.extId)
             items.push({
                 type: "movie", kind: "movie", extId: m.extId,
-                eyebrow: qsTr("New movie"), title: info.name || m.name,
+                eyebrow: movies === featuredMovies ? qsTr("Featured movie") : qsTr("New movie"),
+                title: cleanTitle(info.name || m.name),
                 meta: metaLine([info.year || m.year, info.rating ? "★ " + info.rating : "",
                                 AppTheme.duration(info.durationSecs), info.genre]),
                 plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || m.logo,
@@ -83,12 +113,13 @@ Page {
             })
             requestDetails("movie", m.extId, info)
         }
-        for (let j = 0; j < Math.min(2, newSeries.count); ++j) {
-            const s = newSeries.get(j)
+        for (const j of dailyPick(series, 3)) {
+            const s = series.get(j)
             const info = VodManager.series(sourceId, s.extId)
             items.push({
                 type: "series", kind: "series", extId: s.extId,
-                eyebrow: qsTr("New series"), title: info.name || s.name,
+                eyebrow: series === featuredSeries ? qsTr("Featured series") : qsTr("New series"),
+                title: cleanTitle(info.name || s.name),
                 meta: metaLine([info.year || s.year, info.rating ? "★ " + info.rating : "", info.genre]),
                 plot: info.plot || "", backdrop: info.backdrop || "", poster: info.poster || s.logo,
                 progress: 0, action: qsTr("Watch")
@@ -161,6 +192,23 @@ Page {
         kind: "series"
         sortOrder: "newest"
         limit: 24
+        onModelReset: rebuildTimer.restart()
+    }
+    // The banner: well rated, recent titles (not just the newest uploads)
+    ChannelListModel {
+        id: featuredMovies
+        sourceId: AppState.sourceId
+        kind: "movie"
+        sortOrder: "featured"
+        limit: 25
+        onModelReset: rebuildTimer.restart()
+    }
+    ChannelListModel {
+        id: featuredSeries
+        sourceId: AppState.sourceId
+        kind: "series"
+        sortOrder: "featured"
+        limit: 25
         onModelReset: rebuildTimer.restart()
     }
     ChannelListModel {

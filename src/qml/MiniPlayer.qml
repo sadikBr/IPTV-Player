@@ -73,6 +73,7 @@ Rectangle {
             text: root.player.failed ? qsTr("This station isn't playing right now")
                 : root.player.busy ? qsTr("Connecting…")
                 : root.player.mediaTitle.length > 0 ? "♪ " + root.player.mediaTitle
+                : SleepTimer.active ? SleepTimer.label()
                 : root.station.details || ""
         }
     }
@@ -83,6 +84,7 @@ Rectangle {
         anchors.rightMargin: 8
         anchors.verticalCenter: parent.verticalCenter
         spacing: 2
+        SleepTimerButton {}
         IconButton {
             iconName: root.station.favorite ? "heart" : "heart-outline"
             iconColor: root.station.favorite ? AppTheme.accent : AppTheme.textSecondary

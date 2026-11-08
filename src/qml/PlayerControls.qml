@@ -306,6 +306,9 @@ Item {
                     visible: root.hasChannels
                     onClicked: { root.channelListClicked(); root.activity() }
                 }
+                SleepTimerButton {
+                    programEnd: root.program && root.program.now ? root.program.now.stop : null
+                }
                 IconButton {
                     iconName: "pip"
                     tip: qsTr("Picture-in-picture")

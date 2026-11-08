@@ -112,7 +112,7 @@ public:
     // Parental control: while locked, content of locked categories is left
     // out everywhere (notInHiddenCategory / categoryNotHidden include it).
     // ORDER BY for channels (alias c) in a sort order: "default", "newest",
-    // "name", "name-desc", "rating", "year", "number".
+    // "name", "name-desc", "rating", "year", "number", "featured" (good and recent).
     static QString orderBy(const QString &order);
     static void setParentalLocked(bool locked);
     static bool parentalLocked();

@@ -285,6 +285,8 @@ private slots:
         // Without a rating / year: last
         QCOMPARE(order(QStringLiteral("rating")), QStringLiteral("alpha,Beta,Zorro,Ébène"));
         QCOMPARE(order(QStringLiteral("year")), QStringLiteral("Beta,Ébène,Zorro,alpha"));
+        // Featured: rating plus a bonus for recent years; unrated last
+        QCOMPARE(order(QStringLiteral("featured")), QStringLiteral("alpha,Beta,Zorro,Ébène"));
     }
 
     void lockedCategories()

@@ -171,11 +171,21 @@ Page {
     onWidthChanged: PictureInPicture.refresh()
     onHeightChanged: PictureInPicture.refresh()
 
+    // Sleep timer ran out: stop (after the fade out).
+    Connections {
+        target: SleepTimer
+        function onExpired() {
+            player.stop()
+            page.showControls()
+        }
+    }
+
     PlayerController {
         id: player
         vod: page.isVod || page.catchup
         autoReconnect: AppSettings.autoReconnect
         lowLatency: AppSettings.lowLatency
+        volumeScale: SleepTimer.fade
         onVolumeChanged: AppSettings.volume = volume
         onEnded: {
             page.markFinished()

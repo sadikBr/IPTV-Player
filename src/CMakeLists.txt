@@ -124,6 +124,8 @@ set(QML_SOURCES
     qml/SeriesDetailsPage.qml
     qml/SettingsPage.qml
     qml/Shadow.qml
+    qml/SleepTimer.qml
+    qml/SleepTimerButton.qml
     qml/SortButton.qml
     qml/StationCard.qml
     qml/StatusBanner.qml
@@ -156,6 +158,7 @@ set(QML_RESOURCES
     qml/icons/live.svg
     qml/icons/lock-open.svg
     qml/icons/lock.svg
+    qml/icons/moon.svg
     qml/icons/more.svg
     qml/icons/mute.svg
     qml/icons/next.svg
@@ -189,7 +192,8 @@ foreach(file IN LISTS QML_SOURCES QML_RESOURCES)
     string(REGEX REPLACE "^qml/" "" alias "${file}")
     set_source_files_properties(${file} PROPERTIES QT_RESOURCE_ALIAS ${alias})
 endforeach()
-set_source_files_properties(qml/AppTheme.qml qml/AppState.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/AppTheme.qml qml/AppState.qml qml/SleepTimer.qml
+                            PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 # qmlcachegen 6.12.0 crashes on this file (Qt bug, seen on Arch Linux). It is
 # compiled when the app starts instead; all other files are still precompiled.
 set_source_files_properties(qml/HomePage.qml PROPERTIES QT_QML_SKIP_CACHEGEN TRUE)

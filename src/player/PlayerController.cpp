@@ -97,7 +97,17 @@ void PlayerController::setVolume(qreal volume)
     if (qFuzzyCompare(volume, m_volume))
         return;
     m_volume = volume;
-    m_backend->setVolume(volume);
+    m_backend->setVolume(volume * m_volumeScale);
+    emit volumeChanged();
+}
+
+void PlayerController::setVolumeScale(qreal scale)
+{
+    scale = qBound<qreal>(0.0, scale, 1.0);
+    if (qFuzzyCompare(scale, m_volumeScale))
+        return;
+    m_volumeScale = scale;
+    m_backend->setVolume(m_volume * m_volumeScale);
     emit volumeChanged();
 }
 
@@ -160,7 +170,7 @@ void PlayerController::startSource(qint64 startPositionMs)
     // Low latency only makes sense for live TV; movies keep full buffering.
     m_backend->setLowLatency(m_lowLatency && !m_vod);
     m_backend->setSource(m_source);
-    m_backend->setVolume(m_volume);
+    m_backend->setVolume(m_volume * m_volumeScale);
     m_backend->setMuted(m_muted);
     m_backend->play();
     m_watchdog->start();

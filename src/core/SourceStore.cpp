@@ -459,6 +459,15 @@ QString SourceStore::orderBy(const QString &order)
     if (order == QLatin1String("year"))
         return QStringLiteral("(CAST(c.year AS INTEGER) <= 0), CAST(c.year AS INTEGER) DESC, "
                               "c.search_name");
+    // Worth showing: rated titles first, best rating plus a bonus for recent ones.
+    if (order == QLatin1String("featured"))
+        return QStringLiteral(
+                "(c.rating = '' OR CAST(c.rating AS REAL) <= 0), "
+                "(CAST(c.rating AS REAL) + CASE "
+                "WHEN CAST(c.year AS INTEGER) > CAST(strftime('%Y', 'now') AS INTEGER) + 1 THEN 0 "
+                "WHEN CAST(c.year AS INTEGER) >= CAST(strftime('%Y', 'now') AS INTEGER) - 2 THEN 1.5 "
+                "WHEN CAST(c.year AS INTEGER) >= CAST(strftime('%Y', 'now') AS INTEGER) - 6 THEN 0.5 "
+                "ELSE 0 END) DESC, c.position DESC");
     if (order == QLatin1String("number"))
         return QStringLiteral("(c.number <= 0), c.number, c.position");
     return QStringLiteral("c.position");
